@@ -25,10 +25,10 @@ class GeneSerializer(serializers.ModelSerializer):
         model = Gene
         fields = ['gene_symbol', 'go_terms', 'groups', 'marker_groups']
 
-class ProteinSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Protein
-        fields = ['protein_id', 'go_terms']
+#class ProteinSerializer(serializers.ModelSerializer):
+#    class Meta:
+#        model = Protein
+#        fields = ['protein_id', 'go_terms']
 
 class RNA_QuantSerializer(serializers.ModelSerializer):
     class Meta:

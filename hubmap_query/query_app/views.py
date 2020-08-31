@@ -32,10 +32,10 @@ class GeneViewSet(viewsets.ModelViewSet):
     serializer_class = GeneSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class ProteinViewSet(viewsets.ModelViewSet):
-    queryset = Protein.objects.all()
-    serializer_class = ProteinSerializer
-    permission_classes = [permissions.IsAuthenticated]
+#class ProteinViewSet(viewsets.ModelViewSet):
+#    queryset = Protein.objects.all()
+#    serializer_class = ProteinSerializer
+#    permission_classes = [permissions.IsAuthenticated]
 
 class ATAC_QuantViewSet(viewsets.ModelViewSet):
     queryset = ATAC_Quant.objects.all()

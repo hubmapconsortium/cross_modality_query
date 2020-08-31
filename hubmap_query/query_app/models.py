@@ -6,16 +6,6 @@ import operator
 from django.db import models
 from django.contrib.postgres.fields import ArrayField, JSONField
 
-
-#Mappings from output set types to objects/tables we want to query
-output_aspects = {'cell':Cell, 'gene':Gene, 'tissue_type':Cell_Grouping, 'dataset':Cell_Grouping, 'protein':Protein}
-#Mappings from input set types to columns used to build condition
-input_aspects = {'cell':cell_id, 'gene':genes,'marker_gene':marker_genes, 'tissue_type':tissue_type, 'dataset':dataset, 'protein':protein_mean, 'modality':modality}
-#Mappings from string representations of logical operators to corresponding SQLalchemy functions
-logical_operators = {'and':and_, 'or':or_}
-comparator_dict = {'==': operator.eq, '!=': operator.ne, '>=':operator.ge, '>':operator.gt, '<=':operator.le, '<':operator.lt}
-
-
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
     modality = models.CharField(db_index=True, max_length=20)
@@ -38,9 +28,9 @@ class Gene(models.Model):
 #    groups = models.ManyToManyField(Cell_Grouping)
 #    marker_groups = models.ManyToManyField(Cell_Grouping)
 
-class Protein(models.Model):
-    protein_id = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(db_index=True)
+#class Protein(models.Model):
+#    protein_id = models.CharField(db_index=True, max_length=20)
+#    go_terms = ArrayField(db_index=True)
 #    groups = models.ManyToManyField(Cell_Grouping)
 #    marker_groups = models.ManyToManyField(Cell_Grouping)
 
