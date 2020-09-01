@@ -29,13 +29,3 @@ class GeneSerializer(serializers.ModelSerializer):
 #    class Meta:
 #        model = Protein
 #        fields = ['protein_id', 'go_terms']
-
-class RNA_QuantSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RNA_Quant
-        fields = ['cell_id', 'gene_id', 'value']
-
-class ATAC_GroupingSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ATAC_Quant
-        fields = ['cell_id', 'gene_id', 'value']

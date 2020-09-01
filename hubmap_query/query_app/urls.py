@@ -8,7 +8,8 @@ admin.autodiscover()
 # first we define the serializers
 
 urlpatterns = [
-    path('catquery/', views.CategoricalQuery.as_view(), name="categorical_query"),
-    path('quantquery/', views.QuantitativeQuery.as_view(), name="quantitative_query"),
+    path('genequery/', views.GeneViewSet.as_view(), name="gene_query"),
+    path('cellquery/', views.CellViewSet.as_view(), name="cell_query"),
+    path('groupquery/', views.Cell_GroupingViewSet.as_view(), name="group_query"),
     path('genes/', views.GeneListView.as_view(), name="genes"),
 ]

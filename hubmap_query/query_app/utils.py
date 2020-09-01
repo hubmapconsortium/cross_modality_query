@@ -4,7 +4,7 @@ from .models import (
     Cell,
     Cell_Grouping,
     Gene,
-    Protein,
+#    Protein,
     RNA_Quant,
     ATAC_Quant,
 )
@@ -13,25 +13,8 @@ from .serializers import (
     CellSerializer,
     Cell_GroupingSerializer,
     GeneSerializer,
-    ProteinSerializer,
-    ATAC_QuantSerializer,
-    RNA_QuantSerializer,
+#    ProteinSerializer,
 )
-
-def get_serializer_class(model):
-    model = model.get_subclass_object()
-    if isinstance(model, Cell):
-        return CellSerializer
-    elif isinstance(model, Cell_Grouping):
-        return Cell_GroupingSerializer
-    elif isinstance(model, Gene):
-        return GeneSerializer
-    elif isinstance(model, Protein):
-        return ProteinSerializer
-    elif isinstance(model, RNA_Quant):
-        return RNA_QuantSerializer
-    elif isinstance(model, ATAC_Quant):
-        return ATAC_QuantSerializer
 
 def split_at_comparator(item:str)->List:
     comparator_list = ['<=', '>=', '>', '<', '==', '!=']
@@ -43,77 +26,143 @@ def split_at_comparator(item:str)->List:
     print('No comparator found')
     return None
 
-def process_single_condition(split_condition:List, input_type:str)->:
+def process_single_condition(split_condition:List, input_type:str)->Q:
 
     comparator = split_condition[1]
     value = int(split_condition[2])
 
     if input_type == 'protein':
-        pass
-
-    if input_type in ['rna_gene', 'atac_gene']:
-        id = split_condition[0]
+        protein_id = split_condition[0]
 
         if comparator == '>':
-            return Q(value__gt=int) & Q(gene_id__icontains=id)
+            kwargs = ['protein_mean__' + protein_id + '__gt': value]
         elif comparator == '>=':
-            return Q(value__gte=int) & Q(gene_id__icontains=id)
+            kwargs = ['protein_mean__' + protein_id + '__gte': value]
         elif comparator == '<':
-            return Q(value__lt=int) & Q(gene_id__icontains=id)
+            kwargs = ['protein_mean__' + protein_id + '__lt': value]
         elif comparator == '<=':
-            return Q(value__lte=int) & Q(gene_id__icontains=id)
+            kwargs = ['protein_mean__' + protein_id + '__lte': value]
         elif comparator == '==':
-            return Q(value__exact=int) & Q(gene_id__icontains=id)
+            kwargs = ['protein_mean__' + protein_id + '__exact': value]
         elif comparator == '!=':
-            return (~Q(value__exact=int)) & Q(gene_id__icontains=id)
+            kwargs = ['protein_mean__' + protein_id + '__exact': value]
+            return (~Q(kwargs))
 
-def get_quantitative_condition(input_set:List, input_type:str, logical_operator:str)->Q:
+        return Q(kwargs)
 
-    split_conditions = [split_at_comparator(item) for item in input_set]
+    if input_type in ['rna_gene', 'atac_gene']:
+        gene_id = split_condition[0]
 
-    q = process_single_condition(split_conditions[0], input_type)
-    for condition in split_conditions[1:]:
-        q = q & process_single_condition(condition)
+        if comparator == '>':
+            return Q(value__gt=value & Q(gene_id__icontains=gene_id)
+        elif comparator == '>=':
+            return Q(value__gte=value) & Q(gene_id__icontains=gene_id)
+        elif comparator == '<':
+            return Q(value__lt=value) & Q(gene_id__icontains=gene_id)
+        elif comparator == '<=':
+            return Q(value__lte=value) & Q(gene_id__icontains=gene_id)
+        elif comparator == '==':
+            return Q(value__exact=value) & Q(gene_id__icontains=gene_id)
+        elif comparator == '!=':
+            return (~Q(value__exact=value) & Q(gene_id__icontains=gene_id))
 
-    return q
+def get_gene_filter(input_type, input_set, logical_operator):
+    if input_type in ['tissue_type', 'cluster']:
+        #Query groupings first and then union their marker genes
+        pass
 
+def get_cell_filter(input_type, input_set, logical_operator):
+    if input_type == 'protein':
 
-def get_categorical_condition(input_set:List, input_type:str, logical_operator:str)->Q:
+        if split_at_comparator(input_set[0]) is None:
+            split_conditions = [[item, '>', '0'] for item in input_set]
+        else:
+            split_conditions = [split_at_comparator(item) for item in input_set]
 
-    grouping_types = Cell_Grouping.objects.distinct('grouping_type')
-    g_types_list = [gtype for gtype in grouping_types]
+        q = process_single_condition(split_conditions[0], input_type)
+        for condition in split_conditions[1:]:
+            q = q & process_single_condition(condition)
 
-    if input_type in grouping_types:
-        if output_type in ['gene', 'marker_gene']:
-            pass
+        return q
 
-    elif input_type in ['gene', 'marker_gene']:
-        if output_type in grouping_types:
-            pass
+    elif input_type in ['atac_gene', 'rna_gene']:
+        #Query quants first and then use those cell_ids to get cells
 
-def categorical_query(input_type: str, input_set:List, logical_operator:str, output_type:str):
+    elif input_type in ['tissue_type', 'cluster']:
+        #Query groupings and then union their cells fields
 
-    values_list = [element[0] for element in input_set]
-    condition = get_categorical_condition(values_list, input_type, logical_operator)
+def get_group_filter(input_type, input_set, logical_operator):
+    if input_type == 'cell':
+        pass
+    elif input_type in ['atac_gene', 'rna_gene']:
+        #Query those genes and return their associated groupings
+        pass
 
-    if output_type in grouping_types:
-        results = Cell_Grouping.objects.filter(condition)
+def get_genes_list(input_type, input_set, logical_operator):
+    if input_type is None:
+        return Gene.objects.all()
+    else:
+        filter = get_gene_filter(input_type, input_set, logical_operator)
+        return Gene.objects.filter(filter)
 
-    elif output_type in ['gene', 'marker_gene']:
-        results = Gene.objects.filter(condition)
+def get_cells_list(input_type, input_set, logical_operator):
+    if input_type is None:
+        return Cell.objects.all()
+    else:
+        filter = get_cell_filter(input_type, input_set, logical_operator)
+        return Cell.objects.filter(filter)
 
-    return results
+def get_groupings_list(input_type, input_set, logical_operator):
+    if input_type is None:
+        return Cell_Grouping.objects.all()
+    else:
+        filter = get_group_filter(input_type, input_set, logical_operator)
+        return Cell_Grouping.objects.filter(filter)
 
-def quantitative_query(input_type: str, input_set:List, logical_operator:str, output_type:str):
+def gene_query(self, request):
+    input_type = self.request.query_params.get('input_type', None)
+    input_set = self.request.query_params.get('input_set', None)
+    logical_operator = self.request.query_params.get('logical_operator', None)
+    genes = get_genes_list(input_type, input_set, logical_operator)
+    self.queryset = genes
+    # Set context
+    context = {
+        "request": request,
+    }
+    print(genes)
+    print(GeneSerializer(genes, many=True, context=context))
+    # Get serializers lists
+    response = GeneSerializer(genes, many=True, context=context).data
+    return response
 
-    values_list = [element[0] for element in input_set]
+def cell_query(self, request):
+    input_type = self.request.query_params.get('input_type', None)
+    input_set = self.request.query_params.get('input_set', None)
+    logical_operator = self.request.query_params.get('logical_operator', None)
+    cells = get_cells_list(input_type, input_set, logical_operator)
+    self.queryset = cells
+    # Set context
+    context = {
+        "request": request,
+    }
+    print(cells)
+    print(CellSerializer(cells, many=True, context=context))
+    # Get serializers lists
+    response = CellSerializer(cells, many=True, context=context).data
+    return response
 
-    if output_type == 'cell':
-        condition = get_quantitative_condition(values_list, input_type, logical_operator)
-        if input_type == 'protein':
-            results = Cell.objects.filter(condition)
-        elif input_type == 'rna_gene':
-            results = RNA_Quant.objects.filter(condition)
-        elif input_type == 'atac_gene':
-            results = ATAC_Quant.objects.filter(condition)
-        return results
+def group_query(self, request):
+    input_type = self.request.query_params.get('input_type', None)
+    input_set = self.request.query_params.get('input_set', None)
+    logical_operator = self.request.query_params.get('logical_operator', None)
+    groups = get_groups_list(input_type, input_set, logical_operator)
+    self.queryset = group
+    # Set context
+    context = {
+        "request": request,
+    }
+    print(groups)
+    print(Cell_GroupingSerializer(groups, many=True, context=context))
+    # Get serializers lists
+    response = Cell_GroupingSerializer(groups, many=True, context=context).data
+    return response
