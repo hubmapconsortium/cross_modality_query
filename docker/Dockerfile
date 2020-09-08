@@ -24,9 +24,8 @@ RUN apt-get update \
  && rm -rf /var/cache/apt/*
 
 ## Python packages
-COPY docker/requirements.txt /opt/requirements.txt
+COPY requirements.txt /opt/requirements.txt
 RUN pip3 install --no-binary annoylib -r /opt/requirements.txt \
  && rm -rf /root/.cache/pip
 
-COPY bin /opt
-WORKDIR /opt
+

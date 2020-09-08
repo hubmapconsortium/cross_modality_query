@@ -1,5 +1,4 @@
 #Write a view for each model in models.py
-from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
 from rest_framework import permissions
 from rest_framework.parsers import JSONParser
@@ -15,7 +14,11 @@ from .serializers import (
     RNA_QuantSerializer,
 )
 
-
+from .models import (
+    Cell,
+    Cell_Grouping,
+    Gene,
+)
 
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()

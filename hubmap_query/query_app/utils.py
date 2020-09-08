@@ -1,10 +1,12 @@
 from django.db.models import Q
+from typing import List
+from functools import reduce
 
 from .models import (
     Cell,
     Cell_Grouping,
     Gene,
-#    Protein,
+    # Protein,
     RNA_Quant,
     ATAC_Quant,
 )
@@ -13,50 +15,68 @@ from .serializers import (
     CellSerializer,
     Cell_GroupingSerializer,
     GeneSerializer,
-#    ProteinSerializer,
+    #    ProteinSerializer,
 )
 
-def split_at_comparator(item:str)->List:
+
+def split_at_comparator(item: str) -> List:
+    """str->List
+    Splits a string representation of a quantitative comparison into its parts
+    i.e. 'eg_protein>=50' -> ['eg_protein', '>=', '50']
+    If there is no comparator in the string, returns an empty list"""
+
     comparator_list = ['<=', '>=', '>', '<', '==', '!=']
     for comparator in comparator_list:
         if comparator in item:
             item_split = item.split(comparator)
-            item_split[1] = comparator_dict[item_split[1]]
+            item_split[1] = comparator
             return item_split
     print('No comparator found')
-    return None
+    return []
 
-def combine_qs(qs:List[Q], logical_operator:str):
-    q = qs[0]
-    for q2 in qs[1:]:
-        if logical_operator == 'or':
-            q = q | q2
-        elif logical_operator == 'and':
-            q = q & q2
 
-    return q
+def q_and(q1: Q, q2: Q) -> Q:
+    return q1 & q2
 
-def process_single_condition(split_condition:List, input_type:str)->Q:
 
+def q_or(q1: Q, q2: Q) -> Q:
+    return q1 | q2
+
+
+def combine_qs(qs: List[Q], logical_operator: str) -> Q:
+    """List[Q] -> Q
+    Combines a series of conditions into a single condition based on logical operator"""
+    if logical_operator == 'or':
+        return reduce(q_or, qs)
+    elif logical_operator == 'and':
+        return reduce(q_and, qs)
+
+
+def process_single_condition(split_condition: List[str], input_type: str) -> Q:
+    """List[str], str -> Q
+    Finds the keyword args for a quantitative query based on the results of
+    calling split_at_comparator() on a string representation of that condition"""
     comparator = split_condition[1]
+
+    assert comparator in ['>', '>=', '<=', '<', '==', '!=']
     value = int(split_condition[2])
 
     if input_type == 'protein':
         protein_id = split_condition[0]
 
         if comparator == '>':
-            kwargs = ['protein_mean__' + protein_id + '__gt': value]
+            kwargs = {'protein_mean__' + protein_id + '__gt': value}
         elif comparator == '>=':
-            kwargs = ['protein_mean__' + protein_id + '__gte': value]
+            kwargs = {'protein_mean__' + protein_id + '__gte': value}
         elif comparator == '<':
-            kwargs = ['protein_mean__' + protein_id + '__lt': value]
+            kwargs = {'protein_mean__' + protein_id + '__lt': value}
         elif comparator == '<=':
-            kwargs = ['protein_mean__' + protein_id + '__lte': value]
+            kwargs = {'protein_mean__' + protein_id + '__lte': value}
         elif comparator == '==':
-            kwargs = ['protein_mean__' + protein_id + '__exact': value]
+            kwargs = {'protein_mean__' + protein_id + '__exact': value}
         elif comparator == '!=':
-            kwargs = ['protein_mean__' + protein_id + '__exact': value]
-            return (~Q(kwargs))
+            kwargs = {'protein_mean__' + protein_id + '__exact': value}
+            return ~Q(kwargs)
 
         return Q(kwargs)
 
@@ -64,7 +84,7 @@ def process_single_condition(split_condition:List, input_type:str)->Q:
         gene_id = split_condition[0]
 
         if comparator == '>':
-            return Q(value__gt=value & Q(gene_id__icontains=gene_id)
+            return Q(value__gt=value) & Q(gene_id__icontains=gene_id)
         elif comparator == '>=':
             return Q(value__gte=value) & Q(gene_id__icontains=gene_id)
         elif comparator == '<':
@@ -74,10 +94,13 @@ def process_single_condition(split_condition:List, input_type:str)->Q:
         elif comparator == '==':
             return Q(value__exact=value) & Q(gene_id__icontains=gene_id)
         elif comparator == '!=':
-            return (~Q(value__exact=value) & Q(gene_id__icontains=gene_id))
+            return ~Q(value__exact=value) & Q(gene_id__icontains=gene_id)
 
-def get_gene_filter(input_type, input_set, logical_operator):
 
+def get_gene_filter(input_type: str, input_set: List[str], logical_operator: str) -> Q:
+    """str, List[str], str -> Q
+    Finds the filter for a query for gene objects based on the input set, input type, and logical operator
+    Currently only services categorical queries where input type is tissue_type or dataset"""
     if input_type in ['tissue_type', 'cluster']:
         gene_ids = []
         q = Q(group_type__icontains=input_type)
@@ -93,16 +116,20 @@ def get_gene_filter(input_type, input_set, logical_operator):
 
         return q
 
-def get_cell_filter(input_type, input_set, logical_operator):
 
+def get_cell_filter(input_type: str, input_set: List[str], logical_operator: str) -> Q:
+    """str, List[str], str -> Q
+    Finds the filter for a query for cell objects based on the input set, input type, and logical operator
+    Currently services quantitative queries where input is protein, atac_gene, or rna_gene
+    and membership queries where input is tissue_type"""
     if input_type in ['protein', 'atac_gene', 'rna_gene']:
 
-        if split_at_comparator(input_set[0]) is None:
+        if len(split_at_comparator(input_set[0])) == 0:
             split_conditions = [[item, '>', '0'] for item in input_set]
         else:
             split_conditions = [split_at_comparator(item) for item in input_set]
 
-        qs = [process_single_condition(condition) for condition in split_conditions]
+        qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, logical_operator)
 
         if input_type in ['atac_gene', 'rna_gene']:
@@ -121,10 +148,10 @@ def get_cell_filter(input_type, input_set, logical_operator):
 
         q = Q(group_type__icontains=input_type)
         qs = [Q(group_id__icontains=element) for element in input_set]
-        q2 = combine_qs(qs, 'or')#These categories are mutually exclusive, so their intersection will be empty
+        q2 = combine_qs(qs, 'or')  # These categories are mutually exclusive, so their intersection will be empty
         q = q & q2
 
-        #Query groupings and then union their cells fields
+        # Query groupings and then union their cells fields
         cell_ids = []
         for group in Cell_Grouping.objects.filter(q):
             cell_ids.extend(group.cells.values_list('cell_id'))
@@ -134,14 +161,17 @@ def get_cell_filter(input_type, input_set, logical_operator):
 
         return q
 
-def get_group_filter(input_type, input_set, logical_operator):
 
+def get_group_filter(input_type: str, input_set: List[str], logical_operator: str) -> Q:
+    """str, List[str], str -> Q
+    Finds the filter for a query for group objects based on the input set, input type, and logical operator
+    Currently services membership queries where input type is cells
+    and categorical queries where input type is genes"""
     if input_type == 'cell':
         group_ids = []
-        q = Q(cell_id__icontains=input_set[0])
 
-        for item in input_set[1:]:
-            q = q & Q(cell_id__icontains=item)
+        qs = [Q(cell_id__icontains=item) for item in input_set]
+        q = combine_qs(qs, 'or')
 
         for cell in Cell.objects.filter(q):
             group_ids.extend(cell.grouping.values_list('group_id'))
@@ -152,11 +182,11 @@ def get_group_filter(input_type, input_set, logical_operator):
         return q
 
     elif input_type in ['atac_gene', 'rna_gene']:
-        #Query those genes and return their associated groupings
+        # Query those genes and return their associated groupings
         group_ids = []
 
         qs = [Q(gene_id__icontains=item) for item in input_set]
-        combine_qs(qs, 'or')
+        q = combine_qs(qs, 'or')
 
         for gene in Gene.objects.filter(q):
             group_ids.extend(gene.grouping.values_list('group_id'))
@@ -166,12 +196,14 @@ def get_group_filter(input_type, input_set, logical_operator):
 
         return q
 
+
 def get_genes_list(input_type, input_set, logical_operator):
     if input_type is None:
         return Gene.objects.all()
     else:
         filter = get_gene_filter(input_type, input_set, logical_operator)
         return Gene.objects.filter(filter)
+
 
 def get_cells_list(input_type, input_set, logical_operator):
     if input_type is None:
@@ -180,12 +212,14 @@ def get_cells_list(input_type, input_set, logical_operator):
         filter = get_cell_filter(input_type, input_set, logical_operator)
         return Cell.objects.filter(filter)
 
+
 def get_groupings_list(input_type, input_set, logical_operator):
     if input_type is None:
         return Cell_Grouping.objects.all()
     else:
         filter = get_group_filter(input_type, input_set, logical_operator)
         return Cell_Grouping.objects.filter(filter)
+
 
 def gene_query(self, request):
     input_type = self.request.query_params.get('input_type', None)
@@ -203,6 +237,7 @@ def gene_query(self, request):
     response = GeneSerializer(genes, many=True, context=context).data
     return response
 
+
 def cell_query(self, request):
     input_type = self.request.query_params.get('input_type', None)
     input_set = self.request.query_params.get('input_set', None)
@@ -219,12 +254,13 @@ def cell_query(self, request):
     response = CellSerializer(cells, many=True, context=context).data
     return response
 
+
 def group_query(self, request):
     input_type = self.request.query_params.get('input_type', None)
     input_set = self.request.query_params.get('input_set', None)
     logical_operator = self.request.query_params.get('logical_operator', None)
-    groups = get_groups_list(input_type, input_set, logical_operator)
-    self.queryset = group
+    groups = get_groupings_list(input_type, input_set, logical_operator)
+    self.queryset = groups
     # Set context
     context = {
         "request": request,
