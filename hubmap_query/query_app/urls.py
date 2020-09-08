@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.auth.decorators import login_required
 from django.urls import path
 
 from . import views
@@ -11,5 +10,8 @@ urlpatterns = [
     path('genequery/', views.GeneViewSet.as_view(), name="gene_query"),
     path('cellquery/', views.CellViewSet.as_view(), name="cell_query"),
     path('groupquery/', views.Cell_GroupingViewSet.as_view(), name="group_query"),
-    path('genes/', views.GeneListView.as_view(), name="genes"),
+    path('query/', views.LandingFormView, name="landing_page"),
+    path('genequeryform', views.GeneQueryView, name="gene_query_form"),
+    path('cellqueryform', views.CellQueryView, name="cell_query_form"),
+    path('organqueryform', views.OrganQueryView, name="organ_query_form"),
 ]
