@@ -221,10 +221,7 @@ def get_groupings_list(input_type, input_set, logical_operator):
         return Cell_Grouping.objects.filter(filter)
 
 
-def gene_query(self, request):
-    input_type = self.request.query_params.get('input_type', None)
-    input_set = self.request.query_params.get('input_set', None)
-    logical_operator = self.request.query_params.get('logical_operator', None)
+def gene_query(self, request, input_type, input_set, logical_operator):
     genes = get_genes_list(input_type, input_set, logical_operator)
     self.queryset = genes
     # Set context
@@ -238,10 +235,7 @@ def gene_query(self, request):
     return response
 
 
-def cell_query(self, request):
-    input_type = self.request.query_params.get('input_type', None)
-    input_set = self.request.query_params.get('input_set', None)
-    logical_operator = self.request.query_params.get('logical_operator', None)
+def cell_query(self, request, input_type, input_set, logical_operator):
     cells = get_cells_list(input_type, input_set, logical_operator)
     self.queryset = cells
     # Set context
@@ -255,10 +249,7 @@ def cell_query(self, request):
     return response
 
 
-def group_query(self, request):
-    input_type = self.request.query_params.get('input_type', None)
-    input_set = self.request.query_params.get('input_set', None)
-    logical_operator = self.request.query_params.get('logical_operator', None)
+def group_query(self, request, input_type, input_set, logical_operator):
     groups = get_groupings_list(input_type, input_set, logical_operator)
     self.queryset = groups
     # Set context

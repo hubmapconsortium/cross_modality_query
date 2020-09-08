@@ -4,14 +4,20 @@ from django.contrib.postgres.forms import SimpleArrayField
 class QueryForm(forms.Form):
     output_type = forms.ChoiceField(choices=(('Gene', None), ('Cell', None), ('Organ', None)))
 
-class GeneForm(forms.Form):
-    hugo_symbols = SimpleArrayField(forms.CharField(max_length=100))
+class GeneQueryForm(forms.Form):
+    input_type = forms.ChoiceField(choices = (('Organ', None)))
+    input_set = SimpleArrayField(base_field=forms.CharField())
+    logical_operator = forms.ChoiceField(choices=(('and', None), ('or', None)))
+    marker = forms.BooleanField()
 
-class OrganForm(forms.Form):
-    organs = SimpleArrayField(forms.CharField(max_length=100))
+class OrganQueryForm(forms.Form):
+    input_type = forms.ChoiceField(choices = (('Cell', None), ('Gene', None)))
+    input_set = SimpleArrayField(base_field=forms.CharField())
+    logical_operator = forms.ChoiceField(choices=(('and', None), ('or', None)))
+    marker = forms.BooleanField
 
-class CellForm(forms.Form):
-    cell_ids = SimpleArrayField(forms.CharField(max_length=100))
+class CellQueryForm(forms.Form):
+    input_type = forms.ChoiceField(choices = (('Gene', None), ('Protein', None), ('Organ', None)))
+    input_set = SimpleArrayField(base_field=forms.CharField())
+    logical_operator = forms.ChoiceField(choices=(('and', None), ('or', None)))
 
-class ProteinForm(forms.Form):
-    protein_id = SimpleArrayField(forms.CharField(max_length=100))
