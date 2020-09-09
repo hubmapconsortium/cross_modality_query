@@ -5,7 +5,7 @@ from .models import (
     Cell,
     Cell_Grouping,
     Gene,
-    Protein,
+    #Protein,
     RNA_Quant,
     ATAC_Quant,
 )

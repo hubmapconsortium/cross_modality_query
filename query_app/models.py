@@ -15,7 +15,7 @@ class Cell(models.Model):
 
 class Gene(models.Model):
     gene_symbol = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(models.CharField(), db_index=True)
+    go_terms = ArrayField(models.CharField(max_length=50), db_index=True)
 
 
 #    groups = models.ManyToManyField(Cell_Grouping)

@@ -1,1 +1,2 @@
-seandonahue5311/cross-modality-db	docker/Dockerfile	base_directory_build
+hubmap/cross-modality-query-base	docker/base/Dockerfile
+hubmap/cross-modality-query-dev	docker/dev/Dockerfile
