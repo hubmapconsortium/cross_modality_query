@@ -1,9 +1,7 @@
-#Write a view for each model in models.py
 from rest_framework import viewsets
 from rest_framework import permissions
-from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
-
+from django.shortcuts import redirect
 
 from .serializers import (
     CellSerializer,
@@ -24,11 +22,13 @@ from .forms import (
     OrganQueryForm,
 )
 
-from .utils import(
+from .utils import (
     cell_query,
     gene_query,
     group_query,
 )
+from django.views.generic.edit import FormView
+
 
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
@@ -42,6 +42,7 @@ class CellViewSet(viewsets.ModelViewSet):
         response = cell_query(self, request, input_type, input_set, logical_operator)
         return Response(response)
 
+
 class Cell_GroupingViewSet(viewsets.ModelViewSet):
     queryset = Cell_Grouping.objects.all()
     serializer_class = Cell_GroupingSerializer
@@ -53,6 +54,7 @@ class Cell_GroupingViewSet(viewsets.ModelViewSet):
         logical_operator = self.request.query_params.get('logical_operator', None)
         response = group_query(self, request, input_type, input_set, logical_operator)
         return Response(response)
+
 
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = Gene.objects.all()
@@ -66,53 +68,52 @@ class GeneViewSet(viewsets.ModelViewSet):
         response = gene_query(self, request, input_type, input_set, logical_operator)
         return Response(response)
 
-#class ProteinViewSet(viewsets.ModelViewSet):
+
+# class ProteinViewSet(viewsets.ModelViewSet):
 #    queryset = Protein.objects.all()
 #    serializer_class = ProteinSerializer
 #    permission_classes = [permissions.IsAuthenticated]
 
-class GeneQueryView(viewsets.FormViewSet):
+class GeneQueryView(FormView):
     form_class = GeneQueryForm
 
-    def get(self, request, form):
-        input_type = form.input_type
-        input_set = form.input_set
-        logical_operator = form.logical_operator
-        response = gene_query(self, request, input_type, input_set, logical_operator)
+    def form_valid(self, form):
+        input_type = form.cleaned_data['input_type']
+        input_set = form.cleaned_data['input_set']
+        logical_operator = form.cleaned_data['logical_operator']
+        response = gene_query(self, None, input_type, input_set, logical_operator)
         return Response(response)
 
-class OrganQueryView(viewsets.FormViewSet):
 
+class OrganQueryView(FormView):
     form_class = OrganQueryForm
 
-    def get(self, request, form):
-        input_type = form.input_type
-        input_set = form.input_set
-        logical_operator = form.logical_operator
-        response = group_query(self, request, input_type, input_set, logical_operator)
+    def form_valid(self, form):
+        input_type = form.cleaned_data['input_type']
+        input_set = form.cleaned_data['input_set']
+        logical_operator = form.cleaned_data['logical_operator']
+        response = group_query(self, None, input_type, input_set, logical_operator)
         return Response(response)
 
-class CellQueryView(viewsets.FormViewSet):
 
+class CellQueryView(FormView):
     form_class = CellQueryForm
 
-    def get(self, request, form):
-        input_type = form.input_type
-        input_set = form.input_set
-        logical_operator = form.logical_operator
-        response = cell_query(self, request, input_type, input_set, logical_operator)
+    def form_valid(self, form):
+        input_type = form.cleaned_data['input_type']
+        input_set = form.cleaned_data['input_set']
+        logical_operator = form.cleaned_data['logical_operator']
+        response = cell_query(self, None, input_type, input_set, logical_operator)
         return Response(response)
 
 
-
-class LandingFormView(viewsets.FormViewSet):
-
+class LandingFormView(FormView):
     form_class = QueryForm
 
-    def redirect_query(self, request, form):
-        if form.output_type == 'Gene':
+    def form_valid(self, form):
+        if form.cleaned_data['output_type'] == 'Gene':
             return redirect(GeneQueryView)
-        elif form.output_type == 'Cell':
+        elif form.cleaned_data['output_type'] == 'Cell':
             return redirect(CellQueryView)
-        elif form.output_type == 'Organ':
+        elif form.cleaned_data['output_type'] == 'Organ':
             return redirect(OrganQueryView)

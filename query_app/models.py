@@ -1,13 +1,13 @@
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
     modality = models.CharField(db_index=True, max_length=20)
-    protein_mean = JSONField(db_index=True)
-    protein_total = JSONField(db_index=True)
-    protein_covar = JSONField(db_index=True)
+    protein_mean = models.JSONField(db_index=True)
+    protein_total = models.JSONField(db_index=True)
+    protein_covar = models.JSONField(db_index=True)
     cell_shape = ArrayField(models.FloatField(), db_index=True)
 
 

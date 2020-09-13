@@ -8,19 +8,20 @@ class QueryForm(forms.Form):
 
 class GeneQueryForm(forms.Form):
     input_type = forms.ChoiceField(choices=(('Organ', None)))
-    input_set = SimpleArrayField(base_field=forms.CharField())
+    input_set = SimpleArrayField(base_field=forms.CharField(max_length=1024))
     logical_operator = forms.ChoiceField(choices=(('and', None), ('or', None)))
     marker = forms.BooleanField()
 
 
 class OrganQueryForm(forms.Form):
     input_type = forms.ChoiceField(choices=(('Cell', None), ('Gene', None)))
-    input_set = SimpleArrayField(base_field=forms.CharField())
+    input_set = SimpleArrayField(base_field=forms.CharField(max_length=1024))
     logical_operator = forms.ChoiceField(choices=(('and', None), ('or', None)))
     marker = forms.BooleanField
 
 
 class CellQueryForm(forms.Form):
     input_type = forms.ChoiceField(choices=(('Gene', None), ('Protein', None), ('Organ', None)))
-    input_set = SimpleArrayField(base_field=forms.CharField())
+    input_set = SimpleArrayField(base_field=forms.CharField(max_length=1024))
     logical_operator = forms.ChoiceField(choices=(('and', None), ('or', None)))
+
