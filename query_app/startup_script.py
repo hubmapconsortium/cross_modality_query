@@ -8,10 +8,10 @@ import json
 
 from .models import (
     Cell,
-    Cell_Grouping,
+    CellGrouping,
     Gene,
-    RNA_Quant,
-    ATAC_Quant,
+    RnaQuant,
+    AtacQuant,
 )
 
 
@@ -20,7 +20,7 @@ def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
 
 
 def df_to_db(df: pd.DataFrame, model_name: str):
-    models = {'cell': Cell, 'gene': Gene, 'group': Cell_Grouping, 'rna_quant': RNA_Quant, 'atac_quant': ATAC_Quant}
+    models = {'cell': Cell, 'gene': Gene, 'group': CellGrouping, 'rna_quant': RnaQuant, 'atac_quant': AtacQuant}
     model = models[model_name]
 
     group_fields = ['group_type', 'group_id']

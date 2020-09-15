@@ -9,7 +9,7 @@ admin.autodiscover()
 urlpatterns = [
     path('genequery/', views.GeneViewSet.as_view({'post': 'post'}), name="gene_query"),
     path('cellquery/', views.CellViewSet.as_view({'post': 'post'}), name="cell_query"),
-    path('groupquery/', views.Cell_GroupingViewSet.as_view({'post': 'post'}), name="group_query"),
+    path('groupquery/', views.CellGroupingViewSet.as_view({'post': 'post'}), name="group_query"),
     path('query/', views.LandingFormView, name="landing_page"),
     path('genequeryform', views.GeneQueryView, name="gene_query_form"),
     path('cellqueryform', views.CellQueryView, name="cell_query_form"),

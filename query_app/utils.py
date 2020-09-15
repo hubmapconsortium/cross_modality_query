@@ -1,22 +1,41 @@
 from django.db.models import Q
-from typing import List
+from typing import List, Dict
 from functools import reduce
 
 from .models import (
     Cell,
-    Cell_Grouping,
+    CellGrouping,
     Gene,
     # Protein,
-    RNA_Quant,
-    ATAC_Quant,
+    RnaQuant,
+    AtacQuant,
 )
 
 from .serializers import (
     CellSerializer,
-    Cell_GroupingSerializer,
+    CellGroupingSerializer,
     GeneSerializer,
     #    ProteinSerializer,
 )
+
+
+def process_query_parameters(query_params: Dict) -> Dict:
+    query_params['input_set'] = process_input_set(query_params['input_set'], query_params['input_type'])
+    if query_params['input_type'] == 'gene' and query_params['genomic_modality'] in ['atac', 'rna']:
+        query_params['input_type'] = query_params['genomic_modality'] + '_' + query_params['input_type']
+
+    return query_params
+
+
+def process_input_set(input_set: List, input_type: str):
+    """If the input set is output of a previous query, finds the relevant values from the serialized data"""
+    type_dict = {'gene': 'gene_symbol', 'cell': 'cell_id', 'organ': 'group_id', 'protein': 'protein_id'}
+    if type(input_set[0] == str):
+        return input_set
+    elif type(input_set[0] == dict):
+        return [set_element[type_dict[input_type]] for set_element in input_set]
+    else:
+        return None
 
 
 def split_at_comparator(item: str) -> List:
@@ -97,10 +116,15 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
             return ~Q(value__exact=value) & Q(gene_id__icontains=gene_id)
 
 
-def get_gene_filter(input_type: str, input_set: List[str], logical_operator: str) -> Q:
+def get_gene_filter(query_params: Dict) -> Q:
     """str, List[str], str -> Q
     Finds the filter for a query for gene objects based on the input set, input type, and logical operator
     Currently only services categorical queries where input type is tissue_type or dataset"""
+
+    input_type = query_params['input_type']
+    input_set = query_params['input_set']
+    marker = query_params['marker']
+
     if input_type in ['tissue_type', 'cluster']:
         gene_ids = []
         q = Q(group_type__icontains=input_type)
@@ -108,8 +132,12 @@ def get_gene_filter(input_type: str, input_set: List[str], logical_operator: str
         q2 = combine_qs(qs, 'or')
         q = q & q2
 
-        for group in Cell_Grouping.objects.filter(q):
-            gene_ids.extend(group.genes.values_list('gene_id'))
+        if marker:
+            for group in CellGrouping.objects.filter(q):
+                gene_ids.extend(group.marker_genes.values_list('gene_id'))
+        else:
+            for group in CellGrouping.objects.filter(q):
+                gene_ids.extend(group.genes.values_list('gene_id'))
 
         qs = [Q(gene_id__icontains=gene_id) for gene_id in gene_ids]
         q = combine_qs(qs, 'or')
@@ -117,11 +145,16 @@ def get_gene_filter(input_type: str, input_set: List[str], logical_operator: str
         return q
 
 
-def get_cell_filter(input_type: str, input_set: List[str], logical_operator: str) -> Q:
+def get_cell_filter(query_params: Dict) -> Q:
     """str, List[str], str -> Q
     Finds the filter for a query for cell objects based on the input set, input type, and logical operator
     Currently services quantitative queries where input is protein, atac_gene, or rna_gene
     and membership queries where input is tissue_type"""
+
+    input_type = query_params['input_type']
+    input_set = query_params['input_set']
+    logical_operator = query_params['logical_operator']
+
     if input_type in ['protein', 'atac_gene', 'rna_gene']:
 
         if len(split_at_comparator(input_set[0])) == 0:
@@ -135,9 +168,9 @@ def get_cell_filter(input_type: str, input_set: List[str], logical_operator: str
         if input_type in ['atac_gene', 'rna_gene']:
 
             if input_type == 'atac_gene':
-                cell_ids = ATAC_Quant.objects.filter(q).values_list('cell_id')
+                cell_ids = AtacQuant.objects.filter(q).values_list('cell_id')
             elif input_type == 'rna_gene':
-                cell_ids = RNA_Quant.objects.filter(q).values_list('cell_id')
+                cell_ids = RnaQuant.objects.filter(q).values_list('cell_id')
 
             qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
             q = combine_qs(qs, 'or')
@@ -153,7 +186,7 @@ def get_cell_filter(input_type: str, input_set: List[str], logical_operator: str
 
         # Query groupings and then union their cells fields
         cell_ids = []
-        for group in Cell_Grouping.objects.filter(q):
+        for group in CellGrouping.objects.filter(q):
             cell_ids.extend(group.cells.values_list('cell_id'))
 
         qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
@@ -162,11 +195,17 @@ def get_cell_filter(input_type: str, input_set: List[str], logical_operator: str
         return q
 
 
-def get_group_filter(input_type: str, input_set: List[str], logical_operator: str) -> Q:
+def get_group_filter(query_params: Dict) -> Q:
     """str, List[str], str -> Q
     Finds the filter for a query for group objects based on the input set, input type, and logical operator
     Currently services membership queries where input type is cells
     and categorical queries where input type is genes"""
+
+    input_type = query_params['input_type']
+    input_set = query_params['input_set']
+    logical_operator = query_params['logical_operator']
+    marker = query_params['marker']
+
     if input_type == 'cell':
         group_ids = []
 
@@ -188,8 +227,13 @@ def get_group_filter(input_type: str, input_set: List[str], logical_operator: st
         qs = [Q(gene_id__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
 
-        for gene in Gene.objects.filter(q):
-            group_ids.extend(gene.grouping.values_list('group_id'))
+        if marker:
+            for gene in Gene.objects.filter(q):
+                group_ids.extend(gene.marker_groups.values_list('group_id'))
+
+        else:
+            for gene in Gene.objects.filter(q):
+                group_ids.extend(gene.group.values_list('group_id'))
 
         qs = [Q(group_id__icontains=group_id) for group_id in group_ids]
         q = combine_qs(qs, 'or')
@@ -197,32 +241,35 @@ def get_group_filter(input_type: str, input_set: List[str], logical_operator: st
         return q
 
 
-def get_genes_list(input_type, input_set, logical_operator):
-    if input_type is None:
+def get_genes_list(query_params: Dict):
+    if query_params['input_type'] is None:
         return Gene.objects.all()
     else:
-        filter = get_gene_filter(input_type, input_set, logical_operator)
+        query_params = process_query_parameters(query_params)
+        filter = get_gene_filter(query_params)
         return Gene.objects.filter(filter)
 
 
-def get_cells_list(input_type, input_set, logical_operator):
-    if input_type is None:
+def get_cells_list(query_params: Dict):
+    if query_params['input_type'] is None:
         return Cell.objects.all()
     else:
-        filter = get_cell_filter(input_type, input_set, logical_operator)
+        query_params = process_query_parameters(query_params)
+        filter = get_cell_filter(query_params)
         return Cell.objects.filter(filter)
 
 
-def get_groupings_list(input_type, input_set, logical_operator):
-    if input_type is None:
-        return Cell_Grouping.objects.all()
+def get_groupings_list(query_params: Dict):
+    if query_params['input_type'] is None:
+        return CellGrouping.objects.all()
     else:
-        filter = get_group_filter(input_type, input_set, logical_operator)
-        return Cell_Grouping.objects.filter(filter)
+        query_params = process_query_parameters(query_params)
+        filter = get_group_filter(query_params)
+        return CellGrouping.objects.filter(filter)
 
 
-def gene_query(self, request, input_type, input_set, logical_operator):
-    genes = get_genes_list(input_type, input_set, logical_operator)
+def gene_query(self, request, query_params: Dict):
+    genes = get_genes_list(query_params)
     self.queryset = genes
     # Set context
     context = {
@@ -235,8 +282,8 @@ def gene_query(self, request, input_type, input_set, logical_operator):
     return response
 
 
-def cell_query(self, request, input_type, input_set, logical_operator):
-    cells = get_cells_list(input_type, input_set, logical_operator)
+def cell_query(self, request, query_params: Dict):
+    cells = get_cells_list(query_params)
     self.queryset = cells
     # Set context
     context = {
@@ -249,15 +296,15 @@ def cell_query(self, request, input_type, input_set, logical_operator):
     return response
 
 
-def group_query(self, request, input_type, input_set, logical_operator):
-    groups = get_groupings_list(input_type, input_set, logical_operator)
+def group_query(self, request, query_params: Dict):
+    groups = get_groupings_list(query_params)
     self.queryset = groups
     # Set context
     context = {
         "request": request,
     }
     print(groups)
-    print(Cell_GroupingSerializer(groups, many=True, context=context))
+    print(CellGroupingSerializer(groups, many=True, context=context))
     # Get serializers lists
-    response = Cell_GroupingSerializer(groups, many=True, context=context).data
+    response = CellGroupingSerializer(groups, many=True, context=context).data
     return response

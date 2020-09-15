@@ -21,7 +21,7 @@ class Gene(models.Model):
 #    groups = models.ManyToManyField(Cell_Grouping)
 #    marker_groups = models.ManyToManyField(Cell_Grouping)
 
-class Cell_Grouping(models.Model):
+class CellGrouping(models.Model):
     group_type = models.CharField(db_index=True, max_length=20)
     group_id = models.CharField(db_index=True, max_length=20)
     cells = models.ManyToManyField(Cell, related_name='groupings')
@@ -35,13 +35,13 @@ class Cell_Grouping(models.Model):
 #    groups = models.ManyToManyField(Cell_Grouping)
 #    marker_groups = models.ManyToManyField(Cell_Grouping)
 
-class RNA_Quant(models.Model):
+class RnaQuant(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
     gene_id = models.CharField(db_index=True, max_length=20)
     value = models.FloatField(db_index=True)
 
 
-class ATAC_Quant(models.Model):
+class AtacQuant(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
     gene_id = models.CharField(db_index=True, max_length=20)
     value = models.FloatField(db_index=True)

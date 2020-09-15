@@ -5,13 +5,13 @@ from django.shortcuts import redirect
 
 from .serializers import (
     CellSerializer,
-    Cell_GroupingSerializer,
+    CellGroupingSerializer,
     GeneSerializer,
 )
 
 from .models import (
     Cell,
-    Cell_Grouping,
+    CellGrouping,
     Gene,
 )
 
@@ -36,23 +36,21 @@ class CellViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, format=None):
-        input_type = self.request.query_params.get('input_type', None)
-        input_set = self.request.query_params.get('input_set', None)
-        logical_operator = self.request.query_params.get('logical_operator', None)
-        response = cell_query(self, request, input_type, input_set, logical_operator)
+        query_dict = self.request.query_params
+        query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
+        response = group_query(self, request, query_params)
         return Response(response)
 
 
-class Cell_GroupingViewSet(viewsets.ModelViewSet):
-    queryset = Cell_Grouping.objects.all()
-    serializer_class = Cell_GroupingSerializer
+class CellGroupingViewSet(viewsets.ModelViewSet):
+    queryset = CellGrouping.objects.all()
+    serializer_class = CellGroupingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, format=None):
-        input_type = self.request.query_params.get('input_type', None)
-        input_set = self.request.query_params.get('input_set', None)
-        logical_operator = self.request.query_params.get('logical_operator', None)
-        response = group_query(self, request, input_type, input_set, logical_operator)
+        query_dict = self.request.query_params
+        query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
+        response = group_query(self, request, query_params)
         return Response(response)
 
 
@@ -62,10 +60,9 @@ class GeneViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, format=None):
-        input_type = self.request.query_params.get('input_type', None)
-        input_set = self.request.query_params.get('input_set', None)
-        logical_operator = self.request.query_params.get('logical_operator', None)
-        response = gene_query(self, request, input_type, input_set, logical_operator)
+        query_dict = self.request.query_params
+        query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
+        response = group_query(self, request, query_params)
         return Response(response)
 
 
@@ -78,10 +75,8 @@ class GeneQueryView(FormView):
     form_class = GeneQueryForm
 
     def form_valid(self, form):
-        input_type = form.cleaned_data['input_type']
-        input_set = form.cleaned_data['input_set']
-        logical_operator = form.cleaned_data['logical_operator']
-        response = gene_query(self, None, input_type, input_set, logical_operator)
+        query_params = form.cleaned_data
+        response = gene_query(self, None, query_params)
         return Response(response)
 
 
@@ -89,10 +84,8 @@ class OrganQueryView(FormView):
     form_class = OrganQueryForm
 
     def form_valid(self, form):
-        input_type = form.cleaned_data['input_type']
-        input_set = form.cleaned_data['input_set']
-        logical_operator = form.cleaned_data['logical_operator']
-        response = group_query(self, None, input_type, input_set, logical_operator)
+        query_params = form.cleaned_data
+        response = group_query(self, None, query_params)
         return Response(response)
 
 
@@ -100,10 +93,8 @@ class CellQueryView(FormView):
     form_class = CellQueryForm
 
     def form_valid(self, form):
-        input_type = form.cleaned_data['input_type']
-        input_set = form.cleaned_data['input_set']
-        logical_operator = form.cleaned_data['logical_operator']
-        response = cell_query(self, None, input_type, input_set, logical_operator)
+        query_params = form.cleaned_data
+        response = cell_query(self, None, query_params)
         return Response(response)
 
 
