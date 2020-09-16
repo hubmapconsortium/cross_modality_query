@@ -10,6 +10,7 @@ import json
 
 if __name__ == '__main__':
     import django
+
     django.setup()
 
 from query_app.models import (
@@ -22,12 +23,29 @@ from query_app.models import (
 
 
 def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
-    return df_1.merge(df_2, how='outer')
+    return pd.concat([df_1, df_2], join='outer')
+
+
+#    return df_1.merge(df_2, how='outer')
+
+def create_model(model_name: str, kwargs: dict):
+    if model_name == 'cell':
+        obj = Cell(**kwargs)
+    elif model_name == 'gene':
+        obj = Gene(**kwargs)
+    elif model_name == 'group':
+        obj = CellGrouping(**kwargs)
+    elif model_name == 'rna_quant':
+        obj = RnaQuant(**kwargs)
+    elif model_name == 'atac_quant':
+        obj = AtacQuant(**kwargs)
+    else:
+        print(model_name)
+        obj = None
+    return obj
 
 
 def df_to_db(df: pd.DataFrame, model_name: str):
-    models = {'cell': Cell, 'gene': Gene, 'group': CellGrouping, 'rna_quant': RnaQuant, 'atac_quant': AtacQuant}
-    model = models[model_name]
 
     group_fields = ['group_type', 'group_id']
 
@@ -35,7 +53,8 @@ def df_to_db(df: pd.DataFrame, model_name: str):
 
         for i, row in df.iterrows():
             kwargs = {column: row[column] for column in group_fields}
-            obj = model.__init__(kwargs)
+
+            obj = create_model(model_name, kwargs)
             obj.save()
 
             cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in row['cells']]
@@ -51,12 +70,14 @@ def df_to_db(df: pd.DataFrame, model_name: str):
     else:
         for i, row in df.iterrows():
             kwargs = {column: row[column] for column in df.columns}
-            obj = model.__init__(kwargs)
+            obj = create_model(model_name, kwargs)
             obj.save()
 
 
 def create_cells(cell_files: List[Path]):
     cell_df, quant_dfs = merge_cells(cell_files)
+
+    print(type(cell_df))
 
     df_to_db(cell_df, 'cell')
     df_to_db(quant_dfs['rna'], 'rna_quant')
@@ -94,7 +115,7 @@ def create_groups(group_files: List[Path]):
 
 
 def merge_cells(cell_files: List[Path]):
-    keep_columns = ['cell_id', 'modality', 'protein_mean', 'protein_total', 'protein_covar', 'cell_shape']
+    keep_columns = ['cell_id', 'modality', 'protein_mean', 'protein_total', 'protein_covar']
 
     cell_dfs = [pd.read_csv(cell_file) for cell_file in cell_files]
     quant_dfs = {}
@@ -106,7 +127,7 @@ def merge_cells(cell_files: List[Path]):
             quant_dfs['rna'] = populate_quant_tables(cell_df, 'rna')
 
     merged_df = reduce(outer_join, cell_dfs)
-    merged_df = merged_df[keep_columns].copy
+    merged_df = merged_df[keep_columns].copy()
 
     return merged_df, quant_dfs
 

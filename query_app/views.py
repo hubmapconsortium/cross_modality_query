@@ -38,8 +38,10 @@ class CellViewSet(viewsets.ModelViewSet):
     model = Query
 
     def post(self, request, format=None):
+        print(self.request.query_params)
         query_dict = self.request.query_params
         query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
+        print(query_params)
         response = group_query(self, request, query_params)
         return Response(response)
 
