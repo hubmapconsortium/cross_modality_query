@@ -11,3 +11,6 @@ RUN apt-get update \
 COPY requirements-dev.txt /opt/requirements-dev.txt
 RUN python -m pip install -r /opt/requirements-dev.txt \
  && rm -rf /root/.cache/pip
+
+ENV DJANGO_SETTINGS_MODULE=hubmap_query.settings
+ENV PYTHONPATH=/code
