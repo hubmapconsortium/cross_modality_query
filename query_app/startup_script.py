@@ -127,8 +127,7 @@ def populate_quant_tables(cell_df: pd.DataFrame, modality: str):
     return new_quant_df
 
 
-def main(rna_directory: Path, atac_directory: Path, codex_directory: Path, postgres_username: str,
-         postgres_password: str, postgres_host: str, postgres_port: str):
+def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     rna_files = [file for file in rna_directory.iterdir()]
     atac_files = [file for file in atac_directory.iterdir()]
     codex_files = [file for file in codex_directory.iterdir()]
@@ -150,11 +149,6 @@ if __name__ == '__main__':
     p.add_argument('rna_directory', type=Path)
     p.add_argument('atac_directory', type=Path)
     p.add_argument('codex_directory', type=Path)
-    p.add_argument('postgres_username', type=str)
-    p.add_argument('postgres_password', type=str)
-    p.add_argument('postgres_host', type=str)
-    p.add_argument('postgres_port', type=str)
     args = p.parse_args()
 
-    main(args.rna_directory, args.atac_directory, args.codex_directory, args.postgres_username, args.postgres_password,
-         args.postgres_host, args.postgres_port)
+    main(args.rna_directory, args.atac_directory, args.codex_directory)

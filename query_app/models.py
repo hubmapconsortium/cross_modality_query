@@ -55,3 +55,9 @@ class AtacQuant(models.Model):
 #    motif_id = Column(String, primary_key=True)
 #    groups = relationship('Cell_Grouping', secondary=motif_groupings, back_populates='motifs')
 #    marker_groups = relationship('Cell_Grouping', secondary=marker_motif_groupings, back_populates='marker_motifs')
+
+class Query(models.Model):
+    input_type = models.CharField(max_length=5, choices=(('Cell', 'Cell'), ('Gene', 'Gene'), ('Organ', 'Organ')))
+    input_set = ArrayField(base_field=models.CharField(max_length=1024))
+    logical_operator = models.CharField(max_length=3, choices=(('and', 'or'), ('or', 'or')))
+    marker = models.BooleanField()

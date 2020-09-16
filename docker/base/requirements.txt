@@ -1,5 +1,6 @@
 Django
 djangorestframework
+django-bootstrap
 numpy
 pandas
 psycopg2-binary>=2.8

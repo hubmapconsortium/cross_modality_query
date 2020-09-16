@@ -1,4 +1,3 @@
-# @TODO: Write a serializer for each model in models.py
 from rest_framework import serializers
 
 from .models import (

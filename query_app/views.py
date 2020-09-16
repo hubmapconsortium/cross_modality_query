@@ -13,6 +13,7 @@ from .models import (
     Cell,
     CellGrouping,
     Gene,
+    Query,
 )
 
 from .forms import (
@@ -34,6 +35,7 @@ class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
     serializer_class = CellSerializer
     permission_classes = [permissions.IsAuthenticated]
+    model = Query
 
     def post(self, request, format=None):
         query_dict = self.request.query_params
@@ -46,6 +48,7 @@ class CellGroupingViewSet(viewsets.ModelViewSet):
     queryset = CellGrouping.objects.all()
     serializer_class = CellGroupingSerializer
     permission_classes = [permissions.IsAuthenticated]
+    model = Query
 
     def post(self, request, format=None):
         query_dict = self.request.query_params
@@ -58,6 +61,7 @@ class GeneViewSet(viewsets.ModelViewSet):
     queryset = Gene.objects.all()
     serializer_class = GeneSerializer
     permission_classes = [permissions.IsAuthenticated]
+    model = Query
 
     def post(self, request, format=None):
         query_dict = self.request.query_params
@@ -73,6 +77,7 @@ class GeneViewSet(viewsets.ModelViewSet):
 
 class GeneQueryView(FormView):
     form_class = GeneQueryForm
+    model = Query
 
     def form_valid(self, form):
         query_params = form.cleaned_data
@@ -82,6 +87,7 @@ class GeneQueryView(FormView):
 
 class OrganQueryView(FormView):
     form_class = OrganQueryForm
+    model = Query
 
     def form_valid(self, form):
         query_params = form.cleaned_data
@@ -91,6 +97,7 @@ class OrganQueryView(FormView):
 
 class CellQueryView(FormView):
     form_class = CellQueryForm
+    model = Query
 
     def form_valid(self, form):
         query_params = form.cleaned_data
@@ -100,6 +107,7 @@ class CellQueryView(FormView):
 
 class LandingFormView(FormView):
     form_class = QueryForm
+    model = Query
 
     def form_valid(self, form):
         if form.cleaned_data['output_type'] == 'Gene':
