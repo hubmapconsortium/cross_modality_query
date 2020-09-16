@@ -25,7 +25,7 @@ SECRET_KEY = 'w!%f(4op=)1ivs#g@pwj5%035tvw9!tg^svrhtddjuh#sbp!+@'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['0.0.0.0']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'query_app',
+    'rest_framework',
 #    'bootstrap4',
 ]
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from functools import reduce
 from typing import List
 from pathlib import Path
@@ -6,7 +8,11 @@ from argparse import ArgumentParser
 import pandas as pd
 import json
 
-from .models import (
+if __name__ == '__main__':
+    import django
+    django.setup()
+
+from query_app.models import (
     Cell,
     CellGrouping,
     Gene,

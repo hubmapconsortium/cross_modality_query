@@ -260,7 +260,7 @@ def get_cells_list(query_params: Dict):
 
 
 def get_groupings_list(query_params: Dict):
-    if query_params['input_type'] is None:
+    if query_params.get('input_type') is None:
         return CellGrouping.objects.all()
     else:
         query_params = process_query_parameters(query_params)

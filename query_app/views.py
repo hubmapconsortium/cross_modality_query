@@ -34,7 +34,7 @@ from django.views.generic.edit import FormView
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
     serializer_class = CellSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
     model = Query
 
     def post(self, request, format=None):
@@ -47,7 +47,7 @@ class CellViewSet(viewsets.ModelViewSet):
 class CellGroupingViewSet(viewsets.ModelViewSet):
     queryset = CellGrouping.objects.all()
     serializer_class = CellGroupingSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
     model = Query
 
     def post(self, request, format=None):
@@ -60,7 +60,7 @@ class CellGroupingViewSet(viewsets.ModelViewSet):
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = Gene.objects.all()
     serializer_class = GeneSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
     model = Query
 
     def post(self, request, format=None):
@@ -108,6 +108,7 @@ class CellQueryView(FormView):
 class LandingFormView(FormView):
     form_class = QueryForm
     model = Query
+    template = 'landing_form.html'
 
     def form_valid(self, form):
         if form.cleaned_data['output_type'] == 'Gene':
