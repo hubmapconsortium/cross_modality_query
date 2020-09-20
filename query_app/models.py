@@ -5,17 +5,17 @@ from django.db import models
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
     modality = models.CharField(db_index=True, max_length=20)
-    protein_mean = models.JSONField(db_index=True)
-    protein_total = models.JSONField(db_index=True)
-    protein_covar = models.JSONField(db_index=True)
-    cell_shape = ArrayField(models.FloatField(), db_index=True)
+    protein_mean = models.JSONField(db_index=True, null=True, blank=True)
+    protein_total = models.JSONField(db_index=True, null=True, blank=True)
+    protein_covar = models.JSONField(db_index=True, null=True, blank=True)
+    cell_shape = ArrayField(models.FloatField(), db_index=True, null=True, blank=True)
 
 
 #    groupings = models.ManyToManyField(Cell_Grouping, related_name='cells')
 
 class Gene(models.Model):
     gene_symbol = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(models.CharField(max_length=50), db_index=True)
+    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
 
 
 #    groups = models.ManyToManyField(Cell_Grouping)
