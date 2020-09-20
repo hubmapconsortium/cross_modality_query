@@ -7,6 +7,8 @@ from os import fspath
 from argparse import ArgumentParser
 import pandas as pd
 import json
+import numpy as np
+from django.db import transaction
 
 if __name__ == '__main__':
     import django
@@ -45,8 +47,21 @@ def create_model(model_name: str, kwargs: dict):
     return obj
 
 
-def df_to_db(df: pd.DataFrame, model_name: str):
+def sanitize_nans(kwargs):
+    for key in kwargs.keys():
+        if type(kwargs[key]) == float and np.isnan(kwargs[key]):
+            kwargs[key] = ''
 
+    return kwargs
+
+@transaction.atomic
+def save_genes(gene_set):
+    for gene in gene_set:
+        g = Gene(gene_symbol=gene)
+        g.save()
+
+@transaction.atomic
+def df_to_db(df: pd.DataFrame, model_name: str):
     group_fields = ['group_type', 'group_id']
 
     if model_name == 'group':
@@ -70,6 +85,7 @@ def df_to_db(df: pd.DataFrame, model_name: str):
     else:
         for i, row in df.iterrows():
             kwargs = {column: row[column] for column in df.columns}
+            kwargs = sanitize_nans(kwargs)
             obj = create_model(model_name, kwargs)
             obj.save()
 
@@ -93,18 +109,18 @@ def create_genes(json_files: List[Path]):
         partial_gene_dict = {}
 
         with open(file) as gene_dictionary:
-            partial_gene_dict = json.load(file)
+            partial_gene_dict = json.load(gene_dictionary)
 
         partial_gene_list = [key for key in partial_gene_dict.keys()]
         gene_list.extend(partial_gene_list)
 
     gene_set = set(gene_list)
 
-    for gene in gene_set:
-        g = Gene(gene_symbol=gene)
-        g.save()
+    save_genes(gene_set)
 
     return
+
+
 
 
 def create_groups(group_files: List[Path]):
@@ -116,14 +132,13 @@ def create_groups(group_files: List[Path]):
 
 def merge_cells(cell_files: List[Path]):
     keep_columns = ['cell_id', 'modality', 'protein_mean', 'protein_total', 'protein_covar']
-
     cell_dfs = [pd.read_csv(cell_file) for cell_file in cell_files]
     quant_dfs = {}
 
     for cell_df in cell_dfs:
-        if 'atac' in cell_df['modality']:
+        if 'atac' in cell_df['modality'].tolist():
             quant_dfs['atac'] = populate_quant_tables(cell_df, 'atac')
-        elif 'rna' in cell_df['modality']:
+        elif 'rna' in cell_df['modality'].tolist():
             quant_dfs['rna'] = populate_quant_tables(cell_df, 'rna')
 
     merged_df = reduce(outer_join, cell_dfs)
@@ -140,15 +155,11 @@ def merge_groupings(group_files: List[Path]):
 
 
 def populate_quant_tables(cell_df: pd.DataFrame, modality: str):
-    non_gene_columns = ['modality', 'dataset', 'tissue_type']
-    gene_columns = [column for column in cell_df.columns if column not in non_gene_columns]
-    quant_df = cell_df[gene_columns].copy()
-    quant_df = quant_df.set_index('cell_id')
-    dict_list = []
+    quant_df = cell_df.select_dtypes(np.number)
 
-    for i, row in quant_df.iterrows():
-        for column in quant_df.columns:
-            dict_list.append({'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]})
+    # make sure index is cell_id here
+    dict_list = [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in quant_df.index for column
+                 in quant_df.columns]
 
     new_quant_df = pd.DataFrame(dict_list)
     return new_quant_df
