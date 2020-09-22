@@ -23,6 +23,8 @@ def process_query_parameters(query_params: Dict) -> Dict:
     query_params['input_set'] = process_input_set(query_params['input_set'], query_params['input_type'])
     if query_params['input_type'] == 'gene' and query_params['genomic_modality'] in ['atac', 'rna']:
         query_params['input_type'] = query_params['genomic_modality'] + '_' + query_params['input_type']
+    if query_params['input_type'] == 'organ':
+        query_params['input_type'] = 'tissue_type'
 
     return query_params
 
@@ -48,7 +50,7 @@ def split_at_comparator(item: str) -> List:
     for comparator in comparator_list:
         if comparator in item:
             item_split = item.split(comparator)
-            item_split[1] = comparator
+            item_split.insert(1, comparator)
             return item_split
     print('No comparator found')
     return []
@@ -65,6 +67,7 @@ def q_or(q1: Q, q2: Q) -> Q:
 def combine_qs(qs: List[Q], logical_operator: str) -> Q:
     """List[Q] -> Q
     Combines a series of conditions into a single condition based on logical operator"""
+
     if logical_operator == 'or':
         return reduce(q_or, qs)
     elif logical_operator == 'and':
@@ -78,10 +81,10 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
     comparator = split_condition[1]
 
     assert comparator in ['>', '>=', '<=', '<', '==', '!=']
-    value = int(split_condition[2])
+    value = float(split_condition[2].strip())
 
     if input_type == 'protein':
-        protein_id = split_condition[0]
+        protein_id = split_condition[0].strip()
 
         if comparator == '>':
             kwargs = {'protein_mean__' + protein_id + '__gt': value}
@@ -97,10 +100,10 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
             kwargs = {'protein_mean__' + protein_id + '__exact': value}
             return ~Q(kwargs)
 
-        return Q(kwargs)
+        return Q(**kwargs)
 
     if input_type in ['rna_gene', 'atac_gene']:
-        gene_id = split_condition[0]
+        gene_id = split_condition[0].strip()
 
         if comparator == '>':
             return Q(value__gt=value) & Q(gene_id__icontains=gene_id)
@@ -132,14 +135,16 @@ def get_gene_filter(query_params: Dict) -> Q:
         q2 = combine_qs(qs, 'or')
         q = q & q2
 
-        if marker:
+        if marker == 'True':
             for group in CellGrouping.objects.filter(q):
-                gene_ids.extend(group.marker_genes.values_list('gene_id'))
+                gene_ids.extend(group.marker_genes.values_list('gene_symbol'))
         else:
             for group in CellGrouping.objects.filter(q):
-                gene_ids.extend(group.genes.values_list('gene_id'))
+                gene_ids.extend(group.genes.values_list('gene_symbol'))
 
-        qs = [Q(gene_id__icontains=gene_id) for gene_id in gene_ids]
+        gene_ids = [gene_id[0] for gene_id in gene_ids]
+
+        qs = [Q(gene_symbol__icontains=gene_id) for gene_id in gene_ids]
         q = combine_qs(qs, 'or')
 
         return q
@@ -158,6 +163,7 @@ def get_cell_filter(query_params: Dict) -> Q:
     if input_type in ['protein', 'atac_gene', 'rna_gene']:
 
         if len(split_at_comparator(input_set[0])) == 0:
+            print(len(split_at_comparator(input_set[0])))
             split_conditions = [[item, '>', '0'] for item in input_set]
         else:
             split_conditions = [split_at_comparator(item) for item in input_set]
@@ -168,9 +174,11 @@ def get_cell_filter(query_params: Dict) -> Q:
         if input_type in ['atac_gene', 'rna_gene']:
 
             if input_type == 'atac_gene':
-                cell_ids = AtacQuant.objects.filter(q).values_list('cell_id')
+                print(q)
+                cell_ids = [item[0] for item in AtacQuant.objects.filter(q).values_list('cell_id')]
+
             elif input_type == 'rna_gene':
-                cell_ids = RnaQuant.objects.filter(q).values_list('cell_id')
+                cell_ids = [item[0] for item in RnaQuant.objects.filter(q).values_list('cell_id')]
 
             qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
             q = combine_qs(qs, 'or')
@@ -189,11 +197,12 @@ def get_cell_filter(query_params: Dict) -> Q:
         for group in CellGrouping.objects.filter(q):
             cell_ids.extend(group.cells.values_list('cell_id'))
 
+        cell_ids = [cell_id[0] for cell_id in cell_ids]
+
         qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
         q = combine_qs(qs, 'or')
 
         return q
-
 
 def get_group_filter(query_params: Dict) -> Q:
     """str, List[str], str -> Q
@@ -213,7 +222,9 @@ def get_group_filter(query_params: Dict) -> Q:
         q = combine_qs(qs, 'or')
 
         for cell in Cell.objects.filter(q):
-            group_ids.extend(cell.grouping.values_list('group_id'))
+            group_ids.extend(cell.groupings.values_list('group_id'))
+
+        group_ids = [group_id[0] for group_id in group_ids]
 
         qs = [Q(group_id__icontains=group_id) for group_id in group_ids]
         q = combine_qs(qs, logical_operator)
@@ -224,16 +235,18 @@ def get_group_filter(query_params: Dict) -> Q:
         # Query those genes and return their associated groupings
         group_ids = []
 
-        qs = [Q(gene_id__icontains=item) for item in input_set]
+        qs = [Q(gene_symbol__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
 
-        if marker:
+        if marker == 'True':
             for gene in Gene.objects.filter(q):
                 group_ids.extend(gene.marker_groups.values_list('group_id'))
 
         else:
             for gene in Gene.objects.filter(q):
-                group_ids.extend(gene.group.values_list('group_id'))
+                group_ids.extend(gene.groups.values_list('group_id'))
+
+        group_ids = [group_id[0] for group_id in group_ids]
 
         qs = [Q(group_id__icontains=group_id) for group_id in group_ids]
         q = combine_qs(qs, 'or')
@@ -255,7 +268,9 @@ def get_cells_list(query_params: Dict):
         return Cell.objects.all()
     else:
         query_params = process_query_parameters(query_params)
+        print(query_params)
         filter = get_cell_filter(query_params)
+        print(filter)
         return Cell.objects.filter(filter)
 
 
@@ -268,7 +283,9 @@ def get_groupings_list(query_params: Dict):
         return CellGrouping.objects.filter(filter)
 
 
-def gene_query(self, request, query_params: Dict):
+def gene_query(self, request):
+    query_params = request.data.dict()
+    print(query_params)
     genes = get_genes_list(query_params)
     self.queryset = genes
     # Set context
@@ -282,7 +299,9 @@ def gene_query(self, request, query_params: Dict):
     return response
 
 
-def cell_query(self, request, query_params: Dict):
+def cell_query(self, request):
+    query_params = request.data.dict()
+    print(query_params)
     cells = get_cells_list(query_params)
     self.queryset = cells
     # Set context
@@ -296,7 +315,9 @@ def cell_query(self, request, query_params: Dict):
     return response
 
 
-def group_query(self, request, query_params: Dict):
+def group_query(self, request):
+    query_params = request.data.dict()
+    print(query_params)
     groups = get_groupings_list(query_params)
     self.queryset = groups
     # Set context

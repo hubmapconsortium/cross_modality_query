@@ -34,28 +34,20 @@ from django.views.generic.edit import FormView
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
     serializer_class = CellSerializer
-    #permission_classes = [permissions.IsAuthenticated]
     model = Query
 
     def post(self, request, format=None):
-        print(self.request.query_params)
-        query_dict = self.request.query_params
-        query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
-        print(query_params)
-        response = group_query(self, request, query_params)
+        response = cell_query(self, request)
         return Response(response)
 
 
 class CellGroupingViewSet(viewsets.ModelViewSet):
     queryset = CellGrouping.objects.all()
     serializer_class = CellGroupingSerializer
-    #permission_classes = [permissions.IsAuthenticated]
     model = Query
 
     def post(self, request, format=None):
-        query_dict = self.request.query_params
-        query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
-        response = group_query(self, request, query_params)
+        response = group_query(self, request)
         return Response(response)
 
 
@@ -66,8 +58,6 @@ class GeneViewSet(viewsets.ModelViewSet):
     model = Query
 
     def post(self, request, format=None):
-        query_dict = self.request.query_params
-        query_params = {kv[0]: kv[1] for kv in query_dict.lists()}
         response = group_query(self, request, query_params)
         return Response(response)
 
@@ -83,7 +73,7 @@ class GeneQueryView(FormView):
 
     def form_valid(self, form):
         query_params = form.cleaned_data
-        response = gene_query(self, None, query_params)
+        response = gene_query(self, None)
         return Response(response)
 
 
