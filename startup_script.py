@@ -50,7 +50,7 @@ def create_model(model_name: str, kwargs: dict):
 def sanitize_nans(kwargs):
     for key in kwargs.keys():
         if type(kwargs[key]) == float and np.isnan(kwargs[key]):
-            kwargs[key] = ''
+            kwargs[key] = {}
 
     return kwargs
 
@@ -86,6 +86,9 @@ def df_to_db(df: pd.DataFrame, model_name: str):
         for i, row in df.iterrows():
             kwargs = {column: row[column] for column in df.columns}
             kwargs = sanitize_nans(kwargs)
+            for key in kwargs.keys():
+                if 'protein' in key:
+                    kwargs[key] = json.loads(kwargs[key])
             obj = create_model(model_name, kwargs)
             obj.save()
 
