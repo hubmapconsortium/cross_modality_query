@@ -72,8 +72,11 @@ def df_to_db(df: pd.DataFrame, model_name: str):
             obj = create_model(model_name, kwargs)
             obj.save()
 
-            cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in row['cells']]
-            obj.cells.add(cells)
+            cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in df.at[i,'cells']]
+            cells = [cell for cell in cells if not cell is None]
+            if len(cells) > 0:
+                print(len(cells))
+                obj.cells.add(cells)
 
             genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in row['genes']]
             obj.genes.add(genes)
@@ -87,7 +90,7 @@ def df_to_db(df: pd.DataFrame, model_name: str):
             kwargs = {column: row[column] for column in df.columns}
             kwargs = sanitize_nans(kwargs)
             for key in kwargs.keys():
-                if 'protein' in key:
+                if 'protein' in key and isinstance(kwargs[key], str):
                     kwargs[key] = json.loads(kwargs[key])
             obj = create_model(model_name, kwargs)
             obj.save()
@@ -95,8 +98,6 @@ def df_to_db(df: pd.DataFrame, model_name: str):
 
 def create_cells(cell_files: List[Path]):
     cell_df, quant_dfs = merge_cells(cell_files)
-
-    print(type(cell_df))
 
     df_to_db(cell_df, 'cell')
     df_to_db(quant_dfs['rna'], 'rna_quant')
@@ -114,7 +115,7 @@ def create_genes(json_files: List[Path]):
         with open(file) as gene_dictionary:
             partial_gene_dict = json.load(gene_dictionary)
 
-        partial_gene_list = [key for key in partial_gene_dict.keys()]
+        partial_gene_list = [key[:20] for key in partial_gene_dict.keys()]
         gene_list.extend(partial_gene_list)
 
     gene_set = set(gene_list)
@@ -151,7 +152,7 @@ def merge_cells(cell_files: List[Path]):
 
 
 def merge_groupings(group_files: List[Path]):
-    group_dfs = [pd.read_csv(group_file) for group_file in group_files]
+    group_dfs = [pd.read_csv(group_file).astype(object) for group_file in group_files]
     merged_df = reduce(outer_join, group_dfs)
 
     return merged_df

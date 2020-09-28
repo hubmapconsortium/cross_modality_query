@@ -18,8 +18,14 @@ from .serializers import (
     #    ProteinSerializer,
 )
 
+def split_and_strip(string:str)->List[str]:
+    set_split = string.split(',')
+    set_strip = [element.strip() for element in set_split]
+    return set_strip
 
 def process_query_parameters(query_params: Dict) -> Dict:
+    if isinstance(query_params['input_set'], str):
+        query_params['input_set'] = split_and_strip(query_params['input_set'])
     query_params['input_set'] = process_input_set(query_params['input_set'], query_params['input_type'])
     if query_params['input_type'] == 'gene' and query_params['genomic_modality'] in ['atac', 'rna']:
         query_params['input_type'] = query_params['genomic_modality'] + '_' + query_params['input_type']
