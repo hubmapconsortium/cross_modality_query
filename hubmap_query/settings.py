@@ -9,8 +9,9 @@ https://docs.djangoproject.com/en/3.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
-
+from os import fspath
 from pathlib import Path
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -126,7 +127,16 @@ try:
     from .local_settings import *
 except ImportError:
     pass
-
+# Intended to be a temporary hack for overriding settings in production.
+# TODO: figure out a better way to do this, probably with a different path
+override_settings_file = Path('/opt/secret/override_settings.py')
+if override_settings_file.is_file():
+    sys.path.append(fspath(override_settings_file.parent))
+    try:
+        from override_settings import *
+    except ImportError as e:
+        print("Couldn't read override settings found at", override_settings_file)
+        raise
 # Sometimes we do need to define settings in terms of other settings, so
 # this is a good place to do so, after override settings are loaded.
 # Shouldn't define any constants at this point though
