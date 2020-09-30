@@ -1,2 +1,5 @@
-hubmap/cross-modality-query-base	docker/base/Dockerfile
-hubmap/cross-modality-query-dev	docker/dev/Dockerfile
+# requires v0.4 or newer of 'multi-docker-build' package
+hubmap/cross-modality-query-base  docker/base/Dockerfile
+hubmap/cross-modality-query-dev   docker/dev/Dockerfile
+# needs base directory build to copy code
+hubmap/cross-modality-query-prod  docker/prod/Dockerfile  base_directory_build
