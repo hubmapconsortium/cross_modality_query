@@ -14,8 +14,8 @@ services:
   uwsgi:
     image: "hubmap/cross-modality-query-prod:latest"
     ports:
-      - "8000:8000"
+      - "5000:5000"
     expose:
-      - 8000
+      - 5000
     volumes:
       - /opt/secret:/opt/secret

@@ -15,6 +15,6 @@ RUN python3 -O -m compileall .
 
 VOLUME /opt/secret
 
-EXPOSE 8000
+EXPOSE 5000
 
 ENTRYPOINT ["uwsgi", "--xml", "/opt/cross-modality-query/uwsgi/uwsgi.xml"]
