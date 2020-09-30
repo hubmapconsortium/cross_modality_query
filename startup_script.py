@@ -28,8 +28,6 @@ def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
     return pd.concat([df_1, df_2], join='outer')
 
 
-#    return df_1.merge(df_2, how='outer')
-
 def create_model(model_name: str, kwargs: dict):
     if model_name == 'cell':
         obj = Cell(**kwargs)
@@ -42,7 +40,6 @@ def create_model(model_name: str, kwargs: dict):
     elif model_name == 'atac_quant':
         obj = AtacQuant(**kwargs)
     else:
-        print(model_name)
         obj = None
     return obj
 
@@ -54,11 +51,13 @@ def sanitize_nans(kwargs):
 
     return kwargs
 
+
 @transaction.atomic
 def save_genes(gene_set):
     for gene in gene_set:
         g = Gene(gene_symbol=gene)
         g.save()
+
 
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str):
@@ -72,20 +71,23 @@ def df_to_db(df: pd.DataFrame, model_name: str):
             obj = create_model(model_name, kwargs)
             obj.save()
 
-            cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in df.at[i,'cells']]
-            cells = [cell for cell in cells if not cell is None]
+            cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in list(df.at[i, 'cells'])]
+            cells = [cell for cell in cells if cell is not None]
             if len(cells) > 0:
-                print(len(cells))
                 obj.cells.add(cells)
 
-            genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in row['genes']]
+            genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in list(row['genes'])]
+            genes = [gene for gene in genes if gene is not None]
             obj.genes.add(genes)
 
-            marker_genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in row['marker_genes']]
+            marker_genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in
+                            list(row['marker_genes'])]
+            marker_genes = [gene for gene in marker_genes if gene is not None]
             obj.marker_genes.add(marker_genes)
 
 
     else:
+
         for i, row in df.iterrows():
             kwargs = {column: row[column] for column in df.columns}
             kwargs = sanitize_nans(kwargs)
@@ -123,8 +125,6 @@ def create_genes(json_files: List[Path]):
     save_genes(gene_set)
 
     return
-
-
 
 
 def create_groups(group_files: List[Path]):
@@ -181,8 +181,8 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
     group_files = [file for files in all_files for file in files if 'group' in fspath(file)]
 
-    create_cells(cell_files)
-    create_genes(json_files)
+    #    create_cells(cell_files)
+    #    create_genes(json_files)
     create_groups(group_files)
 
 

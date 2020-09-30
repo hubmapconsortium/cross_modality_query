@@ -7,7 +7,7 @@ class QueryForm(forms.Form):
 
 
 class GeneQueryForm(forms.Form):
-    input_type = forms.ChoiceField(choices=(('Organ', None)), required=True, widget=forms.Select)
+    input_type = forms.ChoiceField(choices=(('Organ', None),), required=True, widget=forms.Select)
     input_set = forms.CharField(max_length=1024, required=True, widget=forms.Textarea)
     logical_operator = forms.ChoiceField(choices=(('and','and'),('or', 'or')), required=True, widget=forms.Select)
     marker = forms.ChoiceField(choices=(('True', 'True'), ('False', 'False')), required=False, widget=forms.Select)

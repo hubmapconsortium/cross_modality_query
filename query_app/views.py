@@ -8,12 +8,14 @@ from .serializers import (
     CellSerializer,
     CellGroupingSerializer,
     GeneSerializer,
+    ProteinSerializer,
 )
 
 from .models import (
     Cell,
     CellGrouping,
     Gene,
+    Protein,
     Query,
 )
 
@@ -28,6 +30,7 @@ from .utils import (
     cell_query,
     gene_query,
     group_query,
+    protein_query,
     get_cells_list,
     get_groupings_list,
     get_genes_list,
@@ -51,6 +54,10 @@ class CellViewSet(viewsets.ModelViewSet):
         response = cell_query(self, request)
         return Response(response)
 
+    def get(self, request, format=None):
+        response = cell_query(self, request)
+        return Response(response)
+
 
 class CellGroupingViewSet(viewsets.ModelViewSet):
     queryset = CellGrouping.objects.all()
@@ -58,6 +65,10 @@ class CellGroupingViewSet(viewsets.ModelViewSet):
     model = CellGrouping
 
     def post(self, request, format=None):
+        response = group_query(self, request)
+        return Response(response)
+
+    def get(self, request, format=None):
         response = group_query(self, request)
         return Response(response)
 
@@ -71,10 +82,19 @@ class GeneViewSet(viewsets.ModelViewSet):
         response = gene_query(self, request)
         return Response(response)
 
+    def get(self, request, format=None):
+        response = gene_query(self, request)
+        return Response(response)
 
-# class ProteinViewSet(viewsets.ModelViewSet):
-#    queryset = Protein.objects.all()
-#    serializer_class = ProteinSerializer
+
+class ProteinViewSet(viewsets.ModelViewSet):
+    queryset = Protein.objects.all()
+    serializer_class = ProteinSerializer
+
+    def get(self, request, format=None):
+        response = protein_query(self, request)
+        return Response(response)
+
 
 class GeneQueryView(FormView):
     form_class = GeneQueryForm
@@ -143,6 +163,7 @@ class OrganListView(SingleTableView):
     def post(self, request, format=None):
         return group_list(request)
 
+
 @api_view(['POST'])
 def cell_list(request):
     table = CellTable(get_cells_list(request.data.dict()))
@@ -151,6 +172,7 @@ def cell_list(request):
         "table": table
     })
 
+
 @api_view(['POST'])
 def gene_list(request):
     table = GeneTable(get_genes_list(request.data.dict()))
@@ -158,6 +180,7 @@ def gene_list(request):
     return render(request, "gene_list.html", {
         "table": table
     })
+
 
 @api_view(['POST'])
 def group_list(request):

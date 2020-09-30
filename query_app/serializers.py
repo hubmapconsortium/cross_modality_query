@@ -4,14 +4,14 @@ from .models import (
     Cell,
     CellGrouping,
     Gene,
-    # Protein,
+    Protein,
 )
 
 
 class CellSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cell
-        fields = ['cell_id', 'modality', 'protein_mean', 'protein_total', 'protein_covar', 'cell_shape', 'groupings']
+        fields = ['cell_id', 'modality', 'dataset', 'tissue_type', 'protein_mean', 'protein_total', 'protein_covar', 'cell_shape', 'groupings']
 
 
 class CellGroupingSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class GeneSerializer(serializers.ModelSerializer):
         model = Gene
         fields = ['gene_symbol', 'go_terms', 'groups', 'marker_groups']
 
-# class ProteinSerializer(serializers.ModelSerializer):
-#    class Meta:
-#        model = Protein
-#        fields = ['protein_id', 'go_terms']
+class ProteinSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Protein
+        fields = ['protein_id', 'go_terms']

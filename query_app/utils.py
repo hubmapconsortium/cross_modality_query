@@ -6,7 +6,7 @@ from .models import (
     Cell,
     CellGrouping,
     Gene,
-    # Protein,
+    Protein,
     RnaQuant,
     AtacQuant,
 )
@@ -15,13 +15,15 @@ from .serializers import (
     CellSerializer,
     CellGroupingSerializer,
     GeneSerializer,
-    #    ProteinSerializer,
+    ProteinSerializer,
 )
 
-def split_and_strip(string:str)->List[str]:
+
+def split_and_strip(string: str) -> List[str]:
     set_split = string.split(',')
     set_strip = [element.strip() for element in set_split]
     return set_strip
+
 
 def process_query_parameters(query_params: Dict) -> Dict:
     if isinstance(query_params['input_set'], str):
@@ -210,6 +212,7 @@ def get_cell_filter(query_params: Dict) -> Q:
 
         return q
 
+
 def get_group_filter(query_params: Dict) -> Q:
     """str, List[str], str -> Q
     Finds the filter for a query for group objects based on the input set, input type, and logical operator
@@ -290,9 +293,15 @@ def get_groupings_list(query_params: Dict):
 
 
 def gene_query(self, request):
-    query_params = request.data.dict()
-    print(query_params)
-    genes = get_genes_list(query_params)
+
+    if request.method == 'GET':
+        genes = Gene.objects.all()
+
+    elif request.method == 'POST':
+        query_params = request.data.dict()
+        print(query_params)
+        genes = get_genes_list(query_params)
+
     self.queryset = genes
     # Set context
     context = {
@@ -306,9 +315,15 @@ def gene_query(self, request):
 
 
 def cell_query(self, request):
-    query_params = request.data.dict()
-    print(query_params)
-    cells = get_cells_list(query_params)
+
+    if request.method == 'GET':
+        cells = Cell.objects.all()
+
+    elif request.method == 'POST':
+        query_params = request.data.dict()
+        print(query_params)
+        cells = get_cells_list(query_params)
+
     self.queryset = cells
     # Set context
     context = {
@@ -322,9 +337,14 @@ def cell_query(self, request):
 
 
 def group_query(self, request):
-    query_params = request.data.dict()
-    print(query_params)
-    groups = get_groupings_list(query_params)
+    if request.method == 'GET':
+        groups = CellGrouping.objects.filter(group_type__icontains='tissue_type')
+
+    elif request.method == 'POST':
+        query_params = request.data.dict()
+        print(query_params)
+        groups = get_groupings_list(query_params)
+
     self.queryset = groups
     # Set context
     context = {
@@ -335,3 +355,19 @@ def group_query(self, request):
     # Get serializers lists
     response = CellGroupingSerializer(groups, many=True, context=context).data
     return response
+
+
+def protein_query(self, request):
+
+    if request.method == 'GET':
+        proteins = Protein.objects.all()
+        self.queryset = proteins
+        # Set context
+        context = {
+            "request": request,
+        }
+        print(proteins)
+        print(ProteinSerializer(proteins, many=True, context=context))
+        # Get serializers lists
+        response = ProteinSerializer(proteins, many=True, context=context).data
+        return response
