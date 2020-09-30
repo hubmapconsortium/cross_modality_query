@@ -4,7 +4,7 @@
 	<enable-threads/>
 	<threads>4</threads>
 	<workers>3</workers>
-	<socket>:5000</socket>
+	<socket>:8000</socket>
 	<chdir>/opt/cross-modality-query</chdir>
 	<plugin>python3</plugin>
 	<module>hubmap_query.wsgi</module>
