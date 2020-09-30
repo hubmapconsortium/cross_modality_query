@@ -131,6 +131,7 @@ except ImportError:
 # TODO: figure out a better way to do this, probably with a different path
 override_settings_file = Path('/opt/secret/override_settings.py')
 if override_settings_file.is_file():
+    print('Reading production override settings from', override_settings_file)
     sys.path.append(fspath(override_settings_file.parent))
     try:
         from override_settings import *
