@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      -  /opt/postgres:/var/lib/postgresql/data
+  uwsgi:
+    image: "hubmap/cross-modality-query-prod:latest"
+    ports:
+      - "5000:5000"
+    expose:
+      - 5000
+    volumes:
+      - /opt/secret:/opt/secret

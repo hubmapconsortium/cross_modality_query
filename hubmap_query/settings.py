@@ -9,24 +9,35 @@ https://docs.djangoproject.com/en/3.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
-
+from os import fspath
 from pathlib import Path
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# !!! for development, overridden in `production_settings.py` by Docker container build
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'w!%f(4op=)1ivs#g@pwj5%035tvw9!tg^svrhtddjuh#sbp!+@'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# /!!! for development, overridden in `production_settings.py` by Docker container build
+
+# database is local to each web app instance, not worth overriding
+# credentials for production deployment at the moment
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': 'db',
+        'PORT': 5432,
+    },
+}
 
 # Application definition
 
@@ -73,22 +84,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hubmap_query.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/3.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'db',
-        'PORT': 5432,
-    }
-}
-
-
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
 
@@ -126,3 +121,31 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Keep this as the last section of this file!
+try:
+    from .local_settings import *
+except ImportError:
+    pass
+# Intended to be a temporary hack for overriding settings in production.
+# TODO: figure out a better way to do this, probably with a different path
+override_settings_file = Path('/opt/secret/override_settings.py')
+if override_settings_file.is_file():
+    print('Reading production override settings from', override_settings_file)
+    sys.path.append(fspath(override_settings_file.parent))
+    try:
+        from override_settings import *
+    except ImportError as e:
+        print("Couldn't read override settings found at", override_settings_file)
+        raise
+# Sometimes we do need to define settings in terms of other settings, so
+# this is a good place to do so, after override settings are loaded.
+# Shouldn't define any constants at this point though
+
+# !!! overrides that depend on other (including local) settings
+
+#  (none yet)
+
+# /!!! overrides that depend on other (including local) settings
+
+# Do not add anything after this
