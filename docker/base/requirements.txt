@@ -1,8 +1,10 @@
 Django
-djangorestframework
 django-bootstrap4
 django-tables2
+djangorestframework
 numpy
 pandas
 psycopg2-binary>=2.8.6
+pyyaml
 scikit-learn
+uritemplate
