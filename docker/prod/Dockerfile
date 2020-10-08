@@ -18,4 +18,4 @@ VOLUME /opt/secret
 
 EXPOSE 5000
 
-ENTRYPOINT ["uwsgi", "--xml", "/opt/cross-modality-query/uwsgi/uwsgi.xml"]
+ENTRYPOINT ["uwsgi", "--xml", "/opt/uwsgi/uwsgi.xml"]
