@@ -27,3 +27,10 @@ class OrganTable(tables.Table):
 
     class Meta:
         model = models.CellGrouping
+
+class ProteinTable(tables.Table):
+    protein_id = tables.Column(accessor='protein_id')
+    go_terms = tables.Column(accessor='go_terms')
+
+    class Meta:
+        model = models.Protein

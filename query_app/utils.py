@@ -29,10 +29,13 @@ def process_query_parameters(query_params: Dict) -> Dict:
     if isinstance(query_params['input_set'], str):
         query_params['input_set'] = split_and_strip(query_params['input_set'])
     query_params['input_set'] = process_input_set(query_params['input_set'], query_params['input_type'])
+    query_params['input_type'] = query_params['input_type'].lower()
     if query_params['input_type'] == 'gene' and query_params['genomic_modality'] in ['atac', 'rna']:
         query_params['input_type'] = query_params['genomic_modality'] + '_' + query_params['input_type']
     if query_params['input_type'] == 'organ':
         query_params['input_type'] = 'tissue_type'
+    if 'limit' not in query_params.keys() or query_params['limit'] > 1000:
+        query_params['limit'] = 1000
 
     return query_params
 
@@ -167,6 +170,7 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_type = query_params['input_type']
     input_set = query_params['input_set']
     logical_operator = query_params['logical_operator']
+    limit = query_params['limit']
 
     if input_type in ['protein', 'atac_gene', 'rna_gene']:
 
@@ -183,10 +187,10 @@ def get_cell_filter(query_params: Dict) -> Q:
 
             if input_type == 'atac_gene':
                 print(q)
-                cell_ids = [item[0] for item in AtacQuant.objects.filter(q).values_list('cell_id')]
+                cell_ids = [item[0] for item in AtacQuant.objects.filter(q).order_by('value')[:limit].values_list('cell_id')]
 
             elif input_type == 'rna_gene':
-                cell_ids = [item[0] for item in RnaQuant.objects.filter(q).values_list('cell_id')]
+                cell_ids = [item[0] for item in RnaQuant.objects.filter(q).order_by('value')[:limit].values_list('cell_id')]
 
             qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
             q = combine_qs(qs, 'or')
@@ -277,20 +281,21 @@ def get_cells_list(query_params: Dict):
         return Cell.objects.all()
     else:
         query_params = process_query_parameters(query_params)
-        print(query_params)
         filter = get_cell_filter(query_params)
-        print(filter)
         return Cell.objects.filter(filter)
 
 
 def get_groupings_list(query_params: Dict):
     if query_params.get('input_type') is None:
-        return CellGrouping.objects.all()
+        return CellGrouping.objects.filter(group_type__icontains='tissue_type')
     else:
         query_params = process_query_parameters(query_params)
         filter = get_group_filter(query_params)
         return CellGrouping.objects.filter(filter)
 
+def get_proteins_list(query_params: Dict):
+    if query_params.get('input_type') is None:
+        return Protein.objects.all()
 
 def gene_query(self, request):
 
@@ -299,7 +304,6 @@ def gene_query(self, request):
 
     elif request.method == 'POST':
         query_params = request.data.dict()
-        print(query_params)
         genes = get_genes_list(query_params)
 
     self.queryset = genes
@@ -307,8 +311,8 @@ def gene_query(self, request):
     context = {
         "request": request,
     }
-    print(genes)
-    print(GeneSerializer(genes, many=True, context=context))
+#    print(genes)
+#    print(GeneSerializer(genes, many=True, context=context))
     # Get serializers lists
     response = GeneSerializer(genes, many=True, context=context).data
     return response
@@ -329,8 +333,8 @@ def cell_query(self, request):
     context = {
         "request": request,
     }
-    print(cells)
-    print(CellSerializer(cells, many=True, context=context))
+#    print(cells)
+#    print(CellSerializer(cells, many=True, context=context))
     # Get serializers lists
     response = CellSerializer(cells, many=True, context=context).data
     return response
@@ -350,8 +354,8 @@ def group_query(self, request):
     context = {
         "request": request,
     }
-    print(groups)
-    print(CellGroupingSerializer(groups, many=True, context=context))
+#    print(groups)
+#    print(CellGroupingSerializer(groups, many=True, context=context))
     # Get serializers lists
     response = CellGroupingSerializer(groups, many=True, context=context).data
     return response
@@ -366,8 +370,8 @@ def protein_query(self, request):
         context = {
             "request": request,
         }
-        print(proteins)
-        print(ProteinSerializer(proteins, many=True, context=context))
+#        print(proteins)
+#        print(ProteinSerializer(proteins, many=True, context=context))
         # Get serializers lists
         response = ProteinSerializer(proteins, many=True, context=context).data
         return response

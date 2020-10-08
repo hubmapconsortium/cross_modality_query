@@ -28,7 +28,7 @@ class CellGrouping(models.Model):
 
 class Protein(models.Model):
     protein_id = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(models.CharField(max_length=50), db_index=True)
+    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
 
 
 #    groups = models.ManyToManyField(Cell_Grouping)

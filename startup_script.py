@@ -19,9 +19,45 @@ from query_app.models import (
     Cell,
     CellGrouping,
     Gene,
+    Protein,
     RnaQuant,
     AtacQuant,
 )
+
+
+def coalesce_organs(group_df: pd.DataFrame):
+    organs_df = group_df[group_df['group_type'] == 'tissue_type']
+    for organ in organs_df['group_id'].unique():
+        organ_df = organs_df[organs_df['group_id'] == organ]
+        cells = []
+        genes = []
+        marker_genes = []
+        for i, row in organ_df.iterrows():
+            print(type(row['cells']))
+            if isinstance(row['cells'], list):
+                cells.extend(row['cells'])
+            elif isinstance(row['cells'], str):
+                cells.extend(row['cells'].split(' '))
+            if isinstance(row['genes'], list):
+                genes.extend(row['genes'])
+            elif isinstance(row['genes'], str):
+                genes.extend(row['genes'].split(' '))
+            if isinstance(row['marker_genes'], list):
+                marker_genes.extend(row['marker_genes'])
+            elif isinstance(row['marker_genes'], str):
+                marker_genes.extend(row['marker_genes'].split(' '))
+            cells = list(set(cells))
+            genes = list(set(genes))
+            marker_genes = list(set(marker_genes))
+
+            cells = [cell.strip(",/'") for cell in cells]
+            genes = [gene.strip(",/'") for gene in genes]
+
+        group_df = group_df[group_df['group_id'] != organ].copy()
+        organ_dict = {'group_type': 'tissue_type', 'group_id': organ, 'cells': cells, 'genes': genes,
+                      'marker_genes': marker_genes}
+        group_df = group_df.append(organ_dict, ignore_index=True)
+    return group_df
 
 
 def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
@@ -39,17 +75,36 @@ def create_model(model_name: str, kwargs: dict):
         obj = RnaQuant(**kwargs)
     elif model_name == 'atac_quant':
         obj = AtacQuant(**kwargs)
+    elif model_name == 'protein':
+        obj = Protein(**kwargs)
     else:
         obj = None
     return obj
 
 
-def sanitize_nans(kwargs):
+def sanitize_nans(kwargs: dict):
     for key in kwargs.keys():
         if type(kwargs[key]) == float and np.isnan(kwargs[key]):
             kwargs[key] = {}
 
     return kwargs
+
+
+@transaction.atomic
+def create_proteins(cell_df: pd.DataFrame):
+    protein_set = set({})
+    for json_string in cell_df['protein_mean'].unique():
+        if isinstance(json_string, str):
+            json_dict = json.loads(json_string)
+            for key in json_dict.keys():
+                protein_set.add(key)
+        else:
+            print(json_string)
+
+
+    for protein in protein_set:
+        p = Protein(protein_id=protein)
+        p.save()
 
 
 @transaction.atomic
@@ -66,25 +121,34 @@ def df_to_db(df: pd.DataFrame, model_name: str):
     if model_name == 'group':
 
         for i, row in df.iterrows():
-            kwargs = {column: row[column] for column in group_fields}
+            if row['group_type'] == 'tissue_type':
+                kwargs = {column: row[column] for column in group_fields}
 
-            obj = create_model(model_name, kwargs)
-            obj.save()
+                obj = create_model(model_name, kwargs)
+                obj.save()
 
-            cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in list(df.at[i, 'cells'])]
-            cells = [cell for cell in cells if cell is not None]
-            if len(cells) > 0:
-                obj.cells.add(cells)
+                cell_list = list(df.at[i, 'cells'])[:50]
+                cell_list = [cell.strip('/n').strip('/').strip('[').strip(']').strip('/') for cell in cell_list]
+                print(cell_list)
+                cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in cell_list]
+                cells = [cell for cell in cells if cell is not None]
+                print(cells)
+                if len(cells) > 0:
+                    obj.cells.add(*cells)
 
-            genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in list(row['genes'])]
-            genes = [gene for gene in genes if gene is not None]
-            obj.genes.add(genes)
+                gene_list = list(df.at[i, 'genes'])[:50]
+                print(gene_list)
+                genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in gene_list]
+                genes = [gene for gene in genes if gene is not None]
+                print(genes)
+                if len(genes) > 0:
+                    obj.genes.add(*genes)
 
-            marker_genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in
-                            list(row['marker_genes'])]
-            marker_genes = [gene for gene in marker_genes if gene is not None]
-            obj.marker_genes.add(marker_genes)
-
+                marker_genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in
+                                list(df.at[i, 'marker_genes'])]
+                marker_genes = [gene for gene in marker_genes if gene is not None]
+                if len(marker_genes) > 0:
+                    obj.marker_genes.add(*marker_genes)
 
     else:
 
@@ -100,6 +164,8 @@ def df_to_db(df: pd.DataFrame, model_name: str):
 
 def create_cells(cell_files: List[Path]):
     cell_df, quant_dfs = merge_cells(cell_files)
+
+    create_proteins(cell_df)
 
     df_to_db(cell_df, 'cell')
     df_to_db(quant_dfs['rna'], 'rna_quant')
@@ -129,6 +195,7 @@ def create_genes(json_files: List[Path]):
 
 def create_groups(group_files: List[Path]):
     group_df = merge_groupings(group_files)
+    group_df = coalesce_organs(group_df)
     df_to_db(group_df, 'group')
 
     return
@@ -181,8 +248,8 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
     group_files = [file for files in all_files for file in files if 'group' in fspath(file)]
 
-    #    create_cells(cell_files)
-    #    create_genes(json_files)
+#    create_cells(cell_files)
+#    create_genes(json_files)
     create_groups(group_files)
 
 

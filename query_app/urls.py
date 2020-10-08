@@ -18,5 +18,8 @@ urlpatterns = [
     path('query/celllist/', views.CellListView.as_view(), name="cell_list"),
     path('query/genelist/', views.GeneListView.as_view(), name="gene_list"),
     path('query/organlist/', views.OrganListView.as_view(), name="organ_list"),
-
+    path('query/allcelllist/', views.AllCellListView.as_view(), name="all_cell_list"),
+    path('query/allgenelist/', views.AllGeneListView.as_view(), name="all_gene_list"),
+    path('query/allorganlist/', views.AllOrganListView.as_view(), name="all_organ_list"),
+    path('query/allproteinlist/', views.AllProteinListView.as_view(), name="all_protein_list"),
 ]

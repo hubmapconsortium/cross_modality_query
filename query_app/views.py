@@ -34,12 +34,14 @@ from .utils import (
     get_cells_list,
     get_groupings_list,
     get_genes_list,
+    get_proteins_list,
 )
 
 from .tables import (
     GeneTable,
     CellTable,
     OrganTable,
+    ProteinTable,
 )
 
 from django.views.generic.edit import FormView
@@ -163,6 +165,39 @@ class OrganListView(SingleTableView):
     def post(self, request, format=None):
         return group_list(request)
 
+class AllCellListView(SingleTableView):
+    model = Cell
+    table_class = CellTable
+    template_name = 'cell_list.html'
+
+    def post(self, request, format=None):
+        return all_cell_list(request)
+
+
+class AllGeneListView(SingleTableView):
+    model = Gene
+    table_class = GeneTable
+    template_name = 'gene_list.html'
+
+    def post(self, request, format=None):
+        return all_gene_list(request)
+
+
+class AllOrganListView(SingleTableView):
+    model = CellGrouping
+    table_class = OrganTable
+    template_name = 'organ_list.html'
+
+    def post(self, request, format=None):
+        return all_group_list(request)
+
+class AllProteinListView(SingleTableView):
+    model = Protein
+    table_class = ProteinTable
+    template_name = 'protein_list.html'
+
+    def post(self, request, format=None):
+        return all_protein_list(request)
 
 @api_view(['POST'])
 def cell_list(request):
@@ -185,6 +220,40 @@ def gene_list(request):
 @api_view(['POST'])
 def group_list(request):
     table = OrganTable(get_groupings_list(request.data.dict()))
+
+    return render(request, "organ_list.html", {
+        "table": table
+    })
+
+@api_view(['POST'])
+def all_cell_list(request):
+    table = CellTable(get_cells_list({'input_type': None}))
+
+    return render(request, "cell_list.html", {
+        "table": table
+    })
+
+
+@api_view(['POST'])
+def all_gene_list(request):
+    table = GeneTable(get_genes_list({'input_type': None}))
+
+    return render(request, "gene_list.html", {
+        "table": table
+    })
+
+
+@api_view(['POST'])
+def all_group_list(request):
+    table = OrganTable(get_groupings_list({'input_type': None}))
+
+    return render(request, "organ_list.html", {
+        "table": table
+    })
+
+@api_view(['POST'])
+def all_protein_list(request):
+    table = ProteinTable(get_proteins_list({'input_type': None}))
 
     return render(request, "organ_list.html", {
         "table": table
