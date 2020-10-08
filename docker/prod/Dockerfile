@@ -7,6 +7,7 @@ RUN apt-get update \
  && rm -rf /var/cache/apt/*
 
 COPY hubmap /opt/cross-modality-query
+COPY uwsgi /opt/uwsgi
 
 WORKDIR /opt/cross-modality-query
 RUN mv hubmap_query/production_settings.py hubmap_query/local_settings.py
@@ -17,4 +18,4 @@ VOLUME /opt/secret
 
 EXPOSE 5000
 
-ENTRYPOINT ["uwsgi", "--xml", "/opt/cross-modality-query/uwsgi/uwsgi.xml"]
+ENTRYPOINT ["uwsgi", "--xml", "/opt/uwsgi/uwsgi.xml"]
