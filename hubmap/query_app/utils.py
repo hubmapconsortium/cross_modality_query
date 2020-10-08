@@ -79,6 +79,8 @@ def combine_qs(qs: List[Q], logical_operator: str) -> Q:
     """List[Q] -> Q
     Combines a series of conditions into a single condition based on logical operator"""
 
+    if len(qs) == 0:
+        return Q(pk__in=[])
     if logical_operator == 'or':
         return reduce(q_or, qs)
     elif logical_operator == 'and':
