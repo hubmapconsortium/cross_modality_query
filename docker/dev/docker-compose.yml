@@ -13,7 +13,7 @@ services:
     image: "hubmap/cross-modality-query-dev:latest"
     command: python3 /code/manage.py runserver 0.0.0.0:8000
     volumes:
-      - ../..:/code
+      - ../../hubmap:/code
     ports:
       - "8000:8000"
     depends_on:

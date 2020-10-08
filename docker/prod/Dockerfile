@@ -6,7 +6,7 @@ RUN apt-get update \
     uwsgi-plugin-python3 \
  && rm -rf /var/cache/apt/*
 
-COPY . /opt/cross-modality-query
+COPY hubmap /opt/cross-modality-query
 
 WORKDIR /opt/cross-modality-query
 RUN mv hubmap_query/production_settings.py hubmap_query/local_settings.py
