@@ -9,7 +9,7 @@
 {% bootstrap_messages %}
 
 {# Display a form #}
-<form action="/api/query/celllist/" method="post" class="form">
+<form action="/api/celllist/" method="post" class="form">
   {% csrf_token %}
   {% bootstrap_form form %}
   {% buttons %}

@@ -128,15 +128,15 @@ class CellQueryView(FormView):
 class LandingFormView(FormView):
     form_class = QueryForm
     model = Query
-    template = 'landing_form.html'
+    template_name = 'landing_page.html'
 
-    def form_valid(self, form):
-        if form.cleaned_data['output_type'] == 'Gene':
-            return redirect(GeneQueryView)
-        elif form.cleaned_data['output_type'] == 'Cell':
-            return redirect(CellQueryView)
-        elif form.cleaned_data['output_type'] == 'Organ':
-            return redirect(OrganQueryView)
+    def post(self, request):
+        if request.POST['output_type'] == 'gene':
+            return redirect('/api/geneform')
+        elif request.POST['output_type'] == 'cell':
+            return redirect('/api/cellform')
+        elif request.POST['output_type'] == 'organ':
+            return redirect('/api/organform')
 
 
 class CellListView(SingleTableView):
