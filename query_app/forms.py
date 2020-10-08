@@ -2,8 +2,7 @@ from django import forms
 
 
 class QueryForm(forms.Form):
-    output_type = forms.ChoiceField(choices=(('Gene', 'Gene'), ('Cell', 'Cell'), ('Organ', 'Organ')),
-                                    widget=forms.Select)
+    output_type = forms.ChoiceField(choices=(('gene', 'gene'), ('cell', 'cell'), ('organ', 'organ')), widget=forms.Select)
 
 
 class GeneQueryForm(forms.Form):

@@ -248,8 +248,9 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
     group_files = [file for files in all_files for file in files if 'group' in fspath(file)]
 
-#    create_cells(cell_files)
-#    create_genes(json_files)
+
+    create_cells(cell_files)
+    create_genes(json_files)
     create_groups(group_files)
 
 

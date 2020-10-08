@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path
+from rest_framework.schemas import get_schema_view
 
 from query_app import views
 
@@ -22,4 +23,12 @@ urlpatterns = [
     path('query/allgenelist/', views.AllGeneListView.as_view(), name="all_gene_list"),
     path('query/allorganlist/', views.AllOrganListView.as_view(), name="all_organ_list"),
     path('query/allproteinlist/', views.AllProteinListView.as_view(), name="all_protein_list"),
+    path(
+        'openapi',
+        get_schema_view(
+            title="HuBMAP cell indexing",
+            version="0.1-dev",
+        ),
+        name='openapi-schema',
+    ),
 ]
