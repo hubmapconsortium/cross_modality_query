@@ -20,13 +20,15 @@ def make_mini_json_files(json_files, gene_set):
         with open(json_file, 'r') as input_file:
             input_dict = json.load(input_file)
             mini_gene_dict = {key: input_dict[key] for key in input_dict.keys() if key in gene_set}
-        output_filename = 'mini_' + json_file.stem + '.json'
+        output_filename = 'mini_' + fspath(json_file)
         with open(output_filename, 'w') as output_file:
             json.dump(mini_gene_dict, output_file)
 
 
 def make_mini_group_files(hdf_files, cell_set, gene_set):
     for file in hdf_files:
+        print(file)
+        print(fspath(file))
         group_df = pd.read_hdf(file, 'group')
 
         for i, row in group_df.iterrows():
@@ -34,7 +36,7 @@ def make_mini_group_files(hdf_files, cell_set, gene_set):
             if 'genes' in group_df.columns:
                 group_df.at[i, 'genes'] = [gene for gene in group_df.at[i, 'genes'][:50] if gene in gene_set]
 
-    with pd.HDFStore('mini_' + file) as store:
+    with pd.HDFStore('mini_' + fspath(file)) as store:
         store.put('group', group_df)
 
 def make_mini_cell_files(files, cell_set):
@@ -43,7 +45,7 @@ def make_mini_cell_files(files, cell_set):
         if 'cell_id' not in cell_df.columns:
             cell_df['cell_id'] = cell_df.index
         cell_df = cell_df[cell_df['cell_id'] in cell_set].copy()
-        with pd.HDFStore('mini_' + file) as store:
+        with pd.HDFStore('mini_' + fspath(file)) as store:
             if file == 'codex.hdf5':
                 store.put('cell', cell_df)
             else:
@@ -58,13 +60,18 @@ def make_mini_quant_files(files, cell_set, gene_set):
             if 'cell_id' not in quant_df.columns:
                 quant_df['cell_id'] = quant_df.index
             quant_df = quant_df[quant_df['cell_id'] in cell_set].copy()
-            with pd.HDFStore(file) as store:
+            with pd.HDFStore('mini_' + fspath(file)) as store:
                 store.put('quant', quant_df)
 
 def get_cells_and_genes(group_df):
     cell_set = set({})
     gene_set = set({})
     for i, row in group_df.iterrows():
+        print(row['group_id'])
+        if isinstance(row['cells'], float):
+            continue
+        if isinstance(row['genes'], float):
+            continue
         for cell in row['cells'][:50]:
             cell_set.add(cell)
         for gene in row['genes'][:50]:
@@ -127,6 +134,8 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     modality_list = ['rna', 'atac', 'codex']
 
     hdf_files = [file for files in all_files for file in files if file.stem in modality_list]
+
+    print(hdf_files)
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
 
     group_df = merge_groupings(hdf_files)

@@ -7,4 +7,5 @@ pandas
 psycopg2-binary>=2.8.6
 pyyaml
 scikit-learn
+tables
 uritemplate

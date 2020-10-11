@@ -151,20 +151,26 @@ def df_to_db(df: pd.DataFrame, model_name: str):
 
     else:
 
+        cell_fields = ['cell_id', 'tissue_type', 'dataset', 'protein_mean', 'protein_total', 'protein_covar']
+
         for i, row in df.iterrows():
-            kwargs = {column: row[column] for column in df.columns}
-            kwargs = sanitize_nans(kwargs)
-            for key in kwargs.keys():
-                if 'protein' in key and isinstance(kwargs[key], str):
-                    kwargs[key] = json.loads(kwargs[key])
+            if model_name == 'cell':
+                kwargs = {column: row[column] for column in df.columns if column in cell_fields}
+                for key in kwargs.keys():
+                    if 'protein' in key and isinstance(kwargs[key], str):
+                        kwargs[key] = json.loads(kwargs[key])
+            else:
+                kwargs = sanitize_nans(kwargs)
+
             obj = create_model(model_name, kwargs)
             obj.save()
 
 
 def create_cells(hdf_files: List[Path]):
+
     for cell_file in hdf_files:
         cell_df = pd.read_hdf(cell_file, 'cell')
-        if 'codex' in cell_file:
+        if 'codex' in fspath(cell_file):
             create_proteins(cell_df)
         df_to_db(cell_df, 'cell')
     return
@@ -209,7 +215,7 @@ def create_quants(hdf_files: List[Path]):
 
     for file in hdf_files:
         modality = file.stem.split('_')[0]
-        quant_df = pd.read_hdf('quant')
+        quant_df = pd.read_hdf(file, 'quant')
         dict_list.extend(
             [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': quant_df.at[i, column]} for i in
              quant_df.index for column
