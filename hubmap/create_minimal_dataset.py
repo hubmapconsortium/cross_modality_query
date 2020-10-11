@@ -25,37 +25,41 @@ def make_mini_json_files(json_files, gene_set):
             json.dump(mini_gene_dict, output_file)
 
 
-def make_mini_group_files(group_files, cell_set, gene_set):
-    for group_file in group_files:
-        group_df = pd.read_csv(group_file)
+def make_mini_group_files(hdf_files, cell_set, gene_set):
+    for file in hdf_files:
+        group_df = pd.read_hdf(file, 'group')
 
         for i, row in group_df.iterrows():
             group_df.at[i, 'cells'] = [cell for cell in group_df.at[i, 'cells'][:50] if cell in cell_set]
             if 'genes' in group_df.columns:
                 group_df.at[i, 'genes'] = [gene for gene in group_df.at[i, 'genes'][:50] if gene in gene_set]
 
-        group_df.to_csv('mini_' + group_file.stem + '.csv')
+    with pd.HDFStore('mini_' + file) as store:
+        store.put('group', group_df)
 
-
-def make_mini_cell_files(cell_files, cell_set):
-    for cell_file in cell_files:
-        cell_df = pd.read_csv(cell_file)
+def make_mini_cell_files(files, cell_set):
+    for file in files:
+        cell_df = pd.read_hdf(file, 'cell')
         if 'cell_id' not in cell_df.columns:
             cell_df['cell_id'] = cell_df.index
         cell_df = cell_df[cell_df['cell_id'] in cell_set].copy()
-        cell_df.to_csv('mini_' + cell_file.stem + '.csv')
+        with pd.HDFStore('mini_' + file) as store:
+            if file == 'codex.hdf5':
+                store.put('cell', cell_df)
+            else:
+                store.put('cell', cell_df, format='t')
 
-
-def make_mini_quant_files(quant_files, cell_set, gene_set):
-    for quant_file in quant_files:
-        gene_list = list(gene_set)
-        quant_df = pd.read_csv(quant_file)
-        quant_df = quant_df[gene_list].copy()
-        if 'cell_id' not in quant_df.columns:
-            quant_df['cell_id'] = quant_df.index
-        quant_df = quant_df[quant_df['cell_id'] in cell_set].copy()
-        quant_df.to_csv('mini_' + quant_file.stem + '.csv')
-
+def make_mini_quant_files(files, cell_set, gene_set):
+    for file in files:
+        if file in ['atac.hdf5', 'rna.hdf5']:
+            gene_list = list(gene_set)
+            quant_df = pd.read_hdf(file, 'quant')
+            quant_df = quant_df[gene_list].copy()
+            if 'cell_id' not in quant_df.columns:
+                quant_df['cell_id'] = quant_df.index
+            quant_df = quant_df[quant_df['cell_id'] in cell_set].copy()
+            with pd.HDFStore(file) as store:
+                store.put('quant', quant_df)
 
 def get_cells_and_genes(group_df):
     cell_set = set({})
@@ -107,8 +111,8 @@ def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
     return pd.concat([df_1, df_2], join='outer')
 
 
-def merge_groupings(group_files: List[Path]):
-    group_dfs = [pd.read_csv(group_file).astype(object) for group_file in group_files]
+def merge_groupings(hdf_files: List[Path]):
+    group_dfs = [pd.read_hdf(file, 'group').astype(object) for file in hdf_files]
     merged_df = reduce(outer_join, group_dfs)
 
     return merged_df
@@ -122,23 +126,21 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     all_files = [rna_files, atac_files, codex_files]
     modality_list = ['rna', 'atac', 'codex']
 
-    cell_files = [file for files in all_files for file in files if file.stem in modality_list]
+    hdf_files = [file for files in all_files for file in files if file.stem in modality_list]
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
-    group_files = [file for files in all_files for file in files if 'group' in fspath(file)]
-    quant_files = [file for files in all_files for file in files if 'quant' in fspath(file)]
 
-    group_df = merge_groupings(group_files)
+    group_df = merge_groupings(hdf_files)
     group_df = coalesce_organs(group_df)
 
     cell_set, gene_set = get_cells_and_genes(group_df)
 
     make_mini_json_files(json_files, gene_set)
 
-    make_mini_group_files(group_files, cell_set, gene_set)
+    make_mini_group_files(hdf_files, cell_set, gene_set)
 
-    make_mini_cell_files(cell_files, cell_set)
+    make_mini_cell_files(hdf_files, cell_set)
 
-    make_mini_quant_files(quant_files, cell_set, gene_set)
+    make_mini_quant_files(hdf_files, cell_set, gene_set)
 
 
 if __name__ == '__main__':
