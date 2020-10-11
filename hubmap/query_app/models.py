@@ -34,15 +34,10 @@ class Protein(models.Model):
 #    groups = models.ManyToManyField(Cell_Grouping)
 #    marker_groups = models.ManyToManyField(Cell_Grouping)
 
-class RnaQuant(models.Model):
+class Quant(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
     gene_id = models.CharField(db_index=True, max_length=20)
-    value = models.FloatField(db_index=True)
-
-
-class AtacQuant(models.Model):
-    cell_id = models.CharField(db_index=True, max_length=60)
-    gene_id = models.CharField(db_index=True, max_length=20)
+    modality = models.CharField(db_index=True, max_length=20)
     value = models.FloatField(db_index=True)
 
 

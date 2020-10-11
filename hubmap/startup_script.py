@@ -20,9 +20,12 @@ from query_app.models import (
     CellGrouping,
     Gene,
     Protein,
-    RnaQuant,
-    AtacQuant,
+    Quant,
 )
+
+
+def sanitize_string(string: str) -> str:
+    return ''.join([char for char in string if char.isalnum() or char in '.-'])
 
 
 def coalesce_organs(group_df: pd.DataFrame):
@@ -37,21 +40,21 @@ def coalesce_organs(group_df: pd.DataFrame):
             if isinstance(row['cells'], list):
                 cells.extend(row['cells'])
             elif isinstance(row['cells'], str):
-                cells.extend(row['cells'].split(' '))
+                cells.extend(row['cells'].strip('[]').split(' '))
             if isinstance(row['genes'], list):
                 genes.extend(row['genes'])
             elif isinstance(row['genes'], str):
-                genes.extend(row['genes'].split(' '))
+                genes.extend(row['genes'].strip('[]').split(' '))
             if isinstance(row['marker_genes'], list):
                 marker_genes.extend(row['marker_genes'])
             elif isinstance(row['marker_genes'], str):
-                marker_genes.extend(row['marker_genes'].split(' '))
+                marker_genes.extend(row['marker_genes'].strip('[]').split(' '))
             cells = list(set(cells))
             genes = list(set(genes))
             marker_genes = list(set(marker_genes))
 
-            cells = [cell.strip(",/'") for cell in cells]
-            genes = [gene.strip(",/'") for gene in genes]
+            cells = [sanitize_string(cell) for cell in cells]
+            genes = [sanitize_string(gene) for gene in genes]
 
         group_df = group_df[group_df['group_id'] != organ].copy()
         organ_dict = {'group_type': 'tissue_type', 'group_id': organ, 'cells': cells, 'genes': genes,
@@ -71,10 +74,8 @@ def create_model(model_name: str, kwargs: dict):
         obj = Gene(**kwargs)
     elif model_name == 'group':
         obj = CellGrouping(**kwargs)
-    elif model_name == 'rna_quant':
-        obj = RnaQuant(**kwargs)
-    elif model_name == 'atac_quant':
-        obj = AtacQuant(**kwargs)
+    elif model_name == 'quant':
+        obj = Quant(**kwargs)
     elif model_name == 'protein':
         obj = Protein(**kwargs)
     else:
@@ -100,7 +101,6 @@ def create_proteins(cell_df: pd.DataFrame):
                 protein_set.add(key)
         else:
             print(json_string)
-
 
     for protein in protein_set:
         p = Protein(protein_id=protein)
@@ -128,7 +128,6 @@ def df_to_db(df: pd.DataFrame, model_name: str):
                 obj.save()
 
                 cell_list = list(df.at[i, 'cells'])[:50]
-                cell_list = [cell.strip('/n').strip('/').strip('[').strip(']').strip('/') for cell in cell_list]
                 print(cell_list)
                 cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in cell_list]
                 cells = [cell for cell in cells if cell is not None]
@@ -162,15 +161,12 @@ def df_to_db(df: pd.DataFrame, model_name: str):
             obj.save()
 
 
-def create_cells(cell_files: List[Path]):
-    cell_df, quant_dfs = merge_cells(cell_files)
-
-    create_proteins(cell_df)
-
-    df_to_db(cell_df, 'cell')
-    df_to_db(quant_dfs['rna'], 'rna_quant')
-    df_to_db(quant_dfs['atac'], 'atac_quant')
-
+def create_cells(hdf_files: List[Path]):
+    for cell_file in hdf_files:
+        cell_df = pd.read_hdf(cell_file, 'cell')
+        if 'codex' in cell_file:
+            create_proteins(cell_df)
+        df_to_db(cell_df, 'cell')
     return
 
 
@@ -193,47 +189,35 @@ def create_genes(json_files: List[Path]):
     return
 
 
-def create_groups(group_files: List[Path]):
-    group_df = merge_groupings(group_files)
+def create_groups(hdf_files: List[Path]):
+    group_df = merge_groupings(hdf_files)
     group_df = coalesce_organs(group_df)
     df_to_db(group_df, 'group')
 
     return
 
 
-def merge_cells(cell_files: List[Path]):
-    keep_columns = ['cell_id', 'modality', 'protein_mean', 'protein_total', 'protein_covar']
-    cell_dfs = [pd.read_csv(cell_file) for cell_file in cell_files]
-    quant_dfs = {}
-
-    for cell_df in cell_dfs:
-        if 'atac' in cell_df['modality'].tolist():
-            quant_dfs['atac'] = populate_quant_tables(cell_df, 'atac')
-        elif 'rna' in cell_df['modality'].tolist():
-            quant_dfs['rna'] = populate_quant_tables(cell_df, 'rna')
-
-    merged_df = reduce(outer_join, cell_dfs)
-    merged_df = merged_df[keep_columns].copy()
-
-    return merged_df, quant_dfs
-
-
 def merge_groupings(group_files: List[Path]):
-    group_dfs = [pd.read_csv(group_file).astype(object) for group_file in group_files]
+    group_dfs = [pd.read_hdf(group_file, 'group').astype(object) for group_file in group_files]
     merged_df = reduce(outer_join, group_dfs)
 
     return merged_df
 
 
-def populate_quant_tables(cell_df: pd.DataFrame, modality: str):
-    quant_df = cell_df.select_dtypes(np.number)
+def create_quants(hdf_files: List[Path]):
+    dict_list = []
 
-    # make sure index is cell_id here
-    dict_list = [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in quant_df.index for column
-                 in quant_df.columns]
+    for file in hdf_files:
+        modality = file.stem.split('_')[0]
+        quant_df = pd.read_hdf('quant')
+        dict_list.extend(
+            [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': quant_df.at[i, column]} for i in
+             quant_df.index for column
+             in quant_df.columns])
 
     new_quant_df = pd.DataFrame(dict_list)
-    return new_quant_df
+
+    df_to_db(new_quant_df, 'quant')
 
 
 def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
@@ -244,14 +228,17 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     all_files = [rna_files, atac_files, codex_files]
     modality_list = ['rna', 'atac', 'codex']
 
-    cell_files = [file for files in all_files for file in files if file.stem in modality_list]
+    hdf_files = [file for files in all_files for file in files if file.stem in modality_list]
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
-    group_files = [file for files in all_files for file in files if 'group' in fspath(file)]
 
-
-    create_cells(cell_files)
+    create_cells(hdf_files)
+    print('Cells created')
     create_genes(json_files)
-    create_groups(group_files)
+    print('Genes created')
+    create_groups(hdf_files)
+    print('Groups created')
+    create_quants(hdf_files)
+    print('Quants created')
 
 
 if __name__ == '__main__':

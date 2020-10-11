@@ -7,8 +7,7 @@ from .models import (
     CellGrouping,
     Gene,
     Protein,
-    RnaQuant,
-    AtacQuant,
+    Quant,
 )
 
 from .serializers import (
@@ -30,8 +29,6 @@ def process_query_parameters(query_params: Dict) -> Dict:
         query_params['input_set'] = split_and_strip(query_params['input_set'])
     query_params['input_set'] = process_input_set(query_params['input_set'], query_params['input_type'])
     query_params['input_type'] = query_params['input_type'].lower()
-    if query_params['input_type'] == 'gene' and query_params['genomic_modality'] in ['atac', 'rna']:
-        query_params['input_type'] = query_params['genomic_modality'] + '_' + query_params['input_type']
     if query_params['input_type'] == 'organ':
         query_params['input_type'] = 'tissue_type'
     if 'limit' not in query_params.keys() or query_params['limit'] > 1000:
@@ -172,7 +169,7 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_type = query_params['input_type']
     input_set = query_params['input_set']
     logical_operator = query_params['logical_operator']
-    limit = query_params['limit']
+    genomic_modality = query_params['genomic_modality']
 
     if input_type in ['protein', 'atac_gene', 'rna_gene']:
 
@@ -185,14 +182,10 @@ def get_cell_filter(query_params: Dict) -> Q:
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, logical_operator)
 
-        if input_type in ['atac_gene', 'rna_gene']:
+        if input_type == 'gene':
 
-            if input_type == 'atac_gene':
-                print(q)
-                cell_ids = [item[0] for item in AtacQuant.objects.filter(q).order_by('value')[:limit].values_list('cell_id')]
-
-            elif input_type == 'rna_gene':
-                cell_ids = [item[0] for item in RnaQuant.objects.filter(q).order_by('value')[:limit].values_list('cell_id')]
+            q = q & Q(modality__icontains=genomic_modality)
+            cell_ids = [item[0] for item in Quant.objects.filter(q).order_by('value').values_list('cell_id')]
 
             qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
             q = combine_qs(qs, 'or')
