@@ -20,7 +20,7 @@ def make_mini_json_files(json_files, gene_set):
         with open(json_file, 'r') as input_file:
             input_dict = json.load(input_file)
             mini_gene_dict = {key: input_dict[key] for key in input_dict.keys() if key in gene_set}
-        output_filename = 'mini_' + fspath(json_file)
+        output_filename = 'mini_' + json_file.stem + '.json'
         with open(output_filename, 'w') as output_file:
             json.dump(mini_gene_dict, output_file)
 
@@ -36,31 +36,30 @@ def make_mini_group_files(hdf_files, cell_set, gene_set):
             if 'genes' in group_df.columns:
                 group_df.at[i, 'genes'] = [gene for gene in group_df.at[i, 'genes'][:50] if gene in gene_set]
 
-    with pd.HDFStore('mini_' + fspath(file)) as store:
+    with pd.HDFStore('mini_' + file.stem + '.hdf5') as store:
         store.put('group', group_df)
 
 def make_mini_cell_files(files, cell_set):
     for file in files:
         cell_df = pd.read_hdf(file, 'cell')
-        if 'cell_id' not in cell_df.columns:
-            cell_df['cell_id'] = cell_df.index
-        cell_df = cell_df[cell_df['cell_id'] in cell_set].copy()
-        with pd.HDFStore('mini_' + fspath(file)) as store:
-            if file == 'codex.hdf5':
+        drop_cells = [cell for cell in cell_df.index if cell not in cell_set]
+        cell_df = cell_df.drop(drop_cells)
+        with pd.HDFStore('mini_' + file.stem + '.hdf5') as store:
+            if file.stem == 'codex':
                 store.put('cell', cell_df)
             else:
                 store.put('cell', cell_df, format='t')
 
 def make_mini_quant_files(files, cell_set, gene_set):
     for file in files:
-        if file in ['atac.hdf5', 'rna.hdf5']:
+        if file.stem in ['atac', 'rna']:
             gene_list = list(gene_set)
             quant_df = pd.read_hdf(file, 'quant')
             quant_df = quant_df[gene_list].copy()
-            if 'cell_id' not in quant_df.columns:
-                quant_df['cell_id'] = quant_df.index
+            drop_cells = [cell for cell in quant_df.index if cell not in cell_set]
+            quant_df = quant_df.drop(drop_cells)
             quant_df = quant_df[quant_df['cell_id'] in cell_set].copy()
-            with pd.HDFStore('mini_' + fspath(file)) as store:
+            with pd.HDFStore('mini_' + file.stem + '.hdf5') as store:
                 store.put('quant', quant_df)
 
 def get_cells_and_genes(group_df):
