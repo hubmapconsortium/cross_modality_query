@@ -20,7 +20,7 @@ def make_mini_json_files(json_files, gene_set):
         with open(json_file, 'r') as input_file:
             input_dict = json.load(input_file)
             mini_gene_dict = {key: input_dict[key] for key in input_dict.keys() if key in gene_set}
-        output_filename = 'mini_' + fspath(json_file)
+        output_filename = 'mini_' + json_file.stem + '.json'
         with open(output_filename, 'w') as output_file:
             json.dump(mini_gene_dict, output_file)
 
@@ -36,17 +36,23 @@ def make_mini_group_files(hdf_files, cell_set, gene_set):
             if 'genes' in group_df.columns:
                 group_df.at[i, 'genes'] = [gene for gene in group_df.at[i, 'genes'][:50] if gene in gene_set]
 
-    with pd.HDFStore('mini_' + fspath(file)) as store:
+    new_filename = 'mini_' + file.stem + ".hdf5"
+
+    print(new_filename)
+
+    with pd.HDFStore(new_filename) as store:
         store.put('group', group_df)
 
 def make_mini_cell_files(files, cell_set):
     for file in files:
         cell_df = pd.read_hdf(file, 'cell')
-        if 'cell_id' not in cell_df.columns:
-            cell_df['cell_id'] = cell_df.index
-        cell_df = cell_df[cell_df['cell_id'] in cell_set].copy()
-        with pd.HDFStore('mini_' + fspath(file)) as store:
-            if file == 'codex.hdf5':
+
+        cell_df = cell_df.drop([cell_id for cell_id in cell_df.index if cell_id not in cell_set])
+
+        new_filename = 'mini_' + file.stem + ".hdf5"
+
+        with pd.HDFStore(new_filename) as store:
+            if file.stem == 'codex':
                 store.put('cell', cell_df)
             else:
                 store.put('cell', cell_df, format='t')
@@ -60,7 +66,8 @@ def make_mini_quant_files(files, cell_set, gene_set):
             if 'cell_id' not in quant_df.columns:
                 quant_df['cell_id'] = quant_df.index
             quant_df = quant_df[quant_df['cell_id'] in cell_set].copy()
-            with pd.HDFStore('mini_' + fspath(file)) as store:
+            new_filename = 'mini_' + file.stem + ".hdf5"
+            with pd.HDFStore(new_filename) as store:
                 store.put('quant', quant_df)
 
 def get_cells_and_genes(group_df):
