@@ -1,6 +1,16 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+class Gene(models.Model):
+    gene_symbol = models.CharField(db_index=True, max_length=20)
+    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+
+
+class Organ(models.Model):
+    organ_name = models.CharField(db_index=True, max_length=20)
+    genes = models.ManyToManyField(Gene, related_name='organs')
+    marker_genes = models.ManyToManyField(Gene, related_name='marker_organs')
+
 
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60, null=True)
@@ -12,17 +22,6 @@ class Cell(models.Model):
     protein_covar = models.JSONField(db_index=True, null=True, blank=True)
     cell_shape = ArrayField(models.FloatField(), db_index=True, null=True, blank=True)
     reporter = models.ForeignKey(Organ, related_name='cells', on_delete=models.CASCADE)
-
-
-class Gene(models.Model):
-    gene_symbol = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
-
-
-class Organ(models.Model):
-    organ_name = models.CharField(db_index=True, max_length=20)
-    genes = models.ManyToManyField(Gene, related_name='organs')
-    marker_genes = models.ManyToManyField(Gene, related_name='organs')
 
 
 class Protein(models.Model):
