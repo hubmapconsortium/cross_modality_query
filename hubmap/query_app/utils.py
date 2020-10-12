@@ -4,16 +4,16 @@ from functools import reduce
 
 from .models import (
     Cell,
-    CellGrouping,
     Gene,
+    Organ,
     Protein,
     Quant,
 )
 
 from .serializers import (
     CellSerializer,
-    CellGroupingSerializer,
     GeneSerializer,
+    OrganSerializer,
     ProteinSerializer,
 )
 
@@ -29,8 +29,6 @@ def process_query_parameters(query_params: Dict) -> Dict:
         query_params['input_set'] = split_and_strip(query_params['input_set'])
     query_params['input_set'] = process_input_set(query_params['input_set'], query_params['input_type'])
     query_params['input_type'] = query_params['input_type'].lower()
-    if query_params['input_type'] == 'organ':
-        query_params['input_type'] = 'tissue_type'
     if 'limit' not in query_params.keys() or query_params['limit'] > 1000:
         query_params['limit'] = 1000
 
@@ -39,7 +37,7 @@ def process_query_parameters(query_params: Dict) -> Dict:
 
 def process_input_set(input_set: List, input_type: str):
     """If the input set is output of a previous query, finds the relevant values from the serialized data"""
-    type_dict = {'gene': 'gene_symbol', 'cell': 'cell_id', 'organ': 'group_id', 'protein': 'protein_id'}
+    type_dict = {'gene': 'gene_symbol', 'cell': 'cell_id', 'organ': 'organ_name', 'protein': 'protein_id'}
     if type(input_set[0] == str):
         return input_set
     elif type(input_set[0] == dict):
@@ -138,19 +136,17 @@ def get_gene_filter(query_params: Dict) -> Q:
     input_set = query_params['input_set']
     marker = query_params['marker']
 
-    if input_type in ['tissue_type', 'cluster']:
+    if input_type == 'organ':
         gene_ids = []
-        q = Q(group_type__icontains=input_type)
-        qs = [Q(group_id__icontains=element) for element in input_set]
-        q2 = combine_qs(qs, 'or')
-        q = q & q2
+        qs = [Q(organ_name__icontains=element) for element in input_set]
+        q = combine_qs(qs, 'or')
 
         if marker == 'True':
-            for group in CellGrouping.objects.filter(q):
-                gene_ids.extend(group.marker_genes.values_list('gene_symbol'))
+            for organ in Organ.objects.filter(q):
+                gene_ids.extend(organ.marker_genes.values_list('gene_symbol'))
         else:
-            for group in CellGrouping.objects.filter(q):
-                gene_ids.extend(group.genes.values_list('gene_symbol'))
+            for organ in Organ.objects.filter(q):
+                gene_ids.extend(organ.genes.values_list('gene_symbol'))
 
         gene_ids = [gene_id[0] for gene_id in gene_ids]
 
@@ -192,17 +188,15 @@ def get_cell_filter(query_params: Dict) -> Q:
 
         return q
 
-    elif input_type in ['tissue_type', 'cluster']:
+    elif input_type == 'organ':
 
-        q = Q(group_type__icontains=input_type)
-        qs = [Q(group_id__icontains=element) for element in input_set]
-        q2 = combine_qs(qs, 'or')  # These categories are mutually exclusive, so their intersection will be empty
-        q = q & q2
+        qs = [Q(organ_name__icontains=element) for element in input_set]
+        q = combine_qs(qs, 'or')  # These categories are mutually exclusive, so their intersection will be empty
 
         # Query groupings and then union their cells fields
         cell_ids = []
-        for group in CellGrouping.objects.filter(q):
-            cell_ids.extend(group.cells.values_list('cell_id'))
+        for organ in Organ.objects.filter(q):
+            cell_ids.extend(organ.cells.values_list('cell_id'))
 
         cell_ids = [cell_id[0] for cell_id in cell_ids]
 
@@ -212,7 +206,7 @@ def get_cell_filter(query_params: Dict) -> Q:
         return q
 
 
-def get_group_filter(query_params: Dict) -> Q:
+def get_organ_filter(query_params: Dict) -> Q:
     """str, List[str], str -> Q
     Finds the filter for a query for group objects based on the input set, input type, and logical operator
     Currently services membership queries where input type is cells
@@ -224,39 +218,35 @@ def get_group_filter(query_params: Dict) -> Q:
     marker = query_params['marker']
 
     if input_type == 'cell':
-        group_ids = []
 
         qs = [Q(cell_id__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
 
-        for cell in Cell.objects.filter(q):
-            group_ids.extend(cell.groupings.values_list('group_id'))
+        organ_names = [cell.organ.organ_name for cell in Cell.objects.filter(q)]
 
-        group_ids = [group_id[0] for group_id in group_ids]
-
-        qs = [Q(group_id__icontains=group_id) for group_id in group_ids]
+        qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names]
         q = combine_qs(qs, logical_operator)
 
         return q
 
-    elif input_type in ['atac_gene', 'rna_gene']:
+    elif input_type == 'gene':
         # Query those genes and return their associated groupings
-        group_ids = []
+        organ_names = []
 
         qs = [Q(gene_symbol__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
 
         if marker == 'True':
             for gene in Gene.objects.filter(q):
-                group_ids.extend(gene.marker_groups.values_list('group_id'))
+                organ_names.extend(gene.marker_organs.values_list('organ_name'))
 
         else:
             for gene in Gene.objects.filter(q):
-                group_ids.extend(gene.groups.values_list('group_id'))
+                organ_names.extend(gene.organs.values_list('organ_name'))
 
-        group_ids = [group_id[0] for group_id in group_ids]
+        organ_names = [name[0] for name in organ_names]
 
-        qs = [Q(group_id__icontains=group_id) for group_id in group_ids]
+        qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names]
         q = combine_qs(qs, 'or')
 
         return q
@@ -280,13 +270,13 @@ def get_cells_list(query_params: Dict):
         return Cell.objects.filter(filter)
 
 
-def get_groupings_list(query_params: Dict):
+def get_organs_list(query_params: Dict):
     if query_params.get('input_type') is None:
-        return CellGrouping.objects.filter(group_type__icontains='tissue_type')
+        return Organ.objects.all()
     else:
         query_params = process_query_parameters(query_params)
-        filter = get_group_filter(query_params)
-        return CellGrouping.objects.filter(filter)
+        filter = get_organ_filter(query_params)
+        return Organ.objects.filter(filter)
 
 def get_proteins_list(query_params: Dict):
     if query_params.get('input_type') is None:
@@ -335,16 +325,16 @@ def cell_query(self, request):
     return response
 
 
-def group_query(self, request):
+def organ_query(self, request):
     if request.method == 'GET':
-        groups = CellGrouping.objects.filter(group_type__icontains='tissue_type')
+        organs = Organ.objects.all()
 
     elif request.method == 'POST':
         query_params = request.data.dict()
         print(query_params)
-        groups = get_groupings_list(query_params)
+        organs = get_organs_list(query_params)
 
-    self.queryset = groups
+    self.queryset = organs
     # Set context
     context = {
         "request": request,
@@ -352,7 +342,7 @@ def group_query(self, request):
 #    print(groups)
 #    print(CellGroupingSerializer(groups, many=True, context=context))
     # Get serializers lists
-    response = CellGroupingSerializer(groups, many=True, context=context).data
+    response = OrganSerializer(organs, many=True, context=context).data
     return response
 
 

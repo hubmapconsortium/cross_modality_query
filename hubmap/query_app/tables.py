@@ -23,10 +23,10 @@ class GeneTable(tables.Table):
 
 
 class OrganTable(tables.Table):
-    organ_name = tables.Column(accessor='group_id')
+    organ_name = tables.Column(accessor='organ_name')
 
     class Meta:
-        model = models.CellGrouping
+        model = models.Organ
 
 class ProteinTable(tables.Table):
     protein_id = tables.Column(accessor='protein_id')
