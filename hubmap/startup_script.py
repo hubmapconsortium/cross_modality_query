@@ -17,8 +17,8 @@ if __name__ == '__main__':
 
 from query_app.models import (
     Cell,
-    CellGrouping,
     Gene,
+    Organ,
     Protein,
     Quant,
 )
@@ -72,8 +72,8 @@ def create_model(model_name: str, kwargs: dict):
         obj = Cell(**kwargs)
     elif model_name == 'gene':
         obj = Gene(**kwargs)
-    elif model_name == 'group':
-        obj = CellGrouping(**kwargs)
+    elif model_name == 'organ':
+        obj = Organ(**kwargs)
     elif model_name == 'quant':
         obj = Quant(**kwargs)
     elif model_name == 'protein':
@@ -116,13 +116,11 @@ def save_genes(gene_set):
 
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str):
-    group_fields = ['group_type', 'group_id']
-
-    if model_name == 'group':
+    if model_name == 'organ':
 
         for i, row in df.iterrows():
             if row['group_type'] == 'tissue_type':
-                kwargs = {column: row[column] for column in group_fields}
+                kwargs = {'organ_name': row['group_id']}
 
                 obj = create_model(model_name, kwargs)
                 obj.save()
@@ -195,10 +193,10 @@ def create_genes(json_files: List[Path]):
     return
 
 
-def create_groups(hdf_files: List[Path]):
+def create_organs(hdf_files: List[Path]):
     group_df = merge_groupings(hdf_files)
     group_df = coalesce_organs(group_df)
-    df_to_db(group_df, 'group')
+    df_to_db(group_df, 'organ')
 
     return
 
@@ -241,8 +239,8 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     print('Cells created')
     create_genes(json_files)
     print('Genes created')
-    create_groups(hdf_files)
-    print('Groups created')
+    create_organs(hdf_files)
+    print('Organs created')
     create_quants(hdf_files)
     print('Quants created')
 
