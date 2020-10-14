@@ -113,9 +113,23 @@ def save_genes(gene_set):
         g = Gene(gene_symbol=gene)
         g.save()
 
+def process_cell_records(cell_df):
+    cell_fields = ['cell_id', 'tissue_type', 'dataset', 'protein_mean', 'protein_total', 'protein_covar']
+
+    if 'cell_id' not in cell_df.columns:
+        cell_df['cell_id'] = cell_df.index
+
+    records = cell_df.to_dict('records')
+    records = sanitize_nans({key: records[key] for key in records.keys() if key in cell_fields})
+    for record in records:
+        for key in record.keys():
+            if 'protein' in key and isinstance([key], str):
+                record[key] = json.loads(record[key])
+
+    return records
 
 @transaction.atomic
-def df_to_db(df: pd.DataFrame, model_name: str):
+def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     group_fields = ['group_type', 'group_id']
 
     if model_name == 'group':
@@ -149,20 +163,18 @@ def df_to_db(df: pd.DataFrame, model_name: str):
                 if len(marker_genes) > 0:
                     obj.marker_genes.add(*marker_genes)
 
-    else:
+    elif model_name == 'quant':
+        dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in df.index for column in df.columns]
+        for kwargs in dict_list:
+            obj = create_model('quant', kwargs)
+            obj.save()
 
-        cell_fields = ['cell_id', 'tissue_type', 'dataset', 'protein_mean', 'protein_total', 'protein_covar']
+    elif model_name == 'cell':
 
-        for i, row in df.iterrows():
-            if model_name == 'cell':
-                kwargs = {column: row[column] for column in df.columns if column in cell_fields}
-                for key in kwargs.keys():
-                    if 'protein' in key and isinstance(kwargs[key], str):
-                        kwargs[key] = json.loads(kwargs[key])
-            else:
-                kwargs = sanitize_nans(kwargs)
+        records = process_cell_records(df)
 
-            obj = create_model(model_name, kwargs)
+        for kwargs in records:
+            obj = create_model('cell', kwargs)
             obj.save()
 
 
@@ -211,19 +223,13 @@ def merge_groupings(group_files: List[Path]):
 
 
 def create_quants(hdf_files: List[Path]):
-    dict_list = []
 
     for file in hdf_files:
         modality = file.stem.split('_')[0]
-        quant_df = pd.read_hdf(file, 'quant')
-        dict_list.extend(
-            [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': quant_df.at[i, column]} for i in
-             quant_df.index for column
-             in quant_df.columns])
-
-    new_quant_df = pd.DataFrame(dict_list)
-
-    df_to_db(new_quant_df, 'quant')
+        with pd.HDFStore(file) as store:
+            for i in range(len(store.get('quant').index) // 1000 + 1):
+                chunk = store.select('quant', start=i*1000, stop=(i+1)*1000)
+                df_to_db(chunk, 'quant', modality)
 
 
 def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):

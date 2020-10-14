@@ -12,6 +12,7 @@ class GeneQueryForm(forms.Form):
     marker = forms.ChoiceField(choices=(('True', 'True'), ('False', 'False')), required=False, widget=forms.Select)
     genomic_modality = forms.ChoiceField(choices=(('rna', 'rna'), ('atac', 'atac')), required=False,
                                          widget=forms.Select)
+    limit = forms.IntegerField(max_value=1000, min_value=0)
 
 
 class OrganQueryForm(forms.Form):
@@ -21,6 +22,8 @@ class OrganQueryForm(forms.Form):
     marker = forms.ChoiceField(choices=(('True', 'True'), ('False', 'False')), widget=forms.Select)
     genomic_modality = forms.ChoiceField(choices=(('rna', 'rna'), ('atac', 'atac')), required=False,
                                          widget=forms.Select)
+    limit = forms.IntegerField(max_value=1000, min_value=0)
+
 
 
 class CellQueryForm(forms.Form):
@@ -30,3 +33,4 @@ class CellQueryForm(forms.Form):
     logical_operator = forms.ChoiceField(choices=(('and', 'and'), ('or', 'or')), required=True, widget=forms.Select)
     genomic_modality = forms.ChoiceField(choices=(('rna', 'rna'), ('atac', 'atac')), required=False,
                                          widget=forms.Select)
+    limit = forms.IntegerField(max_value=1000, min_value=0)

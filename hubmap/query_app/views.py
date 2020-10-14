@@ -45,58 +45,78 @@ from .tables import (
 )
 
 from django.views.generic.edit import FormView
+from rest_framework.pagination import PageNumberPagination
 
+class PaginationClass(PageNumberPagination):
+    page_size = 10
+    max_page_size = 10
 
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
     serializer_class = CellSerializer
+    pagination_class = PaginationClass
     model = Cell
 
     def post(self, request, format=None):
         response = cell_query(self, request)
-        return Response(response)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
     def get(self, request, format=None):
         response = cell_query(self, request)
-        return Response(response)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
 
 class CellGroupingViewSet(viewsets.ModelViewSet):
     queryset = CellGrouping.objects.all()
     serializer_class = CellGroupingSerializer
+    pagination_class = PaginationClass
     model = CellGrouping
 
     def post(self, request, format=None):
         response = group_query(self, request)
-        return Response(response)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
     def get(self, request, format=None):
         response = group_query(self, request)
-        return Response(response)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
 
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = Gene.objects.all()
     serializer_class = GeneSerializer
+    pagination_class = PaginationClass
     model = Gene
 
     def post(self, request, format=None):
         response = gene_query(self, request)
-        return Response(response)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
     def get(self, request, format=None):
         response = gene_query(self, request)
-        return Response(response)
-
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
 class ProteinViewSet(viewsets.ModelViewSet):
     queryset = Protein.objects.all()
     serializer_class = ProteinSerializer
+    pagination_class = PaginationClass
 
     def get(self, request, format=None):
         response = protein_query(self, request)
-        return Response(response)
-
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
 class GeneQueryView(FormView):
     form_class = GeneQueryForm

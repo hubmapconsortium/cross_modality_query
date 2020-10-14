@@ -31,7 +31,7 @@ def process_query_parameters(query_params: Dict) -> Dict:
     query_params['input_type'] = query_params['input_type'].lower()
     if query_params['input_type'] == 'organ':
         query_params['input_type'] = 'tissue_type'
-    if 'limit' not in query_params.keys() or query_params['limit'] > 1000:
+    if 'limit' not in query_params.keys() or int(query_params['limit']) > 1000:
         query_params['limit'] = 1000
 
     return query_params
@@ -112,7 +112,7 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
 
         return Q(**kwargs)
 
-    if input_type in ['rna_gene', 'atac_gene']:
+    if input_type == 'gene':
         gene_id = split_condition[0].strip()
 
         if comparator == '>':
@@ -170,8 +170,9 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_set = query_params['input_set']
     logical_operator = query_params['logical_operator']
     genomic_modality = query_params['genomic_modality']
+    limit = int(query_params['limit'])
 
-    if input_type in ['protein', 'atac_gene', 'rna_gene']:
+    if input_type in ['protein', 'gene']:
 
         if len(split_at_comparator(input_set[0])) == 0:
             print(len(split_at_comparator(input_set[0])))
@@ -185,7 +186,7 @@ def get_cell_filter(query_params: Dict) -> Q:
         if input_type == 'gene':
 
             q = q & Q(modality__icontains=genomic_modality)
-            cell_ids = [item[0] for item in Quant.objects.filter(q).order_by('value').values_list('cell_id')]
+            cell_ids = [item[0] for item in Quant.objects.filter(q).order_by('value')[:limit].values_list('cell_id')]
 
             qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
             q = combine_qs(qs, 'or')
@@ -239,7 +240,7 @@ def get_group_filter(query_params: Dict) -> Q:
 
         return q
 
-    elif input_type in ['atac_gene', 'rna_gene']:
+    elif input_type == 'gene':
         # Query those genes and return their associated groupings
         group_ids = []
 
@@ -267,8 +268,9 @@ def get_genes_list(query_params: Dict):
         return Gene.objects.all()
     else:
         query_params = process_query_parameters(query_params)
+        limit = int(query_params['limit'])
         filter = get_gene_filter(query_params)
-        return Gene.objects.filter(filter)
+        return Gene.objects.filter(filter)[:limit]
 
 
 def get_cells_list(query_params: Dict):
@@ -276,8 +278,9 @@ def get_cells_list(query_params: Dict):
         return Cell.objects.all()
     else:
         query_params = process_query_parameters(query_params)
+        limit = int(query_params['limit'])
         filter = get_cell_filter(query_params)
-        return Cell.objects.filter(filter)
+        return Cell.objects.filter(filter)[:limit]
 
 
 def get_groupings_list(query_params: Dict):
