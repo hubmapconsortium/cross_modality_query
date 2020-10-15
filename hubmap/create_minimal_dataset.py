@@ -36,15 +36,32 @@ def make_mini_group_files(hdf_files, cell_set, gene_set):
             if 'genes' in group_df.columns:
                 group_df.at[i, 'genes'] = [gene for gene in group_df.at[i, 'genes'][:50] if gene in gene_set]
 
+<<<<<<< HEAD
     with pd.HDFStore('mini_' + file.stem + '.hdf5') as store:
+=======
+    new_filename = 'mini_' + file.stem + ".hdf5"
+
+    print(new_filename)
+
+    with pd.HDFStore(new_filename) as store:
+>>>>>>> organ_entity
         store.put('group', group_df)
 
 def make_mini_cell_files(files, cell_set):
     for file in files:
         cell_df = pd.read_hdf(file, 'cell')
+<<<<<<< HEAD
         drop_cells = [cell for cell in cell_df.index if cell not in cell_set]
         cell_df = cell_df.drop(drop_cells)
         with pd.HDFStore('mini_' + file.stem + '.hdf5') as store:
+=======
+
+        cell_df = cell_df.drop([cell_id for cell_id in cell_df.index if cell_id not in cell_set])
+
+        new_filename = 'mini_' + file.stem + ".hdf5"
+
+        with pd.HDFStore(new_filename) as store:
+>>>>>>> organ_entity
             if file.stem == 'codex':
                 store.put('cell', cell_df)
             else:
@@ -59,7 +76,12 @@ def make_mini_quant_files(files, cell_set, gene_set):
             drop_cells = [cell for cell in quant_df.index if cell not in cell_set]
             quant_df = quant_df.drop(drop_cells)
             quant_df = quant_df[quant_df['cell_id'] in cell_set].copy()
+<<<<<<< HEAD
             with pd.HDFStore('mini_' + file.stem + '.hdf5') as store:
+=======
+            new_filename = 'mini_' + file.stem + ".hdf5"
+            with pd.HDFStore(new_filename) as store:
+>>>>>>> organ_entity
                 store.put('quant', quant_df)
 
 def get_cells_and_genes(group_df):

@@ -1,6 +1,20 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+class Gene(models.Model):
+    gene_symbol = models.CharField(db_index=True, max_length=20)
+    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+
+    def __repr__(self):
+        return self.gene_symbol
+
+class Organ(models.Model):
+    organ_name = models.CharField(db_index=True, max_length=20)
+    genes = models.ManyToManyField(Gene, related_name='organs')
+
+    def __repr__(self):
+        return self.organ_name
+
 
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60, null=True)
@@ -16,19 +30,13 @@ class Cell(models.Model):
         return self.cell_id
 
 
-class Gene(models.Model):
-    gene_symbol = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
-
-    def __repr__(self):
-        return self.gene_symbol
-
 class CellGrouping(models.Model):
     group_type = models.CharField(db_index=True, max_length=20)
     group_id = models.CharField(db_index=True, max_length=20)
     cells = models.ManyToManyField(Cell, related_name='groupings')
     genes = models.ManyToManyField(Gene, related_name='groups')
     marker_genes = models.ManyToManyField(Gene, related_name='marker_groups')
+    organ = models.ForeignKey(Organ, related_name='cells', on_delete=models.CASCADE)
 
     def __repr__(self):
         return self.group_id
@@ -39,6 +47,7 @@ class Protein(models.Model):
 
     def __repr__(self):
         return self.protein_id
+
 
 class Quant(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)

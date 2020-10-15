@@ -6,15 +6,15 @@ from django_tables2 import SingleTableView
 
 from .serializers import (
     CellSerializer,
-    CellGroupingSerializer,
     GeneSerializer,
+    OrganSerializer,
     ProteinSerializer,
 )
 
 from .models import (
     Cell,
-    CellGrouping,
     Gene,
+    Organ,
     Protein,
     Query,
 )
@@ -29,11 +29,11 @@ from .forms import (
 from .utils import (
     cell_query,
     gene_query,
-    group_query,
+    organ_query,
     protein_query,
     get_cells_list,
-    get_groupings_list,
     get_genes_list,
+    get_organs_list,
     get_proteins_list,
 )
 
@@ -70,23 +70,18 @@ class CellViewSet(viewsets.ModelViewSet):
         return paginated_response
 
 
-class CellGroupingViewSet(viewsets.ModelViewSet):
-    queryset = CellGrouping.objects.all()
-    serializer_class = CellGroupingSerializer
-    pagination_class = PaginationClass
-    model = CellGrouping
+class OrganViewSet(viewsets.ModelViewSet):
+    queryset = Organ.objects.all()
+    serializer_class = OrganSerializer
+    model = Organ
 
     def post(self, request, format=None):
-        response = group_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        response = organ_query(self, request)
+        return Response(response)
 
     def get(self, request, format=None):
-        response = group_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        response = organ_query(self, request)
+        return Response(response)
 
 
 class GeneViewSet(viewsets.ModelViewSet):
@@ -133,7 +128,7 @@ class OrganQueryView(FormView):
     template_name = "organ_form.html"
 
     def form_valid(self, form):
-        return group_list(self.request)
+        return organ_list(self.request)
 
 
 class CellQueryView(FormView):
@@ -142,7 +137,7 @@ class CellQueryView(FormView):
     template_name = "cell_form.html"
 
     def form_valid(self, form):
-        return group_list(self.request)
+        return cell_list(self.request)
 
 
 class LandingFormView(FormView):
@@ -178,12 +173,12 @@ class GeneListView(SingleTableView):
 
 
 class OrganListView(SingleTableView):
-    model = CellGrouping
+    model = Organ
     table_class = OrganTable
     template_name = 'organ_list.html'
 
     def post(self, request, format=None):
-        return group_list(request)
+        return organ_list(request)
 
 class AllCellListView(SingleTableView):
     model = Cell
@@ -204,12 +199,12 @@ class AllGeneListView(SingleTableView):
 
 
 class AllOrganListView(SingleTableView):
-    model = CellGrouping
+    model = Organ
     table_class = OrganTable
     template_name = 'organ_list.html'
 
     def post(self, request, format=None):
-        return all_group_list(request)
+        return all_organ_list(request)
 
 class AllProteinListView(SingleTableView):
     model = Protein
@@ -238,8 +233,8 @@ def gene_list(request):
 
 
 @api_view(['POST'])
-def group_list(request):
-    table = OrganTable(get_groupings_list(request.data.dict()))
+def organ_list(request):
+    table = OrganTable(get_organs_list(request.data.dict()))
 
     return render(request, "organ_list.html", {
         "table": table
@@ -264,8 +259,8 @@ def all_gene_list(request):
 
 
 @api_view(['POST'])
-def all_group_list(request):
-    table = OrganTable(get_groupings_list({'input_type': None}))
+def all_organ_list(request):
+    table = OrganTable(get_organs_list({'input_type': None}))
 
     return render(request, "organ_list.html", {
         "table": table

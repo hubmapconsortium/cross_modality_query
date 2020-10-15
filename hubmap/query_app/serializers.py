@@ -2,8 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Cell,
-    CellGrouping,
     Gene,
+    Organ,
     Protein,
 )
 
@@ -11,19 +11,19 @@ from .models import (
 class CellSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cell
-        fields = ['cell_id', 'modality', 'dataset', 'tissue_type', 'protein_mean', 'protein_total', 'protein_covar', 'cell_shape', 'groupings']
+        fields = ['cell_id', 'modality', 'dataset', 'tissue_type', 'protein_mean', 'protein_total', 'protein_covar', 'cell_shape', 'organ']
 
 
-class CellGroupingSerializer(serializers.ModelSerializer):
+class OrganSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CellGrouping
-        fields = ['group_type', 'group_id', 'cells', 'genes', 'marker_genes']
+        model = Organ
+        fields = ['organ_name', 'cells', 'genes', 'marker_genes']
 
 
 class GeneSerializer(serializers.ModelSerializer):
     class Meta:
         model = Gene
-        fields = ['gene_symbol', 'go_terms', 'groups', 'marker_groups']
+        fields = ['gene_symbol', 'go_terms', 'organs', 'marker_organs']
 
 class ProteinSerializer(serializers.ModelSerializer):
     class Meta:
