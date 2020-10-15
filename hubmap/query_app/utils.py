@@ -33,6 +33,8 @@ def process_query_parameters(query_params: Dict) -> Dict:
         query_params['input_type'] = 'tissue_type'
     if 'limit' not in query_params.keys() or int(query_params['limit']) > 1000:
         query_params['limit'] = 1000
+    if 'p_value' not in query_params.keys() or float(query_params['p_value']) < 0.0 or float(query_params['p_value']) > 1.0:
+        query_params['p_value'] = 0.05
 
     return query_params
 

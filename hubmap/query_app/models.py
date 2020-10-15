@@ -12,11 +12,16 @@ class Cell(models.Model):
     protein_covar = models.JSONField(db_index=True, null=True, blank=True)
     cell_shape = ArrayField(models.FloatField(), db_index=True, null=True, blank=True)
 
+    def __repr__(self):
+        return self.cell_id
+
 
 class Gene(models.Model):
     gene_symbol = models.CharField(db_index=True, max_length=20)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
 
+    def __repr__(self):
+        return self.gene_symbol
 
 class CellGrouping(models.Model):
     group_type = models.CharField(db_index=True, max_length=20)
@@ -25,14 +30,15 @@ class CellGrouping(models.Model):
     genes = models.ManyToManyField(Gene, related_name='groups')
     marker_genes = models.ManyToManyField(Gene, related_name='marker_groups')
 
+    def __repr__(self):
+        return self.group_id
 
 class Protein(models.Model):
     protein_id = models.CharField(db_index=True, max_length=20)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
 
-
-#    groups = models.ManyToManyField(Cell_Grouping)
-#    marker_groups = models.ManyToManyField(Cell_Grouping)
+    def __repr__(self):
+        return self.protein_id
 
 class Quant(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
@@ -40,6 +46,17 @@ class Quant(models.Model):
     modality = models.CharField(db_index=True, max_length=20)
     value = models.FloatField(db_index=True)
 
+    def __repr__(self):
+        return self.value
+
+
+class PVal(models.Model):
+    organ_name = models.CharField(max_length=20, db_index=True)
+    gene_id = models.CharField(max_length=20, db_index=True)
+    value = models.IntegerField()
+
+    def __repr__(self):
+        return self.value
 
 class Query(models.Model):
     input_type = models.CharField(max_length=5, choices=(('Cell', 'Cell'), ('Gene', 'Gene'), ('Organ', 'Organ')))
