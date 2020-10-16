@@ -16,6 +16,9 @@ from .serializers import (
     GeneSerializer,
     OrganSerializer,
     ProteinSerializer,
+    GenePValSerializer,
+    OrganPValSerializer,
+    CellQuantSerializer,
 )
 
 
@@ -32,7 +35,8 @@ def process_query_parameters(query_params: Dict) -> Dict:
     query_params['input_type'] = query_params['input_type'].lower()
     if 'limit' not in query_params.keys() or int(query_params['limit']) > 1000:
         query_params['limit'] = 1000
-    if 'p_value' not in query_params.keys() or float(query_params['p_value']) < 0.0 or float(query_params['p_value']) > 1.0:
+    if 'p_value' not in query_params.keys() or float(query_params['p_value']) < 0.0 or float(
+            query_params['p_value']) > 1.0:
         query_params['p_value'] = 0.05
 
     return query_params
@@ -137,19 +141,12 @@ def get_gene_filter(query_params: Dict) -> Q:
 
     input_type = query_params['input_type']
     input_set = query_params['input_set']
-    limit = query_params['limit']
     p_value = query_params['p_value']
 
     if input_type == 'organ':
         qs = [Q(organ_name__icontains=element) for element in input_set]
         q = combine_qs(qs, 'or')
         q = q & Q(value__lte=p_value)
-
-        gene_ids = PVal.objects.filter(q).order_by('value')[:limit].values_list('gene_id')
-        gene_ids = [gene_id[0] for gene_id in gene_ids]
-
-        qs = [Q(gene_symbol__icontains=gene_id) for gene_id in gene_ids]
-        q = combine_qs(qs, 'or')
 
         return q
 
@@ -164,7 +161,6 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_set = query_params['input_set']
     logical_operator = query_params['logical_operator']
     genomic_modality = query_params['genomic_modality']
-    limit = int(query_params['limit'])
 
     if input_type in ['protein', 'gene']:
 
@@ -178,12 +174,7 @@ def get_cell_filter(query_params: Dict) -> Q:
         q = combine_qs(qs, logical_operator)
 
         if input_type == 'gene':
-
             q = q & Q(modality__icontains=genomic_modality)
-            cell_ids = [item[0] for item in Quant.objects.filter(q).order_by('value')[:limit].values_list('cell_id')]
-
-            qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
-            q = combine_qs(qs, 'or')
 
         return q
 
@@ -230,20 +221,15 @@ def get_organ_filter(query_params: Dict) -> Q:
     elif input_type == 'gene':
         # Query those genes and return their associated groupings
         p_value = query_params['p_value']
-        limit = query_params['limit']
 
         qs = [Q(gene_id__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
         q = q & Q(value__lte=p_value)
 
-        organ_names = PVal.objects.filter(q).order_by('value')[:limit].values_list('organ_name')
-        organ_names = [organ_name[0] for organ_name in organ_names]
-
-        qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names]
-        q = combine_qs(qs, 'or')
-
         return q
 
+
+# Put fork here depending on whether or not we're returning pvals
 
 def get_genes_list(query_params: Dict):
     if query_params['input_type'] is None:
@@ -252,9 +238,15 @@ def get_genes_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params['limit'])
         filter = get_gene_filter(query_params)
-        return Gene.objects.filter(filter)[:limit]
+
+        if query_params['input_type'] == 'organ':
+            return PVal.objects.filter(filter).order_by('value')[:limit]
+
+        else:
+            return Gene.objects.filter(filter)[:limit]
 
 
+# Put fork here depending on whether or not we're returning expression values
 def get_cells_list(query_params: Dict):
     if query_params['input_type'] is None:
         return Cell.objects.all()
@@ -262,23 +254,32 @@ def get_cells_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params['limit'])
         filter = get_cell_filter(query_params)
-        return Cell.objects.filter(filter)[:limit]
+        if query_params['input_type'] == 'gene':
+            return Quant.objects.filter(filter).order_by('value')[:limit]
+        else:
+            return Cell.objects.filter(filter)[:limit]
 
 
+# Put fork here depending on whether or not we're returning pvals
 def get_organs_list(query_params: Dict):
     if query_params.get('input_type') is None:
         return Organ.objects.all()
     else:
         query_params = process_query_parameters(query_params)
         filter = get_organ_filter(query_params)
-        return Organ.objects.filter(filter)
+        limit = int(query_params['limit'])
+        if query_params['input_type'] == 'gene':
+            return PVal.objects.filter(filter).order_by('value')[:limit]
+        else:
+            return Organ.objects.filter(filter)
+
 
 def get_proteins_list(query_params: Dict):
     if query_params.get('input_type') is None:
         return Protein.objects.all()
 
-def gene_query(self, request):
 
+def gene_query(self, request):
     if request.method == 'GET':
         genes = Gene.objects.all()
 
@@ -291,15 +292,18 @@ def gene_query(self, request):
     context = {
         "request": request,
     }
-#    print(genes)
-#    print(GeneSerializer(genes, many=True, context=context))
+    #    print(genes)
+    #    print(GeneSerializer(genes, many=True, context=context))
     # Get serializers lists
-    response = GeneSerializer(genes, many=True, context=context).data
+    if query_params['input_type'] == 'organ':
+        response = GenePValSerializer(genes, many=True, context=context).data
+    else:
+        response = GeneSerializer(genes, many=True, context=context).data
+
     return response
 
 
 def cell_query(self, request):
-
     if request.method == 'GET':
         cells = Cell.objects.all()
 
@@ -313,10 +317,14 @@ def cell_query(self, request):
     context = {
         "request": request,
     }
-#    print(cells)
-#    print(CellSerializer(cells, many=True, context=context))
+    #    print(cells)
+    #    print(CellSerializer(cells, many=True, context=context))
     # Get serializers lists
-    response = CellSerializer(cells, many=True, context=context).data
+    if query_params['input_type'] == 'gene':
+        response = CellQuantSerializer(cells, many=True, context=context).data
+    else:
+        response = CellSerializer(cells, many=True, context=context).data
+
     return response
 
 
@@ -334,15 +342,18 @@ def organ_query(self, request):
     context = {
         "request": request,
     }
-#    print(groups)
-#    print(CellGroupingSerializer(groups, many=True, context=context))
+    #    print(groups)
+    #    print(CellGroupingSerializer(groups, many=True, context=context))
     # Get serializers lists
-    response = OrganSerializer(organs, many=True, context=context).data
+    if query_params['input_type'] == 'gene':
+        response = OrganPValSerializer(organs, many=True, context=context).data
+    else:
+        response = OrganSerializer(organs, many=True, context=context).data
+
     return response
 
 
 def protein_query(self, request):
-
     if request.method == 'GET':
         proteins = Protein.objects.all()
         self.queryset = proteins
@@ -350,8 +361,8 @@ def protein_query(self, request):
         context = {
             "request": request,
         }
-#        print(proteins)
-#        print(ProteinSerializer(proteins, many=True, context=context))
+        #        print(proteins)
+        #        print(ProteinSerializer(proteins, many=True, context=context))
         # Get serializers lists
         response = ProteinSerializer(proteins, many=True, context=context).data
         return response

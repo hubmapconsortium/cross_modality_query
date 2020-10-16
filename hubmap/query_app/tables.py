@@ -46,7 +46,7 @@ class OrganPValTable(tables.Table):
 
 class GenePValTable(tables.Table):
     organ_name = tables.Column(accessor='organ_name')
-    value = tables.Column(accessor='value'
+    value = tables.Column(accessor='value')
 
     class Meta:
         model = models.PVal
