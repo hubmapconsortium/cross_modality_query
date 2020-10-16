@@ -75,7 +75,7 @@ class Protein(models.Model):
 
 class Quant(models.Model):
     cell_id = models.CharField(db_index=True, max_length=60)
-    cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE)
+    quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE)
     gene_id = models.CharField(db_index=True, max_length=20)
     modality = models.ForeignKey(to=Modality, related_name='quants', on_delete=models.CASCADE, null=True)
     value = models.FloatField(db_index=True)

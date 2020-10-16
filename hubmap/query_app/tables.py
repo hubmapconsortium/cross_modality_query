@@ -53,13 +53,13 @@ class GenePValTable(tables.Table):
 
 class CellQuantTable(tables.Table):
     value = tables.Column(accessor='value')
-    cell_id = tables.Column(accessor='cell.cell_id')
-    organ = tables.Column(accessor='cell.organ')
-    dataset = tables.Column(accessor='cell.dataset')
-    modality = tables.Column(accessor='cell.modality')
-    protein_mean = tables.Column(accessor='cell.protein_mean')
-    protein_total = tables.Column(accessor='cell.protein_total')
-    protein_covar = tables.Column(accessor='cell.protein_covar')
+    cell_id = tables.Column(accessor='quant_cell.cell_id')
+    organ = tables.Column(accessor='quant_cell.organ')
+    dataset = tables.Column(accessor='quant_cell.dataset')
+    modality = tables.Column(accessor='quant_cell.modality')
+    protein_mean = tables.Column(accessor='quant_cell.protein_mean')
+    protein_total = tables.Column(accessor='quant_cell.protein_total')
+    protein_covar = tables.Column(accessor='quant_cell.protein_covar')
 
     class Meta:
         model = models.Quant

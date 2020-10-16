@@ -52,8 +52,8 @@ class OrganPValSerializer(serializers.ModelSerializer):
 
 
 class CellQuantSerializer(serializers.ModelSerializer):
-    cell = serializers.StringRelatedField()
+    quant_cell = serializers.StringRelatedField()
 
     class Meta:
         model = Quant
-        fields = ['cell', 'value']
+        fields = ['quant_cell', 'value']

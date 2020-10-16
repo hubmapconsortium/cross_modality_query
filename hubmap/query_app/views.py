@@ -44,6 +44,9 @@ from .tables import (
     CellTable,
     OrganTable,
     ProteinTable,
+    GenePValTable,
+    OrganPValTable,
+    CellQuantTable,
 )
 
 from django.views.generic.edit import FormView
@@ -164,8 +167,6 @@ class CellListView(SingleTableView):
     def post(self, request, format=None):
         return cell_list(request)
 
-    def get(self, request, format=None):
-        pass
 
 class GeneListView(SingleTableView):
     model = Gene
@@ -175,8 +176,6 @@ class GeneListView(SingleTableView):
     def post(self, request, format=None):
         return gene_list(request)
 
-    def get(self, request, format=None):
-        pass
 
 class OrganListView(SingleTableView):
     model = Organ
@@ -186,8 +185,6 @@ class OrganListView(SingleTableView):
     def post(self, request, format=None):
         return organ_list(request)
 
-    def get(self, request, format=None):
-        return
 
 class AllCellListView(SingleTableView):
     model = Cell
@@ -225,7 +222,10 @@ class AllProteinListView(SingleTableView):
 
 @api_view(['POST'])
 def cell_list(request):
-    table = CellTable(get_cells_list(request.data.dict()))
+    if request.data.dict()['input_type'] == 'gene':
+        table = CellQuantTable(get_cells_list(request.data.dict()))
+    else:
+        table = CellTable(get_cells_list(request.data.dict()))
 
     return render(request, "cell_list.html", {
         "table": table
@@ -234,7 +234,10 @@ def cell_list(request):
 
 @api_view(['POST'])
 def gene_list(request):
-    table = GeneTable(get_genes_list(request.data.dict()))
+    if request.data.dict()['input_type'] == 'organ':
+        table = GenePValTable(get_genes_list(request.data.dict()))
+    else:
+        table = GeneTable(get_genes_list(request.data.dict()))
 
     return render(request, "gene_list.html", {
         "table": table
@@ -243,7 +246,10 @@ def gene_list(request):
 
 @api_view(['POST'])
 def organ_list(request):
-    table = OrganTable(get_organs_list(request.data.dict()))
+    if request.data.dict()['input_type'] == 'gene':
+        table = OrganPValTable(get_organs_list(request.data.dict()))
+    else:
+        table = OrganTable(get_organs_list(request.data.dict()))
 
     return render(request, "organ_list.html", {
         "table": table
