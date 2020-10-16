@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.shortcuts import redirect, render
 from django_tables2 import SingleTableView
+#from django_tables2.export.export import TableExport
+
 
 from .serializers import (
     CellSerializer,
@@ -162,6 +164,8 @@ class CellListView(SingleTableView):
     def post(self, request, format=None):
         return cell_list(request)
 
+    def get(self, request, format=None):
+        pass
 
 class GeneListView(SingleTableView):
     model = Gene
@@ -171,6 +175,8 @@ class GeneListView(SingleTableView):
     def post(self, request, format=None):
         return gene_list(request)
 
+    def get(self, request, format=None):
+        pass
 
 class OrganListView(SingleTableView):
     model = Organ
@@ -179,6 +185,9 @@ class OrganListView(SingleTableView):
 
     def post(self, request, format=None):
         return organ_list(request)
+
+    def get(self, request, format=None):
+        return
 
 class AllCellListView(SingleTableView):
     model = Cell

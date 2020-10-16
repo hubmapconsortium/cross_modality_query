@@ -17,7 +17,9 @@ if __name__ == '__main__':
 
 from query_app.models import (
     Cell,
+    Dataset,
     Gene,
+    Modality,
     Organ,
     Protein,
     PVal,
@@ -104,7 +106,7 @@ def save_genes(gene_set):
         g.save()
 
 def process_cell_records(cell_df):
-    cell_fields = ['cell_id', 'tissue_type', 'dataset', 'protein_mean', 'protein_total', 'protein_covar']
+    cell_fields = ['cell_id', 'protein_mean', 'protein_total', 'protein_covar']
 
     if 'cell_id' not in cell_df.columns:
         cell_df['cell_id'] = cell_df.index
@@ -139,16 +141,19 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
 
 
     elif model_name == 'quant':
+        modality = Modality.objects.filter(modality_name__icontains=modality).first()
         dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in df.index for column in df.columns]
         for kwargs in dict_list:
+            cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id'])
+            kwargs['cell'] = cell
             obj = create_model('quant', kwargs)
             obj.save()
 
     elif model_name == 'cell':
 
-        records = process_cell_records(df)
+        kwargs_list = process_cell_records(df)
 
-        for kwargs in records:
+        for kwargs in kwargs_list:
             obj = create_model('cell', kwargs)
             obj.save()
 
@@ -212,6 +217,28 @@ def create_quants(hdf_files: List[Path]):
                 chunk = store.select('quant', start=i*1000, stop=(i+1)*1000)
                 df_to_db(chunk, 'quant', modality)
 
+def create_pvals(hdf_files: List[Path]):
+    for file in hdf_files:
+        with pd.HDFStore(file) as store:
+            pval_df = store.get('p_value')
+            df_to_db(pval_df, 'pvalue')
+
+
+def create_modalities_and_datasets(hdf_files: List[Path]):
+    for file in hdf_files:
+        modality_name = file.stem
+        modality = Modality(modality_name=modality_name)
+        modality.save()
+        with pd.HDFStore(file) as store:
+            cell_df = store.get('cell')
+            for uuid in cell_df['dataset'].unique():
+                dataset = Dataset(uuid=uuid, modality=modality)
+                dataset.save()
+                for cell_id in cell_df[cell_df['dataset'] == uuid].unique():
+                    cell = Cell.objects.filter(cell_id__icontains=cell_id).first()
+                    if cell is not None:
+                        dataset.cells.add(cell)
+
 
 def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     rna_files = [file for file in rna_directory.iterdir()]
@@ -224,14 +251,18 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     hdf_files = [file for files in all_files for file in files if file.stem in modality_list]
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
 
+
     create_cells(hdf_files)
     print('Cells created')
+    create_modalities_and_datasets(hdf_files)
+    print('Modalities and datasets created')
     create_genes(json_files)
     print('Genes created')
     create_organs(hdf_files)
     print('Organs created')
     create_quants(hdf_files)
     print('Quants created')
+    create_pvals(hdf_files)
 
 
 if __name__ == '__main__':
