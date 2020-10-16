@@ -10,7 +10,6 @@ class Gene(models.Model):
 
 class Organ(models.Model):
     organ_name = models.CharField(db_index=True, max_length=20)
-    genes = models.ManyToManyField(Gene, related_name='organs')
 
     def __repr__(self):
         return self.organ_name
@@ -29,17 +28,6 @@ class Cell(models.Model):
     def __repr__(self):
         return self.cell_id
 
-
-class CellGrouping(models.Model):
-    group_type = models.CharField(db_index=True, max_length=20)
-    group_id = models.CharField(db_index=True, max_length=20)
-    cells = models.ManyToManyField(Cell, related_name='groupings')
-    genes = models.ManyToManyField(Gene, related_name='groups')
-    marker_genes = models.ManyToManyField(Gene, related_name='marker_groups')
-    organ = models.ForeignKey(Organ, related_name='cells', on_delete=models.CASCADE)
-
-    def __repr__(self):
-        return self.group_id
 
 class Protein(models.Model):
     protein_id = models.CharField(db_index=True, max_length=20)

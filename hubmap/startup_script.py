@@ -20,6 +20,7 @@ from query_app.models import (
     Gene,
     Organ,
     Protein,
+    PValue,
     Quant,
 )
 
@@ -28,39 +29,26 @@ def sanitize_string(string: str) -> str:
     return ''.join([char for char in string if char.isalnum() or char in '.-'])
 
 
-def coalesce_organs(group_df: pd.DataFrame):
-    organs_df = group_df[group_df['group_type'] == 'tissue_type']
-    for organ in organs_df['group_id'].unique():
-        organ_df = organs_df[organs_df['group_id'] == organ]
+def coalesce_organs(organs_df: pd.DataFrame):
+    for organ in organs_df['organ_name'].unique():
+        organ_df = organs_df[organs_df['organ_name'] == organ]
         cells = []
-        genes = []
-        marker_genes = []
+
         for i, row in organ_df.iterrows():
             print(type(row['cells']))
             if isinstance(row['cells'], list):
                 cells.extend(row['cells'])
             elif isinstance(row['cells'], str):
                 cells.extend(row['cells'].strip('[]').split(' '))
-            if isinstance(row['genes'], list):
-                genes.extend(row['genes'])
-            elif isinstance(row['genes'], str):
-                genes.extend(row['genes'].strip('[]').split(' '))
-            if isinstance(row['marker_genes'], list):
-                marker_genes.extend(row['marker_genes'])
-            elif isinstance(row['marker_genes'], str):
-                marker_genes.extend(row['marker_genes'].strip('[]').split(' '))
             cells = list(set(cells))
-            genes = list(set(genes))
-            marker_genes = list(set(marker_genes))
 
             cells = [sanitize_string(cell) for cell in cells]
-            genes = [sanitize_string(gene) for gene in genes]
 
-        group_df = group_df[group_df['group_id'] != organ].copy()
-        organ_dict = {'group_type': 'tissue_type', 'group_id': organ, 'cells': cells, 'genes': genes,
-                      'marker_genes': marker_genes}
-        group_df = group_df.append(organ_dict, ignore_index=True)
-    return group_df
+        organs_df = organs_df[organ_df['organ_name'] != organ].copy()
+        organ_dict = {'organ_name': organ, 'cells': cells}
+        organs_df = organ_df.append(organ_dict, ignore_index=True)
+        
+    return organ_df
 
 
 def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
@@ -78,6 +66,8 @@ def create_model(model_name: str, kwargs: dict):
         obj = Quant(**kwargs)
     elif model_name == 'protein':
         obj = Protein(**kwargs)
+    elif model_name == 'pvalue':
+        obj = PValue(**kwargs)
     else:
         obj = None
     return obj
@@ -129,44 +119,24 @@ def process_cell_records(cell_df):
     return records
 
 @transaction.atomic
-<<<<<<< HEAD
-def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
-    group_fields = ['group_type', 'group_id']
 
-    if model_name == 'group':
-=======
 def df_to_db(df: pd.DataFrame, model_name: str):
     if model_name == 'organ':
->>>>>>> organ_entity
 
         for i, row in df.iterrows():
-            if row['group_type'] == 'tissue_type':
-                kwargs = {'organ_name': row['group_id']}
+            kwargs = {'organ_name': row['organ_name']}
 
-                obj = create_model(model_name, kwargs)
-                obj.save()
+            obj = create_model(model_name, kwargs)
+            obj.save()
 
-                cell_list = list(df.at[i, 'cells'])[:50]
-                print(cell_list)
-                cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in cell_list]
-                cells = [cell for cell in cells if cell is not None]
-                print(cells)
-                if len(cells) > 0:
-                    obj.cells.add(*cells)
+            cell_list = list(df.at[i, 'cells'])[:50]
+            print(cell_list)
+            cells = [Cell.objects.filter(cell_id__icontains=cell).first() for cell in cell_list]
+            cells = [cell for cell in cells if cell is not None]
+            print(cells)
+            if len(cells) > 0:
+                obj.cells.add(*cells)
 
-                gene_list = list(df.at[i, 'genes'])[:50]
-                print(gene_list)
-                genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in gene_list]
-                genes = [gene for gene in genes if gene is not None]
-                print(genes)
-                if len(genes) > 0:
-                    obj.genes.add(*genes)
-
-                marker_genes = [Gene.objects.filter(gene_symbol__icontains=gene).first() for gene in
-                                list(df.at[i, 'marker_genes'])]
-                marker_genes = [gene for gene in marker_genes if gene is not None]
-                if len(marker_genes) > 0:
-                    obj.marker_genes.add(*marker_genes)
 
     elif model_name == 'quant':
         dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in df.index for column in df.columns]
@@ -180,6 +150,12 @@ def df_to_db(df: pd.DataFrame, model_name: str):
 
         for kwargs in records:
             obj = create_model('cell', kwargs)
+            obj.save()
+
+    elif model_name == 'pvalue':
+        kwargs_list = df.to_dict('records')
+        for kwargs in kwargs_list:
+            obj = create_model('pvalue', kwargs)
             obj.save()
 
 
