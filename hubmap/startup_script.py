@@ -20,7 +20,7 @@ from query_app.models import (
     Gene,
     Organ,
     Protein,
-    PValue,
+    PVal,
     Quant,
 )
 
@@ -46,8 +46,8 @@ def coalesce_organs(organs_df: pd.DataFrame):
 
         organs_df = organs_df[organ_df['organ_name'] != organ].copy()
         organ_dict = {'organ_name': organ, 'cells': cells}
-        organs_df = organ_df.append(organ_dict, ignore_index=True)
-        
+        organs_df = organs_df.append(organ_dict, ignore_index=True)
+
     return organ_df
 
 
@@ -67,7 +67,7 @@ def create_model(model_name: str, kwargs: dict):
     elif model_name == 'protein':
         obj = Protein(**kwargs)
     elif model_name == 'pvalue':
-        obj = PValue(**kwargs)
+        obj = PVal(**kwargs)
     else:
         obj = None
     return obj
@@ -120,7 +120,7 @@ def process_cell_records(cell_df):
 
 @transaction.atomic
 
-def df_to_db(df: pd.DataFrame, model_name: str):
+def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     if model_name == 'organ':
 
         for i, row in df.iterrows():

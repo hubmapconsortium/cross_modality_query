@@ -7,6 +7,7 @@ from .models import (
     Gene,
     Organ,
     Protein,
+    PVal,
     Quant,
 )
 
@@ -136,20 +137,15 @@ def get_gene_filter(query_params: Dict) -> Q:
 
     input_type = query_params['input_type']
     input_set = query_params['input_set']
-    marker = query_params['marker']
+    limit = query_params['limit']
+    p_value = query_params['p_value']
 
     if input_type == 'organ':
-        gene_ids = []
         qs = [Q(organ_name__icontains=element) for element in input_set]
         q = combine_qs(qs, 'or')
+        q = q & Q(value__lte=p_value)
 
-        if marker == 'True':
-            for organ in Organ.objects.filter(q):
-                gene_ids.extend(organ.marker_genes.values_list('gene_symbol'))
-        else:
-            for organ in Organ.objects.filter(q):
-                gene_ids.extend(organ.genes.values_list('gene_symbol'))
-
+        gene_ids = PVal.objects.filter(q).order_by('value')[:limit].values_list('gene_id')
         gene_ids = [gene_id[0] for gene_id in gene_ids]
 
         qs = [Q(gene_symbol__icontains=gene_id) for gene_id in gene_ids]
@@ -218,7 +214,6 @@ def get_organ_filter(query_params: Dict) -> Q:
     input_type = query_params['input_type']
     input_set = query_params['input_set']
     logical_operator = query_params['logical_operator']
-    marker = query_params['marker']
 
     if input_type == 'cell':
 
@@ -234,20 +229,15 @@ def get_organ_filter(query_params: Dict) -> Q:
 
     elif input_type == 'gene':
         # Query those genes and return their associated groupings
-        organ_names = []
+        p_value = query_params['p_value']
+        limit = query_params['limit']
 
-        qs = [Q(gene_symbol__icontains=item) for item in input_set]
+        qs = [Q(gene_id__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
+        q = q & Q(value__lte=p_value)
 
-        if marker == 'True':
-            for gene in Gene.objects.filter(q):
-                organ_names.extend(gene.marker_organs.values_list('organ_name'))
-
-        else:
-            for gene in Gene.objects.filter(q):
-                organ_names.extend(gene.organs.values_list('organ_name'))
-
-        organ_names = [name[0] for name in organ_names]
+        organ_names = PVal.objects.filter(q).order_by('value')[:limit].values_list('organ_name')
+        organ_names = [organ_name[0] for organ_name in organ_names]
 
         qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names]
         q = combine_qs(qs, 'or')
