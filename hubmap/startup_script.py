@@ -31,7 +31,7 @@ def sanitize_string(string: str) -> str:
     return ''.join([char for char in string if char.isalnum() or char in '.-'])
 
 
-def coalesce_organs(organs_df: pd.DataFrame):
+def coalesce_organs(organs_df: pd.DataFrame) -> pd.DataFrame:
     for organ in organs_df['organ_name'].unique():
         organ_df = organs_df[organs_df['organ_name'] == organ]
         cells = []
@@ -50,10 +50,10 @@ def coalesce_organs(organs_df: pd.DataFrame):
         organ_dict = {'organ_name': organ, 'cells': cells}
         organs_df = organs_df.append(organ_dict, ignore_index=True)
 
-    return organ_df
+    return organs_df
 
 
-def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame):
+def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([df_1, df_2], join='outer')
 
 
@@ -75,7 +75,7 @@ def create_model(model_name: str, kwargs: dict):
     return obj
 
 
-def sanitize_nans(kwargs: dict):
+def sanitize_nans(kwargs: dict) -> dict:
     for key in kwargs.keys():
         if type(kwargs[key]) == float and np.isnan(kwargs[key]):
             kwargs[key] = {}
@@ -100,12 +100,13 @@ def create_proteins(cell_df: pd.DataFrame):
 
 
 @transaction.atomic
-def save_genes(gene_set):
+def save_genes(gene_set: List[str]):
     for gene in gene_set:
         g = Gene(gene_symbol=gene)
         g.save()
 
-def process_cell_records(cell_df):
+
+def process_cell_records(cell_df: pd.DataFrame) -> dict:
     cell_fields = ['cell_id', 'protein_mean', 'protein_total', 'protein_covar']
 
     if 'cell_id' not in cell_df.columns:
@@ -115,13 +116,15 @@ def process_cell_records(cell_df):
     records = sanitize_nans({key: records[key] for key in records.keys() if key in cell_fields})
     for record in records:
         for key in record.keys():
-            if 'protein' in key and isinstance([key], str):
+            if 'protein' in key and isinstance(record[key], str):
                 record[key] = json.loads(record[key])
+            for protein_key in record[key].keys():
+                record[key][protein_key] = float(record[key][protein_key])
 
     return records
 
-@transaction.atomic
 
+@transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     if model_name == 'organ':
 
@@ -142,7 +145,8 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
 
     elif model_name == 'quant':
         modality = Modality.objects.filter(modality_name__icontains=modality).first()
-        dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in df.index for column in df.columns]
+        dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in
+                     df.index for column in df.columns]
         for kwargs in dict_list:
             cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id'])
             kwargs['cell'] = cell
@@ -165,7 +169,6 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
 
 
 def create_cells(hdf_files: List[Path]):
-
     for cell_file in hdf_files:
         cell_df = pd.read_hdf(cell_file, 'cell')
         if 'codex' in fspath(cell_file):
@@ -186,7 +189,7 @@ def create_genes(json_files: List[Path]):
         partial_gene_list = [key[:20] for key in partial_gene_dict.keys()]
         gene_list.extend(partial_gene_list)
 
-    gene_set = set(gene_list)
+    gene_set = list(set(gene_list))
 
     save_genes(gene_set)
 
@@ -209,13 +212,13 @@ def merge_groupings(group_files: List[Path]):
 
 
 def create_quants(hdf_files: List[Path]):
-
     for file in hdf_files:
         modality = file.stem.split('_')[0]
         with pd.HDFStore(file) as store:
             for i in range(len(store.get('quant').index) // 1000 + 1):
-                chunk = store.select('quant', start=i*1000, stop=(i+1)*1000)
+                chunk = store.select('quant', start=i * 1000, stop=(i + 1) * 1000)
                 df_to_db(chunk, 'quant', modality)
+
 
 def create_pvals(hdf_files: List[Path]):
     for file in hdf_files:
@@ -251,7 +254,6 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     hdf_files = [file for files in all_files for file in files if file.stem in modality_list]
     json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
 
-
     create_cells(hdf_files)
     print('Cells created')
     create_modalities_and_datasets(hdf_files)
@@ -260,9 +262,10 @@ def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
     print('Genes created')
     create_organs(hdf_files)
     print('Organs created')
-    create_quants(hdf_files)
+    #    create_quants(hdf_files)
     print('Quants created')
     create_pvals(hdf_files)
+    print('PVals created')
 
 
 if __name__ == '__main__':

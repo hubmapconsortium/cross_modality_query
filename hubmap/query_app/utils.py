@@ -35,9 +35,11 @@ def process_query_parameters(query_params: Dict) -> Dict:
     query_params['input_type'] = query_params['input_type'].lower()
     if 'limit' not in query_params.keys() or int(query_params['limit']) > 1000:
         query_params['limit'] = 1000
-    if 'p_value' not in query_params.keys() or float(query_params['p_value']) < 0.0 or float(
+    if 'p_value' not in query_params.keys() or query_params['p_value'] == '' or float(query_params['p_value']) < 0.0 or float(
             query_params['p_value']) > 1.0:
         query_params['p_value'] = 0.05
+    else:
+        query_params['p_value'] = float(query_params['p_value'])
 
     return query_params
 
@@ -211,9 +213,9 @@ def get_organ_filter(query_params: Dict) -> Q:
         qs = [Q(cell_id__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
 
-        organ_names = [cell.organ.organ_name for cell in Cell.objects.filter(q)]
+        organ_names = [cell.organ.organ_name for cell in Cell.objects.filter(q) if cell is not None]
 
-        qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names]
+        qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names if organ_name is not None]
         q = combine_qs(qs, logical_operator)
 
         return q
