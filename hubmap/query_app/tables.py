@@ -3,6 +3,11 @@ import django_tables2 as tables
 from . import models
 
 
+class FloatColumn(tables.Column):
+    def render(self, value):
+        return '{:0.2f}'.format(value)
+
+
 class CellTable(tables.Table):
     cell_id = tables.Column(accessor='cell_id')
     organ = tables.Column(accessor='organ')
@@ -30,6 +35,7 @@ class OrganTable(tables.Table):
     class Meta:
         model = models.Organ
 
+
 class ProteinTable(tables.Table):
     protein_id = tables.Column(accessor='protein_id')
     go_terms = tables.Column(accessor='go_terms')
@@ -37,29 +43,29 @@ class ProteinTable(tables.Table):
     class Meta:
         model = models.Protein
 
+
 class OrganPValTable(tables.Table):
     organ_name = tables.Column(accessor='organ_name')
-    value = tables.Column(accessor='value')
+    value = FloatColumn(accessor='value')
 
     class Meta:
         model = models.PVal
+
 
 class GenePValTable(tables.Table):
     organ_name = tables.Column(accessor='organ_name')
-    value = tables.Column(accessor='value')
+    value = FloatColumn(accessor='value')
 
     class Meta:
         model = models.PVal
 
-class CellQuantTable(tables.Table):
-    value = tables.Column(accessor='value')
-    cell_id = tables.Column(accessor='quant_cell.cell_id')
-    organ = tables.Column(accessor='quant_cell.organ')
-    dataset = tables.Column(accessor='quant_cell.dataset')
-    modality = tables.Column(accessor='quant_cell.modality')
-    protein_mean = tables.Column(accessor='quant_cell.protein_mean')
-    protein_total = tables.Column(accessor='quant_cell.protein_total')
-    protein_covar = tables.Column(accessor='quant_cell.protein_covar')
+
+class CellAndValuesTable(tables.Table):
+    cell_id = tables.Column(accessor='cell_id')
+    organ = tables.Column(accessor='organ')
+    dataset = tables.Column(accessor='dataset')
+    modality = tables.Column(accessor='modality')
+    values = tables.Column(accessor='values')
 
     class Meta:
-        model = models.Quant
+        model = models.CellAndValues

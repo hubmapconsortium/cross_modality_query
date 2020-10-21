@@ -4,6 +4,7 @@ from functools import reduce
 
 from .models import (
     Cell,
+    CellAndValues,
     Gene,
     Organ,
     Protein,
@@ -13,12 +14,14 @@ from .models import (
 
 from .serializers import (
     CellSerializer,
+    CellAndValuesSerializer,
+    DatasetSerializer,
     GeneSerializer,
+    ModalitySerializer,
     OrganSerializer,
     ProteinSerializer,
     GenePValSerializer,
     OrganPValSerializer,
-    CellQuantSerializer,
 )
 
 
@@ -35,7 +38,8 @@ def process_query_parameters(query_params: Dict) -> Dict:
     query_params['input_type'] = query_params['input_type'].lower()
     if 'limit' not in query_params.keys() or int(query_params['limit']) > 1000:
         query_params['limit'] = 1000
-    if 'p_value' not in query_params.keys() or query_params['p_value'] == '' or float(query_params['p_value']) < 0.0 or float(
+    if 'p_value' not in query_params.keys() or query_params['p_value'] == '' or float(
+            query_params['p_value']) < 0.0 or float(
             query_params['p_value']) > 1.0:
         query_params['p_value'] = 0.05
     else:
@@ -176,7 +180,7 @@ def get_cell_filter(query_params: Dict) -> Q:
         q = combine_qs(qs, logical_operator)
 
         if input_type == 'gene':
-            q = q & Q(modality__icontains=genomic_modality)
+            q = q & Q(modality__modality_name__icontains=genomic_modality)
 
         return q
 
@@ -187,10 +191,9 @@ def get_cell_filter(query_params: Dict) -> Q:
 
         # Query groupings and then union their cells fields
         cell_ids = []
-        for organ in Organ.objects.filter(q):
-            cell_ids.extend(organ.cells.values_list('cell_id'))
 
-        cell_ids = [cell_id[0] for cell_id in cell_ids]
+        for organ in Organ.objects.filter(q):
+            cell_ids.extend([cell.cell_id for cell in organ.cells.all()])
 
         qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
         q = combine_qs(qs, 'or')
@@ -213,7 +216,8 @@ def get_organ_filter(query_params: Dict) -> Q:
         qs = [Q(cell_id__icontains=item) for item in input_set]
         q = combine_qs(qs, 'or')
 
-        organ_names = [cell.organ.organ_name for cell in Cell.objects.filter(q) if cell is not None]
+        organ_names = [cell.organ.organ_name for cell in Cell.objects.filter(q) if
+                       cell is not None and cell.organ is not None]
 
         qs = [Q(organ_name__icontains=organ_name) for organ_name in organ_names if organ_name is not None]
         q = combine_qs(qs, logical_operator)
@@ -242,10 +246,11 @@ def get_genes_list(query_params: Dict):
         filter = get_gene_filter(query_params)
 
         if query_params['input_type'] == 'organ':
-            return PVal.objects.filter(filter).order_by('value')[:limit]
-
+            ids = PVal.objects.filter(filter).order_by('value')[:limit].values_list('pk', flat=True)
+            return PVal.objects.filter(pk__in=list(ids))
         else:
-            return Gene.objects.filter(filter)[:limit]
+            ids = Gene.objects.filter(filter)[:limit].values_list('pk', flat=True)
+            return Gene.objects.filter(pk__in=list(ids))
 
 
 # Put fork here depending on whether or not we're returning expression values
@@ -257,9 +262,14 @@ def get_cells_list(query_params: Dict):
         limit = int(query_params['limit'])
         filter = get_cell_filter(query_params)
         if query_params['input_type'] == 'gene':
-            return Quant.objects.filter(filter).order_by('value')[:limit]
+            ids = Quant.objects.filter(filter).order_by('-value')[:limit].values_list('pk', flat=True)
+            quants = Quant.objects.filter(pk__in=list(ids))
+            cells_and_values = make_cell_and_values(quants)
+
+            return cells_and_values
         else:
-            return Cell.objects.filter(filter)[:limit]
+            ids = Cell.objects.filter(filter)[:limit].values_list('pk', flat=True)
+            return Cell.objects.filter(pk__in=list(ids))
 
 
 # Put fork here depending on whether or not we're returning pvals
@@ -271,9 +281,11 @@ def get_organs_list(query_params: Dict):
         filter = get_organ_filter(query_params)
         limit = int(query_params['limit'])
         if query_params['input_type'] == 'gene':
-            return PVal.objects.filter(filter).order_by('value')[:limit]
+            ids = PVal.objects.filter(filter).order_by('value')[:limit].values_list('pk', flat=True)
+            return PVal.objects.filter(pk__in=list(ids))
         else:
-            return Organ.objects.filter(filter)
+            ids = Organ.objects.filter(filter)[:limit].values_list('pk', flat=True)
+            return Organ.objects.filter(pk__in=list(ids))
 
 
 def get_proteins_list(query_params: Dict):
@@ -323,7 +335,8 @@ def cell_query(self, request):
     #    print(CellSerializer(cells, many=True, context=context))
     # Get serializers lists
     if query_params['input_type'] == 'gene':
-        response = CellQuantSerializer(cells, many=True, context=context).data
+        cells_and_values = make_cell_and_values(cells)
+        response = CellAndValuesSerializer(cells_and_values, many=True, context=context).data
     else:
         response = CellSerializer(cells, many=True, context=context).data
 
@@ -368,3 +381,22 @@ def protein_query(self, request):
         # Get serializers lists
         response = ProteinSerializer(proteins, many=True, context=context).data
         return response
+
+
+def make_cell_and_values(quant_query_set):
+    """Takes a query set of quant objects and returns a query set of cell_and_values
+    This function will almost definitely have problems with concurrency"""
+
+    CellAndValues.objects.all().delete()
+
+    cell_ids = quant_query_set.distinct('cell_id').values_list('cell_id', flat=True)
+    for cell_id in cell_ids:
+        gene_ids_and_values = quant_query_set.filter(cell_id__icontains=cell_id).values_list('gene_id', 'value')
+        values = {giv[0]: float(giv[1]) for giv in gene_ids_and_values}
+        cell = Cell.objects.filter(cell_id__icontains=cell_id).first()
+        kwargs = {'cell_id':cell.cell_id, 'dataset':cell.dataset, 'modality':cell.modality,
+                       'organ':cell.organ, 'values':values}
+        cav = CellAndValues(**kwargs)
+        cav.save()
+
+    return CellAndValues.objects.all()

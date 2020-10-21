@@ -2,24 +2,36 @@ from rest_framework import serializers
 
 from .models import (
     Cell,
+    CellAndValues,
+    Dataset,
     Gene,
     Organ,
+    Modality,
     Protein,
     PVal,
-    Quant,
 )
 
+class ModalitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Modality
+        fields = ['modality_name']
+
+class DatasetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dataset
+        fields = ['uuid']
 
 class CellSerializer(serializers.ModelSerializer):
-    modality = serializers.StringRelatedField()
-    dataset = serializers.StringRelatedField()
-    organ = serializers.StringRelatedField()
+    modality = serializers.RelatedField(read_only=True)
+    dataset = serializers.RelatedField(read_only=True)
+    organ = serializers.RelatedField(read_only=True)
+
 
     class Meta:
         model = Cell
-        fields = ['cell_id', 'modality', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
+        fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
                   'cell_shape', 'organ']
-
+        exclude = ['modality']
 
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,9 +63,9 @@ class OrganPValSerializer(serializers.ModelSerializer):
         fields = ['organ_name', 'value']
 
 
-class CellQuantSerializer(serializers.ModelSerializer):
-    quant_cell = serializers.StringRelatedField()
+class CellAndValuesSerializer(serializers.ModelSerializer):
+    cell = serializers.RelatedField(read_only=True)
 
     class Meta:
-        model = Quant
-        fields = ['quant_cell', 'value']
+        model = CellAndValues
+        fields = ['cell', 'values']

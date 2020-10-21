@@ -74,23 +74,32 @@ class Protein(models.Model):
 
 
 class Quant(models.Model):
-    cell_id = models.CharField(db_index=True, max_length=60)
-    quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE)
-    gene_id = models.CharField(db_index=True, max_length=20)
+    cell_id = models.CharField(db_index=True, max_length=60, null=True)
+    quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, null=True)
+    gene_id = models.CharField(db_index=True, max_length=20, null=True)
     modality = models.ForeignKey(to=Modality, related_name='quants', on_delete=models.CASCADE, null=True)
-    value = models.FloatField(db_index=True)
+    value = models.FloatField(db_index=True, null=True)
 
     def __repr__(self):
         return self.value
 
 
 class PVal(models.Model):
-    organ_name = models.CharField(max_length=20, db_index=True)
-    gene_id = models.CharField(max_length=20, db_index=True)
-    value = models.IntegerField()
+    organ_name = models.CharField(max_length=20, db_index=True, null=True)
+    gene_id = models.CharField(max_length=20, db_index=True, null=True)
+    value = models.FloatField(null=True, db_index=True)
 
     def __repr__(self):
         return self.value
+
+
+class CellAndValues(models.Model):
+    """A model used for storing and serializing cells and subsets of their expression values"""
+    cell_id = models.CharField(db_index=True, max_length=60, null=True)
+    modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
+    dataset = models.ForeignKey(to=Dataset, related_name='cells_and_values', on_delete=models.CASCADE, null=True)
+    organ = models.ForeignKey(to=Organ, related_name='cells_and_values', on_delete=models.CASCADE, null=True)
+    values = models.JSONField(null=True)
 
 
 class Query(models.Model):

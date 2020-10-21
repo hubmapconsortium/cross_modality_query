@@ -3,12 +3,14 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.shortcuts import redirect, render
 from django_tables2 import SingleTableView
-#from django_tables2.export.export import TableExport
+# from django_tables2.export.export import TableExport
 
 
 from .serializers import (
     CellSerializer,
+    DatasetSerializer,
     GeneSerializer,
+    ModalitySerializer,
     OrganSerializer,
     ProteinSerializer,
 )
@@ -40,21 +42,23 @@ from .utils import (
 )
 
 from .tables import (
+    CellAndValuesTable,
     GeneTable,
     CellTable,
     OrganTable,
     ProteinTable,
     GenePValTable,
     OrganPValTable,
-    CellQuantTable,
 )
 
 from django.views.generic.edit import FormView
 from rest_framework.pagination import PageNumberPagination
 
+
 class PaginationClass(PageNumberPagination):
     page_size = 10
     max_page_size = 10
+
 
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
@@ -107,6 +111,7 @@ class GeneViewSet(viewsets.ModelViewSet):
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
 
+
 class ProteinViewSet(viewsets.ModelViewSet):
     queryset = Protein.objects.all()
     serializer_class = ProteinSerializer
@@ -117,6 +122,7 @@ class ProteinViewSet(viewsets.ModelViewSet):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
+
 
 class GeneQueryView(FormView):
     form_class = GeneQueryForm
@@ -163,6 +169,7 @@ class CellListView(SingleTableView):
     model = Cell
     table_class = CellTable
     template_name = 'cell_list.html'
+    paginator_class = PaginationClass
 
     def post(self, request, format=None):
         return cell_list(request)
@@ -172,6 +179,7 @@ class GeneListView(SingleTableView):
     model = Gene
     table_class = GeneTable
     template_name = 'gene_list.html'
+    paginator_class = PaginationClass
 
     def post(self, request, format=None):
         return gene_list(request)
@@ -181,6 +189,7 @@ class OrganListView(SingleTableView):
     model = Organ
     table_class = OrganTable
     template_name = 'organ_list.html'
+    paginator_class = PaginationClass
 
     def post(self, request, format=None):
         return organ_list(request)
@@ -212,6 +221,7 @@ class AllOrganListView(SingleTableView):
     def post(self, request, format=None):
         return all_organ_list(request)
 
+
 class AllProteinListView(SingleTableView):
     model = Protein
     table_class = ProteinTable
@@ -220,12 +230,15 @@ class AllProteinListView(SingleTableView):
     def post(self, request, format=None):
         return all_protein_list(request)
 
+
 @api_view(['POST'])
 def cell_list(request):
     if request.data.dict()['input_type'] == 'gene':
-        table = CellQuantTable(get_cells_list(request.data.dict()))
+        table = CellAndValuesTable(get_cells_list(request.data.dict()))
+        print('Calling the right table')
     else:
         table = CellTable(get_cells_list(request.data.dict()))
+        print('Calling the wrong table')
 
     return render(request, "cell_list.html", {
         "table": table
@@ -255,6 +268,7 @@ def organ_list(request):
         "table": table
     })
 
+
 @api_view(['POST'])
 def all_cell_list(request):
     table = CellTable(get_cells_list({'input_type': None}))
@@ -280,6 +294,7 @@ def all_organ_list(request):
     return render(request, "organ_list.html", {
         "table": table
     })
+
 
 @api_view(['POST'])
 def all_protein_list(request):
