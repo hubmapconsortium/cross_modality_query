@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.shortcuts import redirect, render
 from django_tables2 import SingleTableView
-# from django_tables2.export.export import TableExport
+from django_tables2.export.export import TableExport
+from django_tables2.config import RequestConfig
 
 
 from .serializers import (
@@ -240,6 +241,13 @@ def cell_list(request):
         table = CellTable(get_cells_list(request.data.dict()))
         print('Calling the wrong table')
 
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()['export_format']
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
     return render(request, "cell_list.html", {
         "table": table
     })
@@ -252,6 +260,14 @@ def gene_list(request):
     else:
         table = GeneTable(get_genes_list(request.data.dict()))
 
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()['export_format']
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
     return render(request, "gene_list.html", {
         "table": table
     })
@@ -263,6 +279,14 @@ def organ_list(request):
         table = OrganPValTable(get_organs_list(request.data.dict()))
     else:
         table = OrganTable(get_organs_list(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()['export_format']
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
 
     return render(request, "organ_list.html", {
         "table": table

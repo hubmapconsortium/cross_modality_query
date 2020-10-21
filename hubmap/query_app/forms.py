@@ -13,6 +13,7 @@ class GeneQueryForm(forms.Form):
     genomic_modality = forms.ChoiceField(choices=(('rna', 'rna'), ('atac', 'atac')), required=False,
                                          widget=forms.Select)
     limit = forms.IntegerField(max_value=1000, min_value=0, required=False)
+    export_format = forms.ChoiceField(choices=(('None', 'None'),('CSV', 'CSV'), ('JSON', 'JSON')), required=True, widget=forms.Select)
 
 
 class OrganQueryForm(forms.Form):
@@ -23,6 +24,7 @@ class OrganQueryForm(forms.Form):
     genomic_modality = forms.ChoiceField(choices=(('rna', 'rna'), ('atac', 'atac')), required=False,
                                          widget=forms.Select)
     limit = forms.IntegerField(max_value=1000, min_value=0, required=False)
+    export_format = forms.ChoiceField(choices=(('None', 'None'),('CSV', 'CSV'), ('JSON', 'JSON')), required=True, widget=forms.Select)
 
 
 
@@ -34,3 +36,4 @@ class CellQueryForm(forms.Form):
     genomic_modality = forms.ChoiceField(choices=(('rna', 'rna'), ('atac', 'atac')), required=False,
                                          widget=forms.Select)
     limit = forms.IntegerField(max_value=1000, min_value=0, required=False)
+    export_format = forms.ChoiceField(choices=(('None', 'None'),('CSV', 'CSV'), ('JSON', 'JSON')), required=True, widget=forms.Select)

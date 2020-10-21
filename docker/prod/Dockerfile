@@ -14,6 +14,8 @@ RUN mv hubmap_query/production_settings.py hubmap_query/local_settings.py
 RUN python3 -m compileall .
 RUN python3 -O -m compileall .
 
+ENV DJANGO_SETTINGS_MODULE hubmap_query.settings
+
 VOLUME /opt/secret
 
 EXPOSE 5000
