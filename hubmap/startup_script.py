@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
-from functools import reduce
 from typing import List
 from pathlib import Path
-from os import fspath
 from argparse import ArgumentParser
 import pandas as pd
 import json
@@ -31,10 +29,6 @@ def sanitize_string(string: str) -> str:
     return ''.join([char for char in string if char.isalnum() or char in '.-'])
 
 
-def outer_join(df_1: pd.DataFrame, df_2: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([df_1, df_2], join='outer')
-
-
 def create_model(model_name: str, kwargs: dict):
     if model_name == 'cell':
         obj = Cell(**kwargs)
@@ -60,7 +54,7 @@ def sanitize_nans(kwargs: dict) -> dict:
         kwargs['organ'] = kwargs['tissue_type']
         kwargs.pop('tissue_type')
 
-    kwargs = {key:kwargs[key] for key in kwargs.keys() if key in cell_fields}
+    kwargs = {key: kwargs[key] for key in kwargs.keys() if key in cell_fields}
 
     for key in kwargs.keys():
         if type(kwargs[key]) == float and np.isnan(kwargs[key]):
@@ -70,7 +64,8 @@ def sanitize_nans(kwargs: dict) -> dict:
 
 
 @transaction.atomic
-def create_proteins(cell_df: pd.DataFrame):
+def create_proteins(hdf_file):
+    cell_df = pd.read_hdf(hdf_file, 'cell')
     protein_set = set({})
     for json_string in cell_df['protein_mean'].unique():
         if isinstance(json_string, str):
@@ -93,7 +88,6 @@ def save_genes(gene_set: List[str]):
 
 
 def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
-
     if 'cell_id' not in cell_df.columns:
         cell_df['cell_id'] = cell_df.index
 
@@ -123,22 +117,14 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
 
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
-    if model_name == 'organ':
-
-        for i, row in df.iterrows():
-            kwargs = {'organ_name': row['organ_name']}
-
-            obj = create_model(model_name, kwargs)
-            obj.save()
-
-
-    elif model_name == 'quant':
+    if model_name == 'quant':
         modality = Modality.objects.filter(modality_name__icontains=modality).first()
         dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in
                      df.index for column in df.columns]
         for kwargs in dict_list:
             cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id']).first()
             kwargs['quant_cell'] = cell
+            kwargs.pop('cell_id')
             obj = create_model('quant', kwargs)
             obj.save()
 
@@ -153,115 +139,126 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     elif model_name == 'pvalue':
         kwargs_list = df.to_dict('records')
         for kwargs in kwargs_list:
-            kwargs['gene_id'] = kwargs['gene_id'][:20]
+            kwargs['gene'] = Gene.objects.filter(gene_symbol__iexact=sanitize_string(kwargs['gene_id'])[:20]).first()
+            kwargs.pop('gene_id')
+            kwargs['organ'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
+            kwargs.pop('organ_name')
+            kwargs['modality'] = Modality.objects.filter(modality_name__icontains=modality).first()
             obj = create_model('pvalue', kwargs)
             obj.save()
 
 
-def create_cells(hdf_files: List[Path]):
-    for cell_file in hdf_files:
-        cell_df = pd.read_hdf(cell_file, 'cell')
-        if 'codex' in fspath(cell_file):
-            create_proteins(cell_df)
-        df_to_db(cell_df, 'cell')
-    return
+def create_cells(hdf_file: Path):
+    cell_df = pd.read_hdf(hdf_file, 'cell')
+    df_to_db(cell_df, 'cell')
 
 
-def create_genes(json_files: List[Path]):
-    gene_list = []
-
-    for file in json_files:
-        partial_gene_dict = {}
-
-        with open(file) as gene_dictionary:
-            partial_gene_dict = json.load(gene_dictionary)
-
-        partial_gene_list = [key[:20] for key in partial_gene_dict.keys()]
-        gene_list.extend(partial_gene_list)
-
-    gene_set = list(set(gene_list))
-
-    save_genes(gene_set)
+def create_genes(hdf_file: Path):
+    quant_df = pd.read_hdf(hdf_file, 'quant')
+    genes_to_create = [sanitize_string(gene)[:20] for gene in quant_df.columns if
+                       Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:20]).first() is None]
+    save_genes(genes_to_create)
 
     return
 
 
-def create_organs(hdf_files: List[Path]):
-    organ_df = merge_organs(hdf_files)
-    df_to_db(organ_df, 'organ')
+def create_organs(hdf_file: Path):
+    pval_df = pd.read_hdf(hdf_file, 'p_values')
+    for organ_name in pval_df['organ_name'].unique():
+        if Organ.objects.filter(organ_name__icontains=organ_name).first() is None:
+            organ = Organ(organ_name=organ_name)
+            organ.save()
 
     return
 
 
-def merge_organs(hdf_files: List[Path]):
-    organ_dfs = [pd.read_hdf(file, 'organ').astype(object) for file in hdf_files]
-    merged_df = reduce(outer_join, organ_dfs)
+def create_quants(hdf_file: Path):
+    modality = hdf_file.stem
+    with pd.HDFStore(hdf_file) as store:
+        #            for i in range(len(store.get('quant').index) // 1000 + 1):
+        for i in range(1):
+            chunk = store.select('quant', start=i * 1000, stop=(i + 1) * 1000)
+            df_to_db(chunk, 'quant', modality)
 
-    return merged_df
+
+def create_pvals(hdf_file: Path):
+    modality = hdf_file.stem
+    with pd.HDFStore(hdf_file) as store:
+        pval_df = store.get('p_values')
+        df_to_db(pval_df, 'pvalue', modality)
 
 
-def create_quants(hdf_files: List[Path]):
+def create_modality_and_datasets(hdf_file: Path):
+    modality_name = hdf_file.stem
+    modality = Modality(modality_name=modality_name)
+    modality.save()
+    with pd.HDFStore(hdf_file) as store:
+        cell_df = store.get('cell')
+        for uuid in cell_df['dataset'].unique():
+            dataset = Dataset(uuid=uuid[:32], modality=modality)
+            dataset.save()
+
+
+def load_rna(hdf_file: Path):
+    Cell.objects.filter(modality__modality_name__icontains='rna').delete()
+    Quant.objects.filter(modality__modality_name__icontains='rna').delete()
+    Dataset.objects.filter(modality__modality_name__icontains='rna').delete()
+    Modality.objects.filter(modality_name__icontains='rna').delete()
+
+    create_modality_and_datasets(hdf_file)
+    create_organs(hdf_file)
+    create_cells(hdf_file)
+    create_genes(hdf_file)
+    create_quants(hdf_file)
+    create_pvals(hdf_file)
+
+    return
+
+
+def load_atac(hdf_file):
+    Cell.objects.filter(modality__modality_name__icontains='atac').delete()
+    Quant.objects.filter(modality__modality_name__icontains='atac').delete()
+    Dataset.objects.filter(modality__modality_name__icontains='atac').delete()
+    Modality.objects.filter(modality_name__icontains='atac').delete()
+
+    create_modality_and_datasets(hdf_file)
+    create_organs(hdf_file)
+    create_cells(hdf_file)
+    create_genes(hdf_file)
+    create_quants(hdf_file)
+    create_pvals(hdf_file)
+
+    return
+
+
+def load_codex(hdf_file):
+    Cell.objects.filter(modality__modality_name__icontains='codex').delete()
+    Quant.objects.filter(modality__modality_name__icontains='codex').delete()
+    Dataset.objects.filter(modality__modality_name__icontains='codex').delete()
+    Modality.objects.filter(modality_name__icontains='codex').delete()
+    Protein.objects.all().delete()
+
+    create_modality_and_datasets(hdf_file)
+    create_organs(hdf_file)
+    create_cells(hdf_file)
+    create_proteins(hdf_file)
+
+    return
+
+
+def main(hdf_files: List[Path]):
     for file in hdf_files:
-        modality = file.stem.split('_')[0]
-        with pd.HDFStore(file) as store:
-#            for i in range(len(store.get('quant').index) // 1000 + 1):
-            for i in range(1):
-                chunk = store.select('quant', start=i * 1000, stop=(i + 1) * 1000)
-                df_to_db(chunk, 'quant', modality)
-
-
-def create_pvals(hdf_files: List[Path]):
-    for file in hdf_files:
-        with pd.HDFStore(file) as store:
-            if '/p_values' in store.keys():
-                pval_df = store.get('p_values')
-                df_to_db(pval_df, 'pvalue')
-
-
-def create_modalities_and_datasets(hdf_files: List[Path]):
-    for file in hdf_files:
-        modality_name = file.stem
-        modality = Modality(modality_name=modality_name)
-        modality.save()
-        with pd.HDFStore(file) as store:
-            cell_df = store.get('cell')
-            for uuid in cell_df['dataset'].unique():
-                dataset = Dataset(uuid=uuid[:32], modality=modality)
-                dataset.save()
-
-
-
-def main(rna_directory: Path, atac_directory: Path, codex_directory: Path):
-    rna_files = [file for file in rna_directory.iterdir()]
-    atac_files = [file for file in atac_directory.iterdir()]
-    codex_files = [file for file in codex_directory.iterdir()]
-
-    all_files = [rna_files, atac_files, codex_files]
-    modality_list = ['rna', 'atac', 'codex']
-
-    hdf_files = [file for files in all_files for file in files if file.stem in modality_list]
-    json_files = [file for files in all_files for file in files if 'json' in fspath(file)]
-
-
-    create_organs(hdf_files)
-    print('Organs created')
-    create_modalities_and_datasets(hdf_files)
-    print('Modalities and datasets created')
-    create_cells(hdf_files)
-    print('Cells created')
-    create_genes(json_files)
-    print('Genes created')
-    #    create_quants(hdf_files)
-    print('Quants created')
-    create_pvals(hdf_files)
-    print('PVals created')
+        if 'rna' in file.stem:
+            load_rna(file)
+        elif 'atac' in file.stem:
+            load_atac(file)
+        elif 'codex' in file.stem:
+            load_codex(file)
 
 
 if __name__ == '__main__':
     p = ArgumentParser()
-    p.add_argument('rna_directory', type=Path)
-    p.add_argument('atac_directory', type=Path)
-    p.add_argument('codex_directory', type=Path)
+    p.add_argument('hdf_files', type=Path, nargs='+')
     args = p.parse_args()
 
-    main(args.rna_directory, args.atac_directory, args.codex_directory)
+    main(args.hdf_files)
