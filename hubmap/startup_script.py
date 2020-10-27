@@ -125,6 +125,9 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
             cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id']).first()
             kwargs['quant_cell'] = cell
             kwargs.pop('cell_id')
+            gene = Gene.objects.filter(gene_id__iexact=kwargs['gene_id'].first())
+            kwargs['quant_gene'] = gene
+            kwargs.pop('gene_id')
             obj = create_model('quant', kwargs)
             obj.save()
 
@@ -139,9 +142,9 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     elif model_name == 'pvalue':
         kwargs_list = df.to_dict('records')
         for kwargs in kwargs_list:
-            kwargs['gene'] = Gene.objects.filter(gene_symbol__iexact=sanitize_string(kwargs['gene_id'])[:20]).first()
+            kwargs['p_gene'] = Gene.objects.filter(gene_symbol__iexact=sanitize_string(kwargs['gene_id'])[:20]).first()
             kwargs.pop('gene_id')
-            kwargs['organ'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
+            kwargs['p_organ'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
             kwargs.pop('organ_name')
             kwargs['modality'] = Modality.objects.filter(modality_name__icontains=modality).first()
             obj = create_model('pvalue', kwargs)
@@ -247,13 +250,68 @@ def load_codex(hdf_file):
 
 
 def main(hdf_files: List[Path]):
-    for file in hdf_files:
-        if 'rna' in file.stem:
-            load_rna(file)
-        elif 'atac' in file.stem:
-            load_atac(file)
-        elif 'codex' in file.stem:
-            load_codex(file)
+    print(Gene.objects.all().values_list())
+    print(Cell.objects.all().values_list())
+    print(Organ.objects.all().values_list())
+
+    Cell.objects.all().delete()
+    Organ.objects.all().delete()
+    Gene.objects.all().delete()
+    PVal.objects.all().delete()
+    Quant.objects.all().delete()
+
+    rna = Modality.objects.filter(modality_name__icontains='rna').first()
+
+    best1 = Gene(gene_symbol='BEST1')
+    best1.save()
+    b2m = Gene(gene_symbol='B2M')
+    b2m.save()
+
+    spleen = Organ(organ_name='spleen')
+    spleen.save()
+    kidney = Organ(organ_name='kidney')
+    kidney.save()
+
+    cell_one = Cell(cell_id='cell_1', modality=rna, organ=spleen, protein_mean={'Ki67':10.0, 'CD21':5.0})
+    cell_one.save()
+    cell_two = Cell(cell_id='cell_2', modality=rna, organ=kidney, protein_mean={'Ki67':10.0, 'CD21':0.0})
+    cell_two.save()
+
+    pval_one = PVal(p_gene=best1, p_organ=kidney, modality=rna, value=0.01)
+    pval_one.save()
+    pval_two = PVal(p_gene=b2m, p_organ=kidney, modality=rna, value=0.01)
+    pval_two.save()
+    pval_three = PVal(p_gene=best1, p_organ=spleen, modality=rna, value=0.01)
+    pval_three.save()
+    pval_four = PVal(p_gene=b2m, p_organ=kidney, modality=rna, value=1.00)
+    pval_four.save()
+
+    quant_one = Quant(quant_cell=cell_one, quant_gene=best1, modality=rna, value=10.1)
+    quant_one.save()
+    quant_two = Quant(quant_cell=cell_one, quant_gene=b2m, modality=rna, value=10.1)
+    quant_two.save()
+    quant_three = Quant(quant_cell=cell_two, quant_gene=best1, modality=rna, value=10.1)
+    quant_three.save()
+    quant_four = Quant(quant_cell=cell_two, quant_gene=b2m, modality=rna, value=0.0)
+    quant_four.save()
+
+#    new_index = False
+
+#    if Quant.objects.count() > 0:
+#        for file in hdf_files:
+#            if file.stem in ['atac', 'rna']:
+                #Delete index
+#                new_index=True
+#                break
+
+#    for file in hdf_files:
+#        if 'rna' in file.stem:
+#            load_rna(file)
+#        elif 'atac' in file.stem:
+#            load_atac(file)
+#        elif 'codex' in file.stem:
+#            load_codex(file)
+
 
 
 if __name__ == '__main__':

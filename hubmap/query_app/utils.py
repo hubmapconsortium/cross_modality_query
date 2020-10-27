@@ -5,24 +5,42 @@ from functools import reduce
 from .models import (
     Cell,
     CellAndValues,
+    CellQueryResults,
     Gene,
+    GeneAndValues,
+    GeneQueryResults,
     Organ,
+    OrganAndValues,
+    OrganQueryResults,
     Protein,
     PVal,
     Quant,
 )
 
 from .serializers import (
-    CellSerializer,
-    CellAndValuesSerializer,
-    DatasetSerializer,
-    GeneSerializer,
-    ModalitySerializer,
-    OrganSerializer,
+    CellQueryResultsSerializer,
+    GeneQueryResultsSerializer,
+    OrganQueryResultsSerializer,
     ProteinSerializer,
-    GenePValSerializer,
-    OrganPValSerializer,
 )
+
+
+def genes_from_pvals(pval_set):
+    ids = pval_set.distinct('p_gene').values_list('p_gene', flat=True)
+    print(ids)
+    return Gene.objects.filter(pk__in=list(ids))
+
+
+def organs_from_pvals(pval_set):
+    ids = pval_set.values_list('p_organ', flat=True).distinct()
+    print(ids)
+    return Organ.objects.filter(pk__in=list(ids))
+
+
+def cells_from_quants(quant_set):
+    ids = quant_set.values_list('quant_cell', flat=True).distinct()
+    print(ids)
+    return Cell.objects.filter(pk__in=list(ids))
 
 
 def split_and_strip(string: str) -> List[str]:
@@ -39,8 +57,7 @@ def process_query_parameters(query_params: Dict) -> Dict:
     if 'limit' not in query_params.keys() or int(query_params['limit']) > 1000:
         query_params['limit'] = 1000
     if 'p_value' not in query_params.keys() or query_params['p_value'] == '' or float(
-            query_params['p_value']) < 0.0 or float(
-            query_params['p_value']) > 1.0:
+            query_params['p_value']) < 0.0 or float(query_params['p_value']) > 1.0:
         query_params['p_value'] = 0.05
     else:
         query_params['p_value'] = float(query_params['p_value'])
@@ -127,17 +144,17 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
         gene_id = split_condition[0].strip()
 
         if comparator == '>':
-            return Q(value__gt=value) & Q(gene_id__icontains=gene_id)
+            return Q(value__gt=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
         elif comparator == '>=':
-            return Q(value__gte=value) & Q(gene_id__icontains=gene_id)
+            return Q(value__gte=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
         elif comparator == '<':
-            return Q(value__lt=value) & Q(gene_id__icontains=gene_id)
+            return Q(value__lt=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
         elif comparator == '<=':
-            return Q(value__lte=value) & Q(gene_id__icontains=gene_id)
+            return Q(value__lte=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
         elif comparator == '==':
-            return Q(value__exact=value) & Q(gene_id__icontains=gene_id)
+            return Q(value__exact=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
         elif comparator == '!=':
-            return ~Q(value__exact=value) & Q(gene_id__icontains=gene_id)
+            return ~Q(value__exact=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
 
 
 def get_gene_filter(query_params: Dict) -> Q:
@@ -148,11 +165,12 @@ def get_gene_filter(query_params: Dict) -> Q:
     input_type = query_params['input_type']
     input_set = query_params['input_set']
     p_value = query_params['p_value']
+    genomic_modality = query_params['genomic_modality']
 
     if input_type == 'organ':
-        qs = [Q(organ_name__icontains=element) for element in input_set]
+        qs = [Q(p_organ__organ_name__icontains=element) for element in input_set]
         q = combine_qs(qs, 'or')
-        q = q & Q(value__lte=p_value)
+        q = q & Q(value__lte=p_value) & Q(modality__modality_name__icontains=genomic_modality)
 
         return q
 
@@ -177,7 +195,7 @@ def get_cell_filter(query_params: Dict) -> Q:
             split_conditions = [split_at_comparator(item) for item in input_set]
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
-        q = combine_qs(qs, logical_operator)
+        q = combine_qs(qs, 'or')
 
         if input_type == 'gene':
             q = q & Q(modality__modality_name__icontains=genomic_modality)
@@ -227,10 +245,11 @@ def get_organ_filter(query_params: Dict) -> Q:
     elif input_type == 'gene':
         # Query those genes and return their associated groupings
         p_value = query_params['p_value']
+        genomic_modality = query_params['genomic_modality']
 
-        qs = [Q(gene_id__icontains=item) for item in input_set]
+        qs = [Q(p_gene__gene_symbol__iexact=item) for item in input_set]
         q = combine_qs(qs, 'or')
-        q = q & Q(value__lte=p_value)
+        q = q & Q(value__lte=p_value) & Q(modality__modality_name__icontains=genomic_modality)
 
         return q
 
@@ -244,13 +263,15 @@ def get_genes_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params['limit'])
         filter = get_gene_filter(query_params)
+        print(filter)
 
         if query_params['input_type'] == 'organ':
-            ids = PVal.objects.filter(filter).order_by('value')[:limit].values_list('pk', flat=True)
-            return PVal.objects.filter(pk__in=list(ids))
-        else:
-            ids = Gene.objects.filter(filter)[:limit].values_list('pk', flat=True)
-            return Gene.objects.filter(pk__in=list(ids))
+            query_set = PVal.objects.filter(filter).order_by('value')[:limit]
+            ids = query_set.values_list('pk', flat=True)
+            query_set = PVal.objects.filter(pk__in=list([ids]))
+
+            genes_and_values = make_gene_and_values(query_set, query_params)
+            return genes_and_values
 
 
 # Put fork here depending on whether or not we're returning expression values
@@ -261,15 +282,19 @@ def get_cells_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params['limit'])
         filter = get_cell_filter(query_params)
-        if query_params['input_type'] == 'gene':
-            ids = Quant.objects.filter(filter).order_by('-value')[:limit].values_list('pk', flat=True)
-            quants = Quant.objects.filter(pk__in=list(ids))
-            cells_and_values = make_cell_and_values(quants)
+        print(filter)
 
-            return cells_and_values
+        if query_params['input_type'] == 'gene':
+            query_set = Quant.objects.filter(filter).order_by('value')
+            print(query_set.values())
         else:
-            ids = Cell.objects.filter(filter)[:limit].values_list('pk', flat=True)
-            return Cell.objects.filter(pk__in=list(ids))
+            query_set = Cell.objects.filter(filter)[:limit]
+            ids = query_set.values_list('pk', flat=True)
+            query_set = Cell.objects.filter(pk__in=list(ids))
+
+        cells_and_values = make_cell_and_values(query_set, query_params)
+
+        return cells_and_values
 
 
 # Put fork here depending on whether or not we're returning pvals
@@ -280,12 +305,16 @@ def get_organs_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         filter = get_organ_filter(query_params)
         limit = int(query_params['limit'])
+
         if query_params['input_type'] == 'gene':
-            ids = PVal.objects.filter(filter).order_by('value')[:limit].values_list('pk', flat=True)
-            return PVal.objects.filter(pk__in=list(ids))
+            query_set = PVal.objects.filter(filter).order_by('value')
         else:
-            ids = Organ.objects.filter(filter)[:limit].values_list('pk', flat=True)
-            return Organ.objects.filter(pk__in=list(ids))
+            query_set = Organ.objects.filter(filter)[:limit]
+            ids = query_set.values_list('pk', flat=True)
+            query_set = Organ.objects.filter(pk__in=list(ids))
+
+        organs_and_values = make_organ_and_values(query_set, query_params)
+        return organs_and_values
 
 
 def get_proteins_list(query_params: Dict):
@@ -309,10 +338,9 @@ def gene_query(self, request):
     #    print(genes)
     #    print(GeneSerializer(genes, many=True, context=context))
     # Get serializers lists
-    if query_params['input_type'] == 'organ':
-        response = GenePValSerializer(genes, many=True, context=context).data
-    else:
-        response = GeneSerializer(genes, many=True, context=context).data
+
+    results = make_gene_query_results(genes, query_params)
+    response = GeneQueryResultsSerializer(results, many=True, context=context).data
 
     return response
 
@@ -334,11 +362,8 @@ def cell_query(self, request):
     #    print(cells)
     #    print(CellSerializer(cells, many=True, context=context))
     # Get serializers lists
-    if query_params['input_type'] == 'gene':
-        cells_and_values = make_cell_and_values(cells)
-        response = CellAndValuesSerializer(cells_and_values, many=True, context=context).data
-    else:
-        response = CellSerializer(cells, many=True, context=context).data
+    results = make_cell_query_results(cells, query_params)
+    response = CellQueryResultsSerializer(results, many=True, context=context).data
 
     return response
 
@@ -360,10 +385,9 @@ def organ_query(self, request):
     #    print(groups)
     #    print(CellGroupingSerializer(groups, many=True, context=context))
     # Get serializers lists
-    if query_params['input_type'] == 'gene':
-        response = OrganPValSerializer(organs, many=True, context=context).data
-    else:
-        response = OrganSerializer(organs, many=True, context=context).data
+
+    results = make_organ_query_results(organs, query_params)
+    response = OrganQueryResultsSerializer(results, many=True, context=context).data
 
     return response
 
@@ -383,20 +407,197 @@ def protein_query(self, request):
         return response
 
 
-def make_cell_and_values(quant_query_set):
+def set_intersection(query_set_1, query_set_2):
+    return query_set_1 & query_set_2
+
+
+def make_cell_and_values(query_set, request_dict):
     """Takes a query set of quant objects and returns a query set of cell_and_values
     This function will almost definitely have problems with concurrency"""
 
+    limit = int(request_dict['limit'])
+
+    # Filter this on created field
     CellAndValues.objects.all().delete()
 
-    cell_ids = quant_query_set.distinct('cell_id').values_list('cell_id', flat=True)
-    for cell_id in cell_ids:
-        gene_ids_and_values = quant_query_set.filter(cell_id__icontains=cell_id).values_list('gene_id', 'value')
-        values = {giv[0]: float(giv[1]) for giv in gene_ids_and_values}
-        cell = Cell.objects.filter(cell_id__icontains=cell_id).first()
-        kwargs = {'cell_id':cell.cell_id, 'dataset':cell.dataset, 'modality':cell.modality,
-                       'organ':cell.organ, 'values':values}
-        cav = CellAndValues(**kwargs)
-        cav.save()
+    if request_dict['input_type'] == 'gene':
 
+        gene_ids = [item for item in request_dict['input_set']]
+
+        print(gene_ids)
+
+        if request_dict['logical_operator'] == 'and' and len(request_dict['input_set']) > 1:
+            # Get or more sets and intersect them
+            if len(split_at_comparator(request_dict['input_set'][0])) > 0:
+                gene_ids = [split_at_comparator(item)[0] for item in request_dict['input_set']]
+            quant_genes = query_set.values('quant_gene').distinct()
+            query_sets = [cells_from_quants(query_set.filter(quant_gene=cell['quant_gene'])) for cell in quant_genes]
+            query_set = reduce(set_intersection, query_sets)
+
+        cells = query_set[:limit]
+        for cell in cells:
+            if isinstance(cell, Quant):
+                cell = cell.quant_cell
+            values = {}
+            for gene_id in gene_ids:
+                values[gene_id] = Quant.objects.filter(quant_cell=cell).filter(
+                    quant_gene__gene_symbol__iexact=gene_id).first().value
+            kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
+                      'organ': cell.organ, 'values': values}
+            print(kwargs)
+            cav = CellAndValues(**kwargs)
+            cav.save()
+
+    else:
+        for cell in query_set:
+            if request_dict['input_type'] == 'protein':
+                # This is a cell query set
+                values = {protein: cell.protein_mean[protein] for protein in request_dict['input_set']}
+            else:
+                values = {}
+            kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
+                      'organ': cell.organ, 'values': values}
+            cav = CellAndValues(**kwargs)
+            cav.save()
+
+    # Filter this on request hash
     return CellAndValues.objects.all()
+
+
+def make_gene_and_values(query_set, request_dict):
+    GeneAndValues.objects.all().delete()
+    # Filter on timestamp
+    print(PVal.objects.all().values_list())
+    print(query_set.values_list())
+
+    limit = int(request_dict['limit'])
+
+    if request_dict['logical_operator'] == 'and' and len(request_dict['input_set']) > 1:
+        # Get or more sets and intersect them
+        organs = query_set.values('p_organ').distinct()
+        query_sets = [genes_from_pvals(query_set.filter(p_organ=organ['p_organ'])) for organ in organs]
+        query_set = reduce(set_intersection, query_sets)
+
+    print(query_set.values_list())
+
+    for gene in query_set[:limit]:
+        if isinstance(gene, PVal):
+            gene = gene.p_gene
+        print(gene)
+        values = {}
+        for organ_name in request_dict['input_set']:
+            pval = PVal.objects.filter(p_organ__organ_name__icontains=organ_name).filter(
+                p_gene=gene).first()
+            values[organ_name] = pval.value
+        kwargs = {'gene_symbol': gene.gene_symbol, 'values': values}
+        gav = GeneAndValues(**kwargs)
+        gav.save()
+
+    # Filter on query hash
+    return GeneAndValues.objects.all()
+
+
+def make_organ_and_values(query_set, request_dict):
+    OrganAndValues.objects.all().delete()
+
+    limit = int(request_dict['limit'])
+
+    print(query_set.values_list())
+
+    if request_dict['input_type'] == 'gene':
+        if request_dict['logical_operator'] == 'and' and len(request_dict['input_set']) > 1:
+            genes = query_set.values('p_gene').distinct()
+            query_sets = [organs_from_pvals(query_set.filter(p_gene=gene['p_gene'])) for gene in genes]
+            query_set = reduce(set_intersection, query_sets)
+
+    for organ in query_set[:limit]:
+
+        if isinstance(organ, PVal):
+            organ = organ.p_organ
+
+        values = {}
+        if request_dict['input_type'] == 'gene':
+            for gene_id in request_dict['input_set']:
+                gene_id = gene_id.strip()
+
+                pval = PVal.objects.filter(p_organ=organ).filter(
+                    p_gene__gene_symbol__iexact=gene_id).first()
+                if pval is not None:
+                    values[gene_id] = pval.value
+
+        kwargs = {'organ_name': organ.organ_name, 'values': values}
+        oav = OrganAndValues(**kwargs)
+        oav.save()
+
+    # Filter on query hash
+    return OrganAndValues.objects.all()
+
+
+def calculate_mean(query_set_with_values):
+    totals_dict = {}
+    counts_dict = {}
+
+    for element in query_set_with_values:
+        for key in element.values.keys():
+            if key not in totals_dict:
+                totals_dict[key] = element.values[key]
+                counts_dict[key] = 1
+            else:
+                totals_dict[key] += element.values[key]
+                counts_dict[key] += 1
+
+    means_dict = {}
+    for key in totals_dict.keys():
+        means_dict[key] = totals_dict[key] / counts_dict[key]
+
+    return means_dict
+
+
+def calculate_correlation(query_set_with_values):
+    pass
+
+
+def calculate_covariance(query_set_with_values):
+    pass
+
+
+def make_cell_query_results(cell_and_value_set, request_dict):
+    kwargs = {'cells_and_values': cell_and_value_set}
+    if 'mean' in request_dict['operators']:
+        kwargs['mean'] = calculate_mean(cell_and_value_set)
+    if 'correlation' in request_dict['operators']:
+        kwargs['correlation'] = calculate_correlation(cell_and_value_set)
+    if 'covariance' in request_dict['operators']:
+        kwargs['covariance'] = calculate_covariance(cell_and_value_set)
+
+    response_object = CellQueryResults(**kwargs)
+    response_object.save()
+    return response_object
+
+
+def make_gene_query_results(gene_and_value_set, request_dict):
+    kwargs = {'genes_and_values': gene_and_value_set}
+    if 'mean' in request_dict['operators']:
+        kwargs['mean'] = calculate_mean(gene_and_value_set)
+    if 'correlation' in request_dict['operators']:
+        kwargs['correlation'] = calculate_correlation(gene_and_value_set)
+    if 'covariance' in request_dict['operators']:
+        kwargs['covariance'] = calculate_covariance(gene_and_value_set)
+
+    response_object = GeneQueryResults(**kwargs)
+    response_object.save()
+    return response_object
+
+
+def make_organ_query_results(organ_and_value_set, request_dict):
+    kwargs = {'organs_and_values': organ_and_value_set}
+    if 'mean' in request_dict['operators']:
+        kwargs['mean'] = calculate_mean(organ_and_value_set)
+    if 'correlation' in request_dict['operators']:
+        kwargs['correlation'] = calculate_correlation(organ_and_value_set)
+    if 'covariance' in request_dict['operators']:
+        kwargs['covariance'] = calculate_covariance(organ_and_value_set)
+
+    response_object = OrganQueryResults(**kwargs)
+    response_object.save()
+    return response_object

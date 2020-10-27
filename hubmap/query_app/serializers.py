@@ -5,33 +5,40 @@ from .models import (
     CellAndValues,
     Dataset,
     Gene,
+    GeneAndValues,
     Organ,
+    OrganAndValues,
     Modality,
     Protein,
-    PVal,
+    CellQueryResults,
+    GeneQueryResults,
+    OrganQueryResults,
 )
+
 
 class ModalitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Modality
         fields = ['modality_name']
 
+
 class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dataset
         fields = ['uuid']
+
 
 class CellSerializer(serializers.ModelSerializer):
     modality = serializers.RelatedField(read_only=True)
     dataset = serializers.RelatedField(read_only=True)
     organ = serializers.RelatedField(read_only=True)
 
-
     class Meta:
         model = Cell
         fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
                   'cell_shape', 'organ']
         exclude = ['modality']
+
 
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,21 +58,46 @@ class ProteinSerializer(serializers.ModelSerializer):
         fields = ['protein_id', 'go_terms']
 
 
-class GenePValSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PVal
-        fields = ['gene_id', 'value']
-
-
-class OrganPValSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PVal
-        fields = ['organ_name', 'value']
-
-
 class CellAndValuesSerializer(serializers.ModelSerializer):
     cell = serializers.RelatedField(read_only=True)
 
     class Meta:
         model = CellAndValues
-        fields = ['cell', 'values']
+        fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
+                  'organ', 'values']
+
+
+class GeneAndValuesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneAndValues
+        fields = ['gene_symbol', 'go_terms', 'values']
+
+
+class OrganAndValuesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrganAndValues
+        fields = ['organ_name', 'values']
+
+
+class CellQueryResultsSerializer(serializers.ModelSerializer):
+    cells_and_values = serializers.RelatedField(read_only=True, many=True)
+
+    class Meta:
+        model = CellQueryResults
+        fields = ['cells_and_values', 'mean', 'covariance', 'correlation']
+
+
+class GeneQueryResultsSerializer(serializers.ModelSerializer):
+    genes_and_values = serializers.RelatedField(read_only=True, many=True)
+
+    class Meta:
+        model = GeneQueryResults
+        fields = ['genes_and_values', 'mean', 'covariance', 'correlation']
+
+
+class OrganQueryResultsSerializer(serializers.ModelSerializer):
+    organs_and_values = serializers.RelatedField(read_only=True, many=True)
+
+    class Meta:
+        model = OrganQueryResults
+        fields = ['organs_and_values', 'mean', 'covariance', 'correlation']

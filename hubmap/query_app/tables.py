@@ -3,11 +3,6 @@ import django_tables2 as tables
 from . import models
 
 
-class FloatColumn(tables.Column):
-    def render(self, value):
-        return '{:0.2f}'.format(value)
-
-
 class CellTable(tables.Table):
     cell_id = tables.Column(accessor='cell_id')
     organ = tables.Column(accessor='organ')
@@ -44,28 +39,23 @@ class ProteinTable(tables.Table):
         model = models.Protein
 
 
-class OrganPValTable(tables.Table):
-    organ_name = tables.Column(accessor='organ_name')
-    value = FloatColumn(accessor='value')
-
-    class Meta:
-        model = models.PVal
-
-
-class GenePValTable(tables.Table):
-    organ_name = tables.Column(accessor='organ_name')
-    value = FloatColumn(accessor='value')
-
-    class Meta:
-        model = models.PVal
-
-
 class CellAndValuesTable(tables.Table):
-    cell_id = tables.Column(accessor='cell_id')
-    organ = tables.Column(accessor='organ')
-    dataset = tables.Column(accessor='dataset')
-    modality = tables.Column(accessor='modality')
-    values = tables.Column(accessor='values')
 
     class Meta:
         model = models.CellAndValues
+        fields = ['cell_id', 'dataset', 'modality', 'organ', 'values']
+        template_name = "django_tables2/bootstrap4.html"
+
+class GeneAndValuesTable(tables.Table):
+    class Meta:
+        model = models.GeneAndValues
+        fields = ['gene_symbol', 'go_terms', 'values']
+        template_name = "django_tables2/bootstrap4.html"
+
+
+class OrganAndValuesTable(tables.Table):
+    class Meta:
+        model = models.OrganAndValues
+        fields = ['organ_name', 'values']
+        template_name = "django_tables2/bootstrap4.html"
+
