@@ -14,7 +14,8 @@ from .models import (
     OrganQueryResults,
     Protein,
     PVal,
-    Quant,
+    AtacQuant,
+    RnaQuant,
 )
 
 from .serializers import (
@@ -245,11 +246,10 @@ def get_organ_filter(query_params: Dict) -> Q:
     elif input_type == 'gene':
         # Query those genes and return their associated groupings
         p_value = query_params['p_value']
-        genomic_modality = query_params['genomic_modality']
 
         qs = [Q(p_gene__gene_symbol__iexact=item) for item in input_set]
         q = combine_qs(qs, 'or')
-        q = q & Q(value__lte=p_value) & Q(modality__modality_name__icontains=genomic_modality)
+        q = q & Q(value__lte=p_value)
 
         return q
 
@@ -285,7 +285,10 @@ def get_cells_list(query_params: Dict):
         print(filter)
 
         if query_params['input_type'] == 'gene':
-            query_set = Quant.objects.filter(filter).order_by('value')
+            if query_params['genomic_modality'] == 'rna':
+                query_set = RnaQuant.objects.filter(filter).order_by('value')
+            else:
+                query_set = AtacQuant.objects.filter(filter).order_by('value')
             print(query_set.values())
         else:
             query_set = Cell.objects.filter(filter)[:limit]
@@ -436,11 +439,15 @@ def make_cell_and_values(query_set, request_dict):
 
         cells = query_set[:limit]
         for cell in cells:
-            if isinstance(cell, Quant):
+            if isinstance(cell, AtacQuant) or isinstance(cell, RnaQuant):
                 cell = cell.quant_cell
             values = {}
             for gene_id in gene_ids:
-                values[gene_id] = Quant.objects.filter(quant_cell=cell).filter(
+                if request_dict['genomic_modality'] == 'rna':
+                    values[gene_id] = RnaQuant.objects.filter(quant_cell=cell).filter(
+                    quant_gene__gene_symbol__iexact=gene_id).first().value
+                else:
+                    values[gene_id] = AtacQuant.objects.filter(quant_cell=cell).filter(
                     quant_gene__gene_symbol__iexact=gene_id).first().value
             kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
                       'organ': cell.organ, 'values': values}

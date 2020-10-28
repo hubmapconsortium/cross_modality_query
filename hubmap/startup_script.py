@@ -6,7 +6,8 @@ from argparse import ArgumentParser
 import pandas as pd
 import json
 import numpy as np
-from django.db import transaction
+from django.db import transaction, connection
+import concurrent.futures
 
 if __name__ == '__main__':
     import django
@@ -21,8 +22,37 @@ from query_app.models import (
     Organ,
     Protein,
     PVal,
-    Quant,
+    RnaQuant,
+    AtacQuant,
 )
+
+
+def create_quant_index(modality:str):
+    sql = "CREATE INDEX " + modality + "_value_idx ON " + modality + "_quant (value);"
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+
+def drop_quant_index(modality:str):
+    sql = 'DROP INDEX IF EXISTS ' + modality + '_value_idx;'
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+
+def process_quant_column(quant_df_and_column):
+    quant_df = quant_df_and_column[0]
+    column = quant_df_and_column[1]
+
+    return [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
+                 quant_df.index]
+
+def flatten_quant_df(quant_df):
+    dict_list = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
+
+        df_and_columns = [(quant_df, column) for column in quant_df.columns]
+
+        for column_list in executor.map(process_quant_column, df_and_columns):
+            dict_list.extend(column_list)
 
 
 def sanitize_string(string: str) -> str:
@@ -36,8 +66,6 @@ def create_model(model_name: str, kwargs: dict):
         obj = Gene(**kwargs)
     elif model_name == 'organ':
         obj = Organ(**kwargs)
-    elif model_name == 'quant':
-        obj = Quant(**kwargs)
     elif model_name == 'protein':
         obj = Protein(**kwargs)
     elif model_name == 'pvalue':
@@ -118,17 +146,18 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     if model_name == 'quant':
-        modality = Modality.objects.filter(modality_name__icontains=modality).first()
-        dict_list = [{'cell_id': i, 'gene_id': column, 'modality': modality, 'value': df.at[i, column]} for i in
-                     df.index for column in df.columns]
+        dict_list = flatten_quant_df(df)
         for kwargs in dict_list:
             cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id']).first()
             kwargs['quant_cell'] = cell
             kwargs.pop('cell_id')
-            gene = Gene.objects.filter(gene_id__iexact=kwargs['gene_id'].first())
+            gene = Gene.objects.filter(gene_symbol__iexact=kwargs['gene_id']).first()
             kwargs['quant_gene'] = gene
             kwargs.pop('gene_id')
-            obj = create_model('quant', kwargs)
+            if modality == 'rna':
+                obj = RnaQuant(**kwargs)
+            elif modality == 'atac':
+                obj = AtacQuant(**kwargs)
             obj.save()
 
     elif model_name == 'cell':
@@ -178,8 +207,9 @@ def create_organs(hdf_file: Path):
 def create_quants(hdf_file: Path):
     modality = hdf_file.stem
     with pd.HDFStore(hdf_file) as store:
-        #            for i in range(len(store.get('quant').index) // 1000 + 1):
-        for i in range(1):
+        chunks = len(store.get('quant').index) // 1000 + 1
+        for i in range(chunks):
+            print('Loading chunk ' + str(i) + ' out of ' + str(chunks))
             chunk = store.select('quant', start=i * 1000, stop=(i + 1) * 1000)
             df_to_db(chunk, 'quant', modality)
 
@@ -203,114 +233,96 @@ def create_modality_and_datasets(hdf_file: Path):
 
 
 def load_rna(hdf_file: Path):
+
+    drop_quant_index('rna')
+    print('Old index dropped')
+
     Cell.objects.filter(modality__modality_name__icontains='rna').delete()
-    Quant.objects.filter(modality__modality_name__icontains='rna').delete()
+    RnaQuant.objects.all().delete()
     Dataset.objects.filter(modality__modality_name__icontains='rna').delete()
     Modality.objects.filter(modality_name__icontains='rna').delete()
 
+    print('Old data deleted')
     create_modality_and_datasets(hdf_file)
+    print('Modality and datasets created')
     create_organs(hdf_file)
+    print('Organs created')
     create_cells(hdf_file)
+    print('Cells created')
     create_genes(hdf_file)
+    print('Genes created')
     create_quants(hdf_file)
+    print('Quants created')
     create_pvals(hdf_file)
+    print('Pvals created')
+
+    create_quant_index('rna')
+    print('New index created')
 
     return
 
 
 def load_atac(hdf_file):
+
+    drop_quant_index('atac')
+    print('Old index dropped')
+
     Cell.objects.filter(modality__modality_name__icontains='atac').delete()
-    Quant.objects.filter(modality__modality_name__icontains='atac').delete()
+    AtacQuant.objects.all().delete()
     Dataset.objects.filter(modality__modality_name__icontains='atac').delete()
     Modality.objects.filter(modality_name__icontains='atac').delete()
 
+    print('Old data deleted')
     create_modality_and_datasets(hdf_file)
+    print('Modality and datasets created')
     create_organs(hdf_file)
+    print('Organs created')
     create_cells(hdf_file)
+    print('Cells created')
     create_genes(hdf_file)
+    print('Genes created')
     create_quants(hdf_file)
+    print('Quants created')
     create_pvals(hdf_file)
+    print('Pvals created')
+
+    create_quant_index('atac')
+    print('New index created')
 
     return
 
 
 def load_codex(hdf_file):
     Cell.objects.filter(modality__modality_name__icontains='codex').delete()
-    Quant.objects.filter(modality__modality_name__icontains='codex').delete()
     Dataset.objects.filter(modality__modality_name__icontains='codex').delete()
     Modality.objects.filter(modality_name__icontains='codex').delete()
     Protein.objects.all().delete()
 
+    print('Old data deleted')
     create_modality_and_datasets(hdf_file)
+    print('Modality and datasets created')
     create_organs(hdf_file)
+    print('Organs created')
     create_cells(hdf_file)
+    print('Cells created')
     create_proteins(hdf_file)
+    print('Proteins created')
 
     return
 
 
 def main(hdf_files: List[Path]):
-    print(Gene.objects.all().values_list())
-    print(Cell.objects.all().values_list())
-    print(Organ.objects.all().values_list())
 
-    Cell.objects.all().delete()
-    Organ.objects.all().delete()
-    Gene.objects.all().delete()
-    PVal.objects.all().delete()
-    Quant.objects.all().delete()
-
-    rna = Modality.objects.filter(modality_name__icontains='rna').first()
-
-    best1 = Gene(gene_symbol='BEST1')
-    best1.save()
-    b2m = Gene(gene_symbol='B2M')
-    b2m.save()
-
-    spleen = Organ(organ_name='spleen')
-    spleen.save()
-    kidney = Organ(organ_name='kidney')
-    kidney.save()
-
-    cell_one = Cell(cell_id='cell_1', modality=rna, organ=spleen, protein_mean={'Ki67':10.0, 'CD21':5.0})
-    cell_one.save()
-    cell_two = Cell(cell_id='cell_2', modality=rna, organ=kidney, protein_mean={'Ki67':10.0, 'CD21':0.0})
-    cell_two.save()
-
-    pval_one = PVal(p_gene=best1, p_organ=kidney, modality=rna, value=0.01)
-    pval_one.save()
-    pval_two = PVal(p_gene=b2m, p_organ=kidney, modality=rna, value=0.01)
-    pval_two.save()
-    pval_three = PVal(p_gene=best1, p_organ=spleen, modality=rna, value=0.01)
-    pval_three.save()
-    pval_four = PVal(p_gene=b2m, p_organ=kidney, modality=rna, value=1.00)
-    pval_four.save()
-
-    quant_one = Quant(quant_cell=cell_one, quant_gene=best1, modality=rna, value=10.1)
-    quant_one.save()
-    quant_two = Quant(quant_cell=cell_one, quant_gene=b2m, modality=rna, value=10.1)
-    quant_two.save()
-    quant_three = Quant(quant_cell=cell_two, quant_gene=best1, modality=rna, value=10.1)
-    quant_three.save()
-    quant_four = Quant(quant_cell=cell_two, quant_gene=b2m, modality=rna, value=0.0)
-    quant_four.save()
-
-#    new_index = False
-
-#    if Quant.objects.count() > 0:
-#        for file in hdf_files:
-#            if file.stem in ['atac', 'rna']:
-                #Delete index
-#                new_index=True
-#                break
-
-#    for file in hdf_files:
-#        if 'rna' in file.stem:
-#            load_rna(file)
-#        elif 'atac' in file.stem:
-#            load_atac(file)
-#        elif 'codex' in file.stem:
-#            load_codex(file)
+    for file in hdf_files:
+        if 'rna' in file.stem:
+            load_rna(file)
+            print('RNA loaded')
+        elif 'atac' in file.stem:
+            load_atac(file)
+            print('ATAC loaded')
+        elif 'codex' in file.stem:
+            load_codex(file)
+            print('CODEX loaded')
 
 
 

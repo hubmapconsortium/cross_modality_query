@@ -73,14 +73,22 @@ class Protein(models.Model):
         return self.protein_id
 
 
-class Quant(models.Model):
+class RnaQuant(models.Model):
     quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, null=True)
     quant_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
-    modality = models.ForeignKey(to=Modality, related_name='quants', on_delete=models.CASCADE, null=True)
     value = models.FloatField(null=True)
 
     def __repr__(self):
-        return self.value
+        return str(self.value)
+
+
+class AtacQuant(models.Model):
+    quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, null=True)
+    quant_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
+    value = models.FloatField(null=True)
+
+    def __repr__(self):
+        return str(self.value)
 
 
 class PVal(models.Model):
@@ -93,24 +101,17 @@ class PVal(models.Model):
         return self.value
 
 
-class QueryHash(models.Model):
-    hash = models.CharField(max_length=32)
-
-
 class CellAndValues(Cell):
     """A model used for storing and serializing cells and subsets of their expression values"""
     values = models.JSONField(null=True)
-    query_hash = models.ForeignKey(to=QueryHash, on_delete=models.CASCADE, null=True)
 
 
 class OrganAndValues(Organ):
     values = models.JSONField(null=True)
-    query_hash = models.ForeignKey(to=QueryHash, on_delete=models.CASCADE, null=True)
 
 
 class GeneAndValues(Gene):
     values = models.JSONField(null=True)
-    query_hash = models.ForeignKey(to=QueryHash, on_delete=models.CASCADE, null=True)
 
 
 class QueryResults(models.Model):
