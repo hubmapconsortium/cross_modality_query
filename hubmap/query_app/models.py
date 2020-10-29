@@ -24,17 +24,6 @@ class Dataset(models.Model):
         return '%s' % self.uuid
 
 
-class Gene(models.Model):
-    gene_symbol = models.CharField(db_index=True, max_length=20)
-    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
-
-    def __repr__(self):
-        return self.gene_symbol
-
-    def __str__(self):
-        return '%s' % self.gene_symbol
-
-
 class Organ(models.Model):
     organ_name = models.CharField(db_index=True, max_length=20)
 
@@ -63,6 +52,19 @@ class Cell(models.Model):
                      'protein_mean': self.protein_mean, 'protein_total': self.protein_total,
                      'protein_covar': self.protein_covar}
         return json.dumps(cell_dict)
+
+
+class Gene(models.Model):
+    gene_symbol = models.CharField(db_index=True, max_length=20)
+    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+    rna_zero_cells = models.ManyToManyField(to=Cell, related_name='rna_zero_genes')
+    atac_zero_cells = models.ManyToManyField(to=Cell, related_name='atac_zero_genes')
+
+    def __repr__(self):
+        return self.gene_symbol
+
+    def __str__(self):
+        return '%s' % self.gene_symbol
 
 
 class Protein(models.Model):

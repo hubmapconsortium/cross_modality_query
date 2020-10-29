@@ -26,9 +26,20 @@ from query_app.models import (
     AtacQuant,
 )
 
+def get_zero_cells(quant_df, modality):
+    for gene in quant_df.columns:
+        gene_df = quant_df[quant_df[gene] == 0.0].copy()
+        cell_ids = [cell_id for cell_id in gene_df.index]
+        gene_object = Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:20]).first()
+        cells = Cell.objects.filter(cell_id__in=cell_ids)
+        cells = [cell for cell in cells]
+        if modality == 'rna':
+            gene_object.rna_zero_cells.add(*cells)
+        elif modality == 'atac':
+            gene_object.atac_zero_cells.add(*cells)
 
 def create_quant_index(modality:str):
-    sql = "CREATE INDEX " + modality + "_value_idx ON " + modality + "_quant (value);"
+    sql = "CREATE INDEX " + modality + "_value_idx ON query_app_" + modality + "quant (value);"
     with connection.cursor() as cursor:
         cursor.execute(sql)
 
@@ -42,9 +53,11 @@ def process_quant_column(quant_df_and_column):
     column = quant_df_and_column[1]
 
     return [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
-                 quant_df.index]
+                 quant_df.index if quant_df.at[i, column] > 0.0]
 
-def flatten_quant_df(quant_df):
+def flatten_quant_df(quant_df, modality):
+    get_zero_cells(quant_df, modality)
+
     dict_list = []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
@@ -53,6 +66,8 @@ def flatten_quant_df(quant_df):
 
         for column_list in executor.map(process_quant_column, df_and_columns):
             dict_list.extend(column_list)
+
+    return dict_list
 
 
 def sanitize_string(string: str) -> str:
@@ -146,7 +161,7 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
     if model_name == 'quant':
-        dict_list = flatten_quant_df(df)
+        dict_list = flatten_quant_df(df, modality)
         for kwargs in dict_list:
             cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id']).first()
             kwargs['quant_cell'] = cell
@@ -195,8 +210,14 @@ def create_genes(hdf_file: Path):
 
 
 def create_organs(hdf_file: Path):
-    pval_df = pd.read_hdf(hdf_file, 'p_values')
-    for organ_name in pval_df['organ_name'].unique():
+
+    cell_df = pd.read_hdf(hdf_file, 'cell')
+    if 'tissue_type' in cell_df.columns:
+        organs = list(cell_df['tissue_type'].unique())
+    elif 'organ_name' in cell_df.columns:
+        organs = list(cell_df['tissue_type'].unique())
+
+    for organ_name in organs:
         if Organ.objects.filter(organ_name__icontains=organ_name).first() is None:
             organ = Organ(organ_name=organ_name)
             organ.save()

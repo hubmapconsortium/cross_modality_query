@@ -184,8 +184,6 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     input_type = query_params['input_type']
     input_set = query_params['input_set']
-    logical_operator = query_params['logical_operator']
-    genomic_modality = query_params['genomic_modality']
 
     if input_type in ['protein', 'gene']:
 
@@ -197,9 +195,6 @@ def get_cell_filter(query_params: Dict) -> Q:
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, 'or')
-
-        if input_type == 'gene':
-            q = q & Q(modality__modality_name__icontains=genomic_modality)
 
         return q
 
@@ -459,7 +454,8 @@ def make_cell_and_values(query_set, request_dict):
         for cell in query_set:
             if request_dict['input_type'] == 'protein':
                 # This is a cell query set
-                values = {protein: cell.protein_mean[protein] for protein in request_dict['input_set']}
+                proteins = [split_at_comparator(protein) if len(split_at_comparator(protein)) > 0 else protein for protein in request_dict['input_set']]
+                values = {protein: cell.protein_mean[protein] for protein in proteins}
             else:
                 values = {}
             kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
