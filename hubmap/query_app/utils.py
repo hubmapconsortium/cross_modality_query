@@ -1,6 +1,8 @@
-from django.db.models import Q
+from django.db.models import Q, F
 from typing import List, Dict
 from functools import reduce
+from django.contrib.postgres.fields.jsonb import KeyTextTransform
+
 
 from .models import (
     Cell,
@@ -26,6 +28,14 @@ from .serializers import (
 )
 
 
+def get_zero_cells(gene:str)->List[str]:
+    non_zero_quants = RnaQuant.objects.filter(q_gene_id__iexact=gene)
+
+    non_zero_cells = cells_from_quants(non_zero_quants)
+    zero_cells = Cell.objects.filter(modality__modality_name__icontains='rna').difference(non_zero_cells).values_list('cell_id', flat=True)
+
+    return zero_cells
+
 def genes_from_pvals(pval_set):
     ids = pval_set.distinct('p_gene').values_list('p_gene', flat=True)
     print(ids)
@@ -39,9 +49,9 @@ def organs_from_pvals(pval_set):
 
 
 def cells_from_quants(quant_set):
-    ids = quant_set.values_list('quant_cell', flat=True).distinct()
+    ids = quant_set.order_by('q_cell_id', 'value').distinct('q_cell_id').values_list('q_cell_id', flat=True)
     print(ids)
-    return Cell.objects.filter(pk__in=list(ids))
+    return Cell.objects.filter(cell_id__in=list(ids))
 
 
 def split_and_strip(string: str) -> List[str]:
@@ -113,7 +123,7 @@ def combine_qs(qs: List[Q], logical_operator: str) -> Q:
         return reduce(q_and, qs)
 
 
-def process_single_condition(split_condition: List[str], input_type: str) -> Q:
+def process_single_condition(split_condition: List[str], input_type: str, genomic_modality:str) -> Q:
     """List[str], str -> Q
     Finds the keyword args for a quantitative query based on the results of
     calling split_at_comparator() on a string representation of that condition"""
@@ -142,20 +152,25 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
         return Q(**kwargs)
 
     if input_type == 'gene':
+
         gene_id = split_condition[0].strip()
 
+        q = Q(q_gene_id__icontains=gene_id)
+
         if comparator == '>':
-            return Q(value__gt=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
+            q = q & Q(value__gt=value)
         elif comparator == '>=':
-            return Q(value__gte=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
+            q = q & Q(value__gte=value)
         elif comparator == '<':
-            return Q(value__lt=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
+            q = q & (Q(value__lt=value) | Q(q_cell_id__in=get_zero_cells(gene_id)))
         elif comparator == '<=':
-            return Q(value__lte=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
+            q = q & (Q(value__lt=value) | Q(q_cell_id__in=get_zero_cells(gene_id)))
         elif comparator == '==':
-            return Q(value__exact=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
+            q = q & Q(value__exact=value)
         elif comparator == '!=':
-            return ~Q(value__exact=value) & Q(quant_gene__gene_symbol__icontains=gene_id)
+            q = q & ~Q(value__exact=value)
+
+        return q
 
 
 def get_gene_filter(query_params: Dict) -> Q:
@@ -184,6 +199,7 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     input_type = query_params['input_type']
     input_set = query_params['input_set']
+    genomic_modality = query_params['genomic_modality']
 
     if input_type in ['protein', 'gene']:
 
@@ -193,7 +209,7 @@ def get_cell_filter(query_params: Dict) -> Q:
         else:
             split_conditions = [split_at_comparator(item) for item in input_set]
 
-        qs = [process_single_condition(condition, input_type) for condition in split_conditions]
+        qs = [process_single_condition(condition, input_type, genomic_modality) for condition in split_conditions]
         q = combine_qs(qs, 'or')
 
         return q
@@ -277,14 +293,14 @@ def get_cells_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params['limit'])
         filter = get_cell_filter(query_params)
-        print(filter)
+        print('Filter made')
 
         if query_params['input_type'] == 'gene':
             if query_params['genomic_modality'] == 'rna':
-                query_set = RnaQuant.objects.filter(filter).order_by('value')
+                query_set = RnaQuant.objects.filter(filter)
             else:
-                query_set = AtacQuant.objects.filter(filter).order_by('value')
-            print(query_set.values())
+                query_set = AtacQuant.objects.filter(filter)
+            print('Quant queryset gotten')
         else:
             query_set = Cell.objects.filter(filter)[:limit]
             ids = query_set.values_list('pk', flat=True)
@@ -420,35 +436,50 @@ def make_cell_and_values(query_set, request_dict):
 
     if request_dict['input_type'] == 'gene':
 
+        genomic_modality = request_dict['genomic_modality']
+
         gene_ids = [item for item in request_dict['input_set']]
+        if len(split_at_comparator(request_dict['input_set'][0])) > 0:
+            gene_ids = [split_at_comparator(item)[0] for item in request_dict['input_set']]
 
         print(gene_ids)
 
         if request_dict['logical_operator'] == 'and' and len(request_dict['input_set']) > 1:
             # Get or more sets and intersect them
-            if len(split_at_comparator(request_dict['input_set'][0])) > 0:
-                gene_ids = [split_at_comparator(item)[0] for item in request_dict['input_set']]
-            quant_genes = query_set.values('quant_gene').distinct()
-            query_sets = [cells_from_quants(query_set.filter(quant_gene=cell['quant_gene'])) for cell in quant_genes]
-            query_set = reduce(set_intersection, query_sets)
 
-        cells = query_set[:limit]
-        for cell in cells:
-            if isinstance(cell, AtacQuant) or isinstance(cell, RnaQuant):
-                cell = cell.quant_cell
+            quant_genes = query_set.values('q_gene_id').distinct()
+            query_sets = [cells_from_quants(query_set.filter(q_gene_id=gene['gene_id'])) for gene in quant_genes]
+            query_set = reduce(set_intersection, query_sets)[:limit]
+
+        else:
+            query_set = cells_from_quants(query_set)[:limit]
+
+        print('Cells gotten')
+
+
+        for cell in query_set:
             values = {}
             for gene_id in gene_ids:
                 if request_dict['genomic_modality'] == 'rna':
-                    values[gene_id] = RnaQuant.objects.filter(quant_cell=cell).filter(
-                    quant_gene__gene_symbol__iexact=gene_id).first().value
+                    if RnaQuant.objects.filter(q_cell_id=cell.cell_id).filter(q_gene_id__iexact=gene_id).first() is None:
+                        values[gene_id] = 0.0
+                    else:
+                        values[gene_id] = RnaQuant.objects.filter(q_cell_id=cell.cell_id).filter(
+                        q_gene_id__iexact=gene_id).first().value
                 else:
-                    values[gene_id] = AtacQuant.objects.filter(quant_cell=cell).filter(
-                    quant_gene__gene_symbol__iexact=gene_id).first().value
+                    values[gene_id] = AtacQuant.objects.filter(q_cell_id=cell.cell_id).filter(
+                    q_gene_id__iexact=gene_id).first().value
             kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
                       'organ': cell.organ, 'values': values}
             print(kwargs)
             cav = CellAndValues(**kwargs)
             cav.save()
+
+        print('Values gotten')
+
+        qs = CellAndValues.objects.all()
+
+        return qs
 
     else:
         for cell in query_set:

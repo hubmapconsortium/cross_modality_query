@@ -4,7 +4,7 @@ import json
 
 
 class Modality(models.Model):
-    modality_name = models.CharField(max_length=10)
+    modality_name = models.CharField(max_length=16)
 
     def __repr__(self):
         return self.modality_name
@@ -25,7 +25,7 @@ class Dataset(models.Model):
 
 
 class Organ(models.Model):
-    organ_name = models.CharField(db_index=True, max_length=20)
+    organ_name = models.CharField(db_index=True, max_length=32)
 
     def __repr__(self):
         return self.organ_name
@@ -35,7 +35,7 @@ class Organ(models.Model):
 
 
 class Cell(models.Model):
-    cell_id = models.CharField(db_index=True, max_length=60, null=True)
+    cell_id = models.CharField(db_index=True, max_length=64, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
     dataset = models.ForeignKey(to=Dataset, related_name='cells', on_delete=models.CASCADE, null=True)
     organ = models.ForeignKey(to=Organ, related_name='cells', on_delete=models.CASCADE, null=True)
@@ -55,10 +55,8 @@ class Cell(models.Model):
 
 
 class Gene(models.Model):
-    gene_symbol = models.CharField(db_index=True, max_length=20)
+    gene_symbol = models.CharField(db_index=True, max_length=64)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
-    rna_zero_cells = models.ManyToManyField(to=Cell, related_name='rna_zero_genes')
-    atac_zero_cells = models.ManyToManyField(to=Cell, related_name='atac_zero_genes')
 
     def __repr__(self):
         return self.gene_symbol
@@ -68,7 +66,7 @@ class Gene(models.Model):
 
 
 class Protein(models.Model):
-    protein_id = models.CharField(db_index=True, max_length=20)
+    protein_id = models.CharField(db_index=True, max_length=32)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
 
     def __repr__(self):
@@ -76,8 +74,8 @@ class Protein(models.Model):
 
 
 class RnaQuant(models.Model):
-    quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, null=True)
-    quant_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
+    q_cell_id = models.CharField(max_length=64, null=True, db_index=True)
+    q_gene_id = models.CharField(max_length=64, null=True, db_index=True)
     value = models.FloatField(null=True)
 
     def __repr__(self):
@@ -85,8 +83,8 @@ class RnaQuant(models.Model):
 
 
 class AtacQuant(models.Model):
-    quant_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, null=True)
-    quant_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
+    q_cell_id = models.CharField(max_length=64, null=True, db_index=True)
+    q_gene_id = models.CharField(max_length=64, null=True, db_index=True)
     value = models.FloatField(null=True)
 
     def __repr__(self):

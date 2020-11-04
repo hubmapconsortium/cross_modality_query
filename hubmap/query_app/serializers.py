@@ -37,7 +37,6 @@ class CellSerializer(serializers.ModelSerializer):
         model = Cell
         fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
                   'cell_shape', 'organ']
-        exclude = ['modality']
 
 
 class OrganSerializer(serializers.ModelSerializer):

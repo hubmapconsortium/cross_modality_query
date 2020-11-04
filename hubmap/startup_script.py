@@ -7,7 +7,7 @@ import pandas as pd
 import json
 import numpy as np
 from django.db import transaction, connection
-import concurrent.futures
+from os import fspath
 
 if __name__ == '__main__':
     import django
@@ -26,48 +26,32 @@ from query_app.models import (
     AtacQuant,
 )
 
-def get_zero_cells(quant_df, modality):
-    for gene in quant_df.columns:
-        gene_df = quant_df[quant_df[gene] == 0.0].copy()
-        cell_ids = [cell_id for cell_id in gene_df.index]
-        gene_object = Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:20]).first()
-        cells = Cell.objects.filter(cell_id__in=cell_ids)
-        cells = [cell for cell in cells]
-        if modality == 'rna':
-            gene_object.rna_zero_cells.add(*cells)
-        elif modality == 'atac':
-            gene_object.atac_zero_cells.add(*cells)
 
-def create_quant_index(modality:str):
+def make_quants_csv(hdf_file):
+    modality = hdf_file.stem
+
+    csv_file = hdf_file.parent / Path(modality + '.csv')
+
+    drop_quant_index(modality)
+
+    sql = 'COPY query_app_' + modality + "quant(id, q_cell_id, q_gene_id, value)  FROM '" + fspath(csv_file) + "' CSV HEADER;"
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql)
+
+    create_quant_index(modality)
+
+
+def create_quant_index(modality: str):
     sql = "CREATE INDEX " + modality + "_value_idx ON query_app_" + modality + "quant (value);"
     with connection.cursor() as cursor:
         cursor.execute(sql)
 
-def drop_quant_index(modality:str):
+
+def drop_quant_index(modality: str):
     sql = 'DROP INDEX IF EXISTS ' + modality + '_value_idx;'
     with connection.cursor() as cursor:
         cursor.execute(sql)
-
-def process_quant_column(quant_df_and_column):
-    quant_df = quant_df_and_column[0]
-    column = quant_df_and_column[1]
-
-    return [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
-                 quant_df.index if quant_df.at[i, column] > 0.0]
-
-def flatten_quant_df(quant_df, modality):
-    get_zero_cells(quant_df, modality)
-
-    dict_list = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
-
-        df_and_columns = [(quant_df, column) for column in quant_df.columns]
-
-        for column_list in executor.map(process_quant_column, df_and_columns):
-            dict_list.extend(column_list)
-
-    return dict_list
 
 
 def sanitize_string(string: str) -> str:
@@ -118,16 +102,14 @@ def create_proteins(hdf_file):
         else:
             print(json_string)
 
-    for protein in protein_set:
-        p = Protein(protein_id=protein)
-        p.save()
+    proteins = [Protein(protein_id=protein) for protein in protein_set if Protein.objects.filter(protein_id__iexact=protein).first() is None]
+    Protein.objects.bulk_create(proteins)
 
 
 @transaction.atomic
 def save_genes(gene_set: List[str]):
-    for gene in gene_set:
-        g = Gene(gene_symbol=gene)
-        g.save()
+    genes = [Gene(gene_symbol=gene) for gene in gene_set]
+    Gene.objects.bulk_create(genes)
 
 
 def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
@@ -158,41 +140,28 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
     return sanitized_records
 
 
+def process_pval_args(kwargs: dict, modality: str):
+    kwargs['p_gene'] = Gene.objects.filter(gene_symbol__iexact=sanitize_string(kwargs['gene_id'])[:64]).first()
+    kwargs.pop('gene_id')
+    kwargs['p_organ'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
+    kwargs.pop('organ_name')
+    kwargs['modality'] = Modality.objects.filter(modality_name__icontains=modality).first()
+    return kwargs
+
+
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
-    if model_name == 'quant':
-        dict_list = flatten_quant_df(df, modality)
-        for kwargs in dict_list:
-            cell = Cell.objects.filter(cell_id__icontains=kwargs['cell_id']).first()
-            kwargs['quant_cell'] = cell
-            kwargs.pop('cell_id')
-            gene = Gene.objects.filter(gene_symbol__iexact=kwargs['gene_id']).first()
-            kwargs['quant_gene'] = gene
-            kwargs.pop('gene_id')
-            if modality == 'rna':
-                obj = RnaQuant(**kwargs)
-            elif modality == 'atac':
-                obj = AtacQuant(**kwargs)
-            obj.save()
-
-    elif model_name == 'cell':
+    if model_name == 'cell':
 
         kwargs_list = process_cell_records(df)
-
-        for kwargs in kwargs_list:
-            obj = create_model('cell', kwargs)
-            obj.save()
+        objs = [create_model('cell', kwargs) for kwargs in kwargs_list]
+        Cell.objects.bulk_create(objs)
 
     elif model_name == 'pvalue':
         kwargs_list = df.to_dict('records')
-        for kwargs in kwargs_list:
-            kwargs['p_gene'] = Gene.objects.filter(gene_symbol__iexact=sanitize_string(kwargs['gene_id'])[:20]).first()
-            kwargs.pop('gene_id')
-            kwargs['p_organ'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
-            kwargs.pop('organ_name')
-            kwargs['modality'] = Modality.objects.filter(modality_name__icontains=modality).first()
-            obj = create_model('pvalue', kwargs)
-            obj.save()
+        processed_kwargs_list = [process_pval_args(kwargs, modality) for kwargs in kwargs_list]
+        objs = [create_model('pvalue', kwargs) for kwargs in processed_kwargs_list]
+        PVal.objects.bulk_create(objs)
 
 
 def create_cells(hdf_file: Path):
@@ -201,16 +170,15 @@ def create_cells(hdf_file: Path):
 
 
 def create_genes(hdf_file: Path):
-    quant_df = pd.read_hdf(hdf_file, 'quant')
-    genes_to_create = [sanitize_string(gene)[:20] for gene in quant_df.columns if
-                       Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:20]).first() is None]
+    pval_df = pd.read_hdf(hdf_file, 'p_values')
+    genes_to_create = [sanitize_string(gene)[:64] for gene in pval_df['gene_id'].unique() if
+                       Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:64]).first() is None]
     save_genes(genes_to_create)
 
     return
 
 
 def create_organs(hdf_file: Path):
-
     cell_df = pd.read_hdf(hdf_file, 'cell')
     if 'tissue_type' in cell_df.columns:
         organs = list(cell_df['tissue_type'].unique())
@@ -225,16 +193,6 @@ def create_organs(hdf_file: Path):
     return
 
 
-def create_quants(hdf_file: Path):
-    modality = hdf_file.stem
-    with pd.HDFStore(hdf_file) as store:
-        chunks = len(store.get('quant').index) // 1000 + 1
-        for i in range(chunks):
-            print('Loading chunk ' + str(i) + ' out of ' + str(chunks))
-            chunk = store.select('quant', start=i * 1000, stop=(i + 1) * 1000)
-            df_to_db(chunk, 'quant', modality)
-
-
 def create_pvals(hdf_file: Path):
     modality = hdf_file.stem
     with pd.HDFStore(hdf_file) as store:
@@ -244,8 +202,10 @@ def create_pvals(hdf_file: Path):
 
 def create_modality_and_datasets(hdf_file: Path):
     modality_name = hdf_file.stem
-    modality = Modality(modality_name=modality_name)
-    modality.save()
+    modality = Modality.objects.filter(modality_name__iexact=modality_name)
+    if modality is None:
+        modality = Modality(modality_name=modality_name)
+        modality.save()
     with pd.HDFStore(hdf_file) as store:
         cell_df = store.get('cell')
         for uuid in cell_df['dataset'].unique():
@@ -254,10 +214,6 @@ def create_modality_and_datasets(hdf_file: Path):
 
 
 def load_rna(hdf_file: Path):
-
-    drop_quant_index('rna')
-    print('Old index dropped')
-
     Cell.objects.filter(modality__modality_name__icontains='rna').delete()
     RnaQuant.objects.all().delete()
     Dataset.objects.filter(modality__modality_name__icontains='rna').delete()
@@ -270,24 +226,17 @@ def load_rna(hdf_file: Path):
     print('Organs created')
     create_cells(hdf_file)
     print('Cells created')
+    make_quants_csv(hdf_file)
+    print('Quants created')
     create_genes(hdf_file)
     print('Genes created')
-    create_quants(hdf_file)
-    print('Quants created')
     create_pvals(hdf_file)
     print('Pvals created')
-
-    create_quant_index('rna')
-    print('New index created')
 
     return
 
 
 def load_atac(hdf_file):
-
-    drop_quant_index('atac')
-    print('Old index dropped')
-
     Cell.objects.filter(modality__modality_name__icontains='atac').delete()
     AtacQuant.objects.all().delete()
     Dataset.objects.filter(modality__modality_name__icontains='atac').delete()
@@ -300,24 +249,21 @@ def load_atac(hdf_file):
     print('Organs created')
     create_cells(hdf_file)
     print('Cells created')
+    make_quants_csv(hdf_file)
+    print('Quants created')
     create_genes(hdf_file)
     print('Genes created')
-    create_quants(hdf_file)
-    print('Quants created')
     create_pvals(hdf_file)
     print('Pvals created')
-
-    create_quant_index('atac')
-    print('New index created')
 
     return
 
 
 def load_codex(hdf_file):
-    Cell.objects.filter(modality__modality_name__icontains='codex').delete()
-    Dataset.objects.filter(modality__modality_name__icontains='codex').delete()
-    Modality.objects.filter(modality_name__icontains='codex').delete()
-    Protein.objects.all().delete()
+#    Cell.objects.filter(modality__modality_name__icontains='codex').delete()
+#    Dataset.objects.filter(modality__modality_name__icontains='codex').delete()
+#    Modality.objects.filter(modality_name__icontains='codex').delete()
+#    Protein.objects.all().delete()
 
     print('Old data deleted')
     create_modality_and_datasets(hdf_file)
@@ -333,7 +279,6 @@ def load_codex(hdf_file):
 
 
 def main(hdf_files: List[Path]):
-
     for file in hdf_files:
         if 'rna' in file.stem:
             load_rna(file)
@@ -344,7 +289,6 @@ def main(hdf_files: List[Path]):
         elif 'codex' in file.stem:
             load_codex(file)
             print('CODEX loaded')
-
 
 
 if __name__ == '__main__':
