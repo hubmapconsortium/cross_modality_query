@@ -5,6 +5,7 @@ djangorestframework
 numpy
 pandas
 psycopg2-binary>=2.8.6
+pylibmc
 pyyaml
 scikit-learn
 tables

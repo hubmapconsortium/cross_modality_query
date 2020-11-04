@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
  && apt-get -y install \
+    libmemcached-dev \
     python3 \
     python3-dev \
     python3-pip \
