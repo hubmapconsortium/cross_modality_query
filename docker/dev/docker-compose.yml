@@ -9,6 +9,8 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - ../../data/postgres:/var/lib/postgresql/data
+  memcached:
+    image: memcached:latest
   web:
     image: "hubmap/cross-modality-query-dev:latest"
     command: python3 /code/manage.py runserver 0.0.0.0:8000

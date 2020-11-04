@@ -11,6 +11,8 @@ services:
       - "5432:5432"
     volumes:
       -  /opt/postgres:/var/lib/postgresql/data
+  memcached:
+    image: memcached:latest
   uwsgi:
     image: "hubmap/cross-modality-query-prod:latest"
     ports:
