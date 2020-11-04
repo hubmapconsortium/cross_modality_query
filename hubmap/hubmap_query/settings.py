@@ -39,6 +39,15 @@ DATABASES = {
     },
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyLibMCCache',
+        # same in development and current production configuration; will
+        # likely need to override for deployment by IEC
+        'LOCATION': 'memcached:11211',
+    }
+}
+
 # Application definition
 
 INSTALLED_APPS = [
