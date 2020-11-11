@@ -7,6 +7,7 @@ import pandas as pd
 import json
 import numpy as np
 from django.db import transaction, connection
+from django.core.cache import cache
 from os import fspath
 
 if __name__ == '__main__':
@@ -25,6 +26,14 @@ from query_app.models import (
     RnaQuant,
     AtacQuant,
 )
+
+
+def load_cache():
+    ids_list = Cell.objects.filter(modality__modality_name__in=['rna','atac']).values_list('id', 'cell_id')
+    print(len(ids_list))
+    ids_dict = {id[1]: id[0] for id in ids_list}
+    print(len(ids_dict))
+    cache.set_many(ids_dict, None)
 
 
 def make_quants_csv(hdf_file):
@@ -157,6 +166,10 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
         objs = [create_model('cell', kwargs) for kwargs in kwargs_list]
         Cell.objects.bulk_create(objs)
 
+        ids_list = Cell.objects.filter(modality__modality_name__iexact=modality).values_list('id', 'cell_id')
+        ids_dict = {id[1]:id[0] for id in ids_list}
+        cache.set_many(ids_dict, None)
+
     elif model_name == 'pvalue':
         kwargs_list = df.to_dict('records')
         processed_kwargs_list = [process_pval_args(kwargs, modality) for kwargs in kwargs_list]
@@ -202,7 +215,7 @@ def create_pvals(hdf_file: Path):
 
 def create_modality_and_datasets(hdf_file: Path):
     modality_name = hdf_file.stem
-    modality = Modality.objects.filter(modality_name__iexact=modality_name)
+    modality = Modality.objects.filter(modality_name__iexact=modality_name).first()
     if modality is None:
         modality = Modality(modality_name=modality_name)
         modality.save()
@@ -289,6 +302,8 @@ def main(hdf_files: List[Path]):
         elif 'codex' in file.stem:
             load_codex(file)
             print('CODEX loaded')
+
+    load_cache()
 
 
 if __name__ == '__main__':

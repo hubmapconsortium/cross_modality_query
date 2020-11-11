@@ -35,7 +35,7 @@ class CellSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cell
-        fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
+        fields = ['cell_id', 'modality', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
                   'cell_shape', 'organ']
 
 
