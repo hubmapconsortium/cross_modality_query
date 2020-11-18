@@ -158,10 +158,10 @@ def process_pval_args(kwargs: dict, modality: str):
     kwargs.pop('gene_id')
 
     if 'organ_name' in kwargs:
-        kwargs['p_group'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
+        kwargs['p_group'] = Organ.objects.filter(grouping_name__iexact=kwargs['organ_name']).first()
         kwargs.pop('organ_name')
     elif 'cluster' in kwargs:
-        kwargs['p_group'] = Cluster.objects.filter(cluster_name__iexact=kwargs['cluster']).first()
+        kwargs['p_group'] = Cluster.objects.filter(grouping_name__iexact=kwargs['cluster']).first()
         kwargs.pop('cluster')
 
     kwargs['modality'] = Modality.objects.filter(modality_name__icontains=modality).first()
