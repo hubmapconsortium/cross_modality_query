@@ -188,15 +188,6 @@ class OrganListView(SingleTableView):
         return organ_list(request)
 
 
-class AllCellListView(SingleTableView):
-    model = Cell
-    table_class = CellTable
-    template_name = 'cell_list.html'
-
-    def post(self, request, format=None):
-        return all_cell_list(request)
-
-
 class AllGeneListView(SingleTableView):
     model = Gene
     table_class = GeneTable
@@ -277,15 +268,6 @@ def organ_list(request):
         return exporter.response("table.{}".format(export_format))
 
     return render(request, "organ_list.html", {
-        "table": table
-    })
-
-
-@api_view(['POST'])
-def all_cell_list(request):
-    table = CellTable(get_cells_list({'input_type': None}))
-
-    return render(request, "cell_list.html", {
         "table": table
     })
 

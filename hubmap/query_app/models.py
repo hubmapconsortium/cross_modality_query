@@ -2,6 +2,13 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 import json
 
+class CellGrouping(models.Model):
+
+    grouping_name = models.CharField(max_length=64)
+
+    def __repr__(self):
+        return str(self.id)
+
 
 class Modality(models.Model):
     modality_name = models.CharField(max_length=16)
@@ -13,7 +20,7 @@ class Modality(models.Model):
         return '%s' % self.modality_name
 
 
-class Dataset(models.Model):
+class Dataset(CellGrouping):
     uuid = models.CharField(max_length=32)
     modality = models.ForeignKey(to=Modality, related_name='datasets', on_delete=models.CASCADE, null=True)
 
@@ -24,21 +31,25 @@ class Dataset(models.Model):
         return '%s' % self.uuid
 
 
-class Organ(models.Model):
-    organ_name = models.CharField(db_index=True, max_length=32)
+class Organ(CellGrouping):
 
     def __repr__(self):
-        return self.organ_name
+        return self.grouping_name
 
     def __str__(self):
-        return '%s' % self.organ_name
+        return '%s' % self.grouping_name
 
+
+class Cluster(CellGrouping):
+    cluster_method = models.CharField(max_length=16) #i.e. leiden, k means
+    cluster_data = models.CharField(max_length=16) #UMAP, protein mean, cell shape
 
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=64, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
     dataset = models.ForeignKey(to=Dataset, related_name='cells', on_delete=models.CASCADE, null=True)
     organ = models.ForeignKey(to=Organ, related_name='cells', on_delete=models.CASCADE, null=True)
+    clusters = models.ManyToManyField(to=Cluster, related_name='cells', null=True)
     protein_mean = models.JSONField(db_index=True, null=True, blank=True)
     protein_total = models.JSONField(db_index=True, null=True, blank=True)
     protein_covar = models.JSONField(db_index=True, null=True, blank=True)
@@ -92,7 +103,7 @@ class AtacQuant(models.Model):
 
 
 class PVal(models.Model):
-    p_organ = models.ForeignKey(to=Organ, on_delete=models.CASCADE, null=True)
+    p_group = models.ForeignKey(to=CellGrouping, on_delete=models.CASCADE, null=True)
     p_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
     value = models.FloatField(null=True, db_index=True)

@@ -19,7 +19,6 @@ urlpatterns = [
     path('celllist/', views.CellListView.as_view(), name="cell_list"),
     path('genelist/', views.GeneListView.as_view(), name="gene_list"),
     path('organlist/', views.OrganListView.as_view(), name="organ_list"),
-    path('allcelllist/', views.AllCellListView.as_view(), name="all_cell_list"),
     path('allgenelist/', views.AllGeneListView.as_view(), name="all_gene_list"),
     path('allorganlist/', views.AllOrganListView.as_view(), name="all_organ_list"),
     path('allproteinlist/', views.AllProteinListView.as_view(), name="all_protein_list"),

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .models import (
     Cell,
+    Cluster,
     CellAndValues,
     Dataset,
     Gene,
@@ -28,21 +29,28 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = ['uuid']
 
 
+class ClusterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cluster
+        fields = ['cluster_method', 'cluster_data', 'grouping_name']
+
+
 class CellSerializer(serializers.ModelSerializer):
     modality = serializers.RelatedField(read_only=True)
     dataset = serializers.RelatedField(read_only=True)
     organ = serializers.RelatedField(read_only=True)
+    clusters = serializers.RelatedField(read_only=True, many=True)
+
 
     class Meta:
         model = Cell
-        fields = ['cell_id', 'modality', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
-                  'cell_shape', 'organ']
+        fields = ['cell_id', 'modality', 'dataset', 'organ', 'clusters', 'protein_mean', 'protein_total', 'protein_covar']
 
 
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organ
-        fields = ['organ_name', 'cells']
+        fields = ['grouping_name', 'cells']
 
 
 class GeneSerializer(serializers.ModelSerializer):
@@ -58,24 +66,32 @@ class ProteinSerializer(serializers.ModelSerializer):
 
 
 class CellAndValuesSerializer(serializers.ModelSerializer):
-    cell = serializers.RelatedField(read_only=True)
+#    cell = CellSerializer(read_only=True)
+#    values = serializers.JSONField()
 
     class Meta:
         model = CellAndValues
+#        fields = ['cell', 'values']
         fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
                   'organ', 'values']
 
 
 class GeneAndValuesSerializer(serializers.ModelSerializer):
+#    values = serializers.JSONField()
+#    gene = GeneSerializer(read_only=True)
+
     class Meta:
         model = GeneAndValues
         fields = ['gene_symbol', 'go_terms', 'values']
-
+#        fields = ['gene', 'values']
 
 class OrganAndValuesSerializer(serializers.ModelSerializer):
+#    organ = serializers.RelatedField(read_only=True)
+#    values = serializers.JSONField()
+
     class Meta:
         model = OrganAndValues
-        fields = ['organ_name', 'values']
+        fields = ['grouping_name', 'values']
 
 
 class CellQueryResultsSerializer(serializers.ModelSerializer):

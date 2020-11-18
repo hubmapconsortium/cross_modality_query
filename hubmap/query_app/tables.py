@@ -25,10 +25,11 @@ class GeneTable(tables.Table):
 
 
 class OrganTable(tables.Table):
-    organ_name = tables.Column(accessor='organ_name')
+    grouping_name = tables.Column(accessor='grouping_name')
 
     class Meta:
         model = models.Organ
+        fields = ['grouping_name']
 
 
 class ProteinTable(tables.Table):
@@ -56,6 +57,6 @@ class GeneAndValuesTable(tables.Table):
 class OrganAndValuesTable(tables.Table):
     class Meta:
         model = models.OrganAndValues
-        fields = ['organ_name', 'values']
+        fields = ['grouping_name', 'values']
         template_name = "django_tables2/bootstrap4.html"
 

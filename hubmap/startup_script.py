@@ -17,6 +17,7 @@ if __name__ == '__main__':
 
 from query_app.models import (
     Cell,
+    Cluster,
     Dataset,
     Gene,
     Modality,
@@ -120,6 +121,9 @@ def save_genes(gene_set: List[str]):
     genes = [Gene(gene_symbol=gene) for gene in gene_set]
     Gene.objects.bulk_create(genes)
 
+def get_clusters(cell_df:pd.DataFrame):
+    return cell_df[['cell_id', 'leiden']].to_dict('records')
+
 
 def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
     if 'cell_id' not in cell_df.columns:
@@ -137,7 +141,7 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
         record['dataset'] = Dataset.objects.filter(uuid__icontains=record['dataset']).first()
         if 'modality' not in record.keys():
             record['modality'] = record['dataset'].modality
-        record['organ'] = Organ.objects.filter(organ_name__icontains=record['organ']).first()
+        record['organ'] = Organ.objects.filter(grouping_name__icontains=record['organ']).first()
 
         for key in record.keys():
             if 'protein' in key and isinstance(record[key], str):
@@ -152,8 +156,14 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
 def process_pval_args(kwargs: dict, modality: str):
     kwargs['p_gene'] = Gene.objects.filter(gene_symbol__iexact=sanitize_string(kwargs['gene_id'])[:64]).first()
     kwargs.pop('gene_id')
-    kwargs['p_organ'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
-    kwargs.pop('organ_name')
+
+    if 'organ_name' in kwargs:
+        kwargs['p_group'] = Organ.objects.filter(organ_name__iexact=kwargs['organ_name']).first()
+        kwargs.pop('organ_name')
+    elif 'cluster' in kwargs:
+        kwargs['p_group'] = Cluster.objects.filter(cluster_name__iexact=kwargs['cluster']).first()
+        kwargs.pop('cluster')
+
     kwargs['modality'] = Modality.objects.filter(modality_name__icontains=modality).first()
     return kwargs
 
@@ -179,11 +189,20 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
 
 def create_cells(hdf_file: Path):
     cell_df = pd.read_hdf(hdf_file, 'cell')
+    cluster_assignments = []
+
+    if hdf_file.stem in ['atac', 'rna']:
+        cluster_assignments = get_clusters(cell_df)
     df_to_db(cell_df, 'cell')
+
+    for ca in cluster_assignments:
+        cell = Cell.objects.filter(cell_id__iexact=ca['cell_id']).first()
+        cluster = Cluster.objects.filter(group_name__iexact=ca['leiden']).first()
+        cell.clusters.add(cluster)
 
 
 def create_genes(hdf_file: Path):
-    pval_df = pd.read_hdf(hdf_file, 'p_values')
+    pval_df = pd.read_hdf(hdf_file, 'organ')
     genes_to_create = [sanitize_string(gene)[:64] for gene in pval_df['gene_id'].unique() if
                        Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:64]).first() is None]
     save_genes(genes_to_create)
@@ -196,11 +215,11 @@ def create_organs(hdf_file: Path):
     if 'tissue_type' in cell_df.columns:
         organs = list(cell_df['tissue_type'].unique())
     elif 'organ_name' in cell_df.columns:
-        organs = list(cell_df['tissue_type'].unique())
+        organs = list(cell_df['organ_name'].unique())
 
     for organ_name in organs:
-        if Organ.objects.filter(organ_name__icontains=organ_name).first() is None:
-            organ = Organ(organ_name=organ_name)
+        if Organ.objects.filter(grouping_name__icontains=organ_name).first() is None:
+            organ = Organ(grouping_name=organ_name)
             organ.save()
 
     return
@@ -208,9 +227,25 @@ def create_organs(hdf_file: Path):
 
 def create_pvals(hdf_file: Path):
     modality = hdf_file.stem
-    with pd.HDFStore(hdf_file) as store:
-        pval_df = store.get('p_values')
-        df_to_db(pval_df, 'pvalue', modality)
+
+    for grouping_type in ['organ', 'cluster']:
+        with pd.HDFStore(hdf_file) as store:
+            pval_df = store.get(grouping_type)
+            df_to_db(pval_df, 'pvalue', modality)
+
+
+def create_clusters(hdf_file: Path):
+
+    if hdf_file.stem in ['atac', 'rna']:
+        cluster_method = 'leiden'
+        cluster_data = 'UMAP'
+        with pd.HDFStore(hdf_file) as store:
+            cluster_df = store.get('cluster')
+            for cluster_name in cluster_df['cluster'].unique():
+                cluster = Cluster(grouping_name=cluster_name, cluster_method=cluster_method, cluster_data=cluster_data)
+                cluster.save()
+
+
 
 
 def create_modality_and_datasets(hdf_file: Path):
@@ -237,6 +272,8 @@ def load_rna(hdf_file: Path):
     print('Modality and datasets created')
     create_organs(hdf_file)
     print('Organs created')
+    create_clusters(hdf_file)
+    print('Clusters created')
     create_cells(hdf_file)
     print('Cells created')
     make_quants_csv(hdf_file)
@@ -260,6 +297,8 @@ def load_atac(hdf_file):
     print('Modality and datasets created')
     create_organs(hdf_file)
     print('Organs created')
+    create_clusters(hdf_file)
+    print('Clusters created')
     create_cells(hdf_file)
     print('Cells created')
     make_quants_csv(hdf_file)
