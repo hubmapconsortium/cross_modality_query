@@ -30,12 +30,26 @@ from query_app.models import (
 
 
 def load_cache():
+
     ids_list = Cell.objects.filter(modality__modality_name__in=['rna','atac']).values_list('id', 'cell_id')
     print(len(ids_list))
     ids_dict = {id[1]: id[0] for id in ids_list}
     print(len(ids_dict))
     cache.set_many(ids_dict, None)
 
+    #Load non-zero RNA quants
+#    rna_dict = {}
+#    for gene in RnaQuant.objects.all().distinct('q_gene_id').values_list('q_gene_id', flat=True):
+#        cell_pks = RnaQuant.objects.filter(q_gene_id=gene).distinct('q_cell_id').values_list('q_cell_id', flat=True)
+#        rna_dict['rna' + gene] = cell_pks
+#    cache.set_many(rna_dict, None)
+
+    #Load non-zero RNA quants
+#    atac_dict = {}
+#    for gene in AtacQuant.objects.all().distinct('q_gene_id').values_list('q_gene_id', flat=True):
+#        cell_pks = AtacQuant.objects.filter(q_gene_id=gene).distinct('q_cell_id').values_list('q_cell_id', flat=True)
+#        atac_dict['atac' + gene] = cell_pks
+#    cache.set_many(atac_dict, None)
 
 def make_quants_csv(hdf_file):
     modality = hdf_file.stem
