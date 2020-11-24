@@ -255,10 +255,14 @@ def create_clusters(hdf_file: Path):
         cluster_data = 'UMAP'
         with pd.HDFStore(hdf_file) as store:
             cluster_df = store.get('cluster')
+            cell_df = store.get('cell')
             for cluster_name in cluster_df['cluster'].unique():
                 cluster = Cluster(grouping_name=cluster_name, cluster_method=cluster_method, cluster_data=cluster_data)
                 cluster.save()
-
+                cluster_cell_df = cell_df[cell_df['leiden'] == cluster_name]
+                cluster_cell_ids = list(cluster_cell_df['cell_id'].unique())
+                cluster_cell_pks = Cell.objects.filter(cell_id__in=cluster_cell_ids).values_list('pk', flat=True)
+                cluster.cells.add(*cluster_cell_pks)
 
 
 
