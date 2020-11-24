@@ -4,59 +4,58 @@ from . import models
 
 
 class CellTable(tables.Table):
-    cell_id = tables.Column(accessor='cell_id')
-    organ = tables.Column(accessor='organ')
-    dataset = tables.Column(accessor='dataset')
-    modality = tables.Column(accessor='modality')
-    protein_mean = tables.Column(accessor='protein_mean')
-    protein_total = tables.Column(accessor='protein_total')
-    protein_covar = tables.Column(accessor='protein_covar')
+    cell_id = tables.Column(accessor="cell_id")
+    organ = tables.Column(accessor="organ")
+    dataset = tables.Column(accessor="dataset")
+    modality = tables.Column(accessor="modality")
+    protein_mean = tables.Column(accessor="protein_mean")
+    protein_total = tables.Column(accessor="protein_total")
+    protein_covar = tables.Column(accessor="protein_covar")
 
     class Meta:
         model = models.Cell
 
 
 class GeneTable(tables.Table):
-    gene_symbol = tables.Column(accessor='gene_symbol')
-    go_terms = tables.Column(accessor='go_terms')
+    gene_symbol = tables.Column(accessor="gene_symbol")
+    go_terms = tables.Column(accessor="go_terms")
 
     class Meta:
         model = models.Gene
 
 
 class OrganTable(tables.Table):
-    grouping_name = tables.Column(accessor='grouping_name')
+    grouping_name = tables.Column(accessor="grouping_name")
 
     class Meta:
         model = models.Organ
-        fields = ['grouping_name']
+        fields = ["grouping_name"]
 
 
 class ProteinTable(tables.Table):
-    protein_id = tables.Column(accessor='protein_id')
-    go_terms = tables.Column(accessor='go_terms')
+    protein_id = tables.Column(accessor="protein_id")
+    go_terms = tables.Column(accessor="go_terms")
 
     class Meta:
         model = models.Protein
 
 
 class CellAndValuesTable(tables.Table):
-
     class Meta:
         model = models.CellAndValues
-        fields = ['cell_id', 'dataset', 'modality', 'organ', 'values']
+        fields = ["cell_id", "dataset", "modality", "organ", "values"]
         template_name = "django_tables2/bootstrap4.html"
+
 
 class GeneAndValuesTable(tables.Table):
     class Meta:
         model = models.GeneAndValues
-        fields = ['gene_symbol', 'go_terms', 'values']
+        fields = ["gene_symbol", "go_terms", "values"]
         template_name = "django_tables2/bootstrap4.html"
 
 
 class OrganAndValuesTable(tables.Table):
     class Meta:
         model = models.OrganAndValues
-        fields = ['grouping_name', 'values']
+        fields = ["grouping_name", "values"]
         template_name = "django_tables2/bootstrap4.html"
-
