@@ -2,37 +2,37 @@ from rest_framework import serializers
 
 from .models import (
     Cell,
-    Cluster,
     CellAndValues,
+    CellQueryResults,
+    Cluster,
     Dataset,
     Gene,
     GeneAndValues,
+    GeneQueryResults,
+    Modality,
     Organ,
     OrganAndValues,
-    Modality,
-    Protein,
-    CellQueryResults,
-    GeneQueryResults,
     OrganQueryResults,
+    Protein,
 )
 
 
 class ModalitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Modality
-        fields = ['modality_name']
+        fields = ["modality_name"]
 
 
 class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dataset
-        fields = ['uuid']
+        fields = ["uuid"]
 
 
 class ClusterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cluster
-        fields = ['cluster_method', 'cluster_data', 'grouping_name']
+        fields = ["cluster_method", "cluster_data", "grouping_name"]
 
 
 class CellSerializer(serializers.ModelSerializer):
@@ -41,57 +41,76 @@ class CellSerializer(serializers.ModelSerializer):
     organ = serializers.RelatedField(read_only=True)
     clusters = serializers.RelatedField(read_only=True, many=True)
 
-
     class Meta:
         model = Cell
-        fields = ['cell_id', 'modality', 'dataset', 'organ', 'clusters', 'protein_mean', 'protein_total', 'protein_covar']
+        fields = [
+            "cell_id",
+            "modality",
+            "dataset",
+            "organ",
+            "clusters",
+            "protein_mean",
+            "protein_total",
+            "protein_covar",
+        ]
 
 
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organ
-        fields = ['grouping_name', 'cells']
+        fields = ["grouping_name", "cells"]
 
 
 class GeneSerializer(serializers.ModelSerializer):
     class Meta:
         model = Gene
-        fields = ['gene_symbol', 'go_terms']
+        fields = ["gene_symbol", "go_terms"]
 
 
 class ProteinSerializer(serializers.ModelSerializer):
     class Meta:
         model = Protein
-        fields = ['protein_id', 'go_terms']
+        fields = ["protein_id", "go_terms"]
 
 
 class CellAndValuesSerializer(serializers.ModelSerializer):
-#    cell = CellSerializer(read_only=True)
-#    values = serializers.JSONField()
+    #    cell = CellSerializer(read_only=True)
+    #    values = serializers.JSONField()
 
     class Meta:
         model = CellAndValues
-#        fields = ['cell', 'values']
-        fields = ['cell_id', 'dataset', 'organ', 'protein_mean', 'protein_total', 'protein_covar',
-                  'organ', 'values']
+        #        fields = ['cell', 'values']
+        fields = [
+            "cell_id",
+            "dataset",
+            "organ",
+            "protein_mean",
+            "protein_total",
+            "protein_covar",
+            "organ",
+            "values",
+        ]
 
 
 class GeneAndValuesSerializer(serializers.ModelSerializer):
-#    values = serializers.JSONField()
-#    gene = GeneSerializer(read_only=True)
+    #    values = serializers.JSONField()
+    #    gene = GeneSerializer(read_only=True)
 
     class Meta:
         model = GeneAndValues
-        fields = ['gene_symbol', 'go_terms', 'values']
+        fields = ["gene_symbol", "go_terms", "values"]
+
+
 #        fields = ['gene', 'values']
 
+
 class OrganAndValuesSerializer(serializers.ModelSerializer):
-#    organ = serializers.RelatedField(read_only=True)
-#    values = serializers.JSONField()
+    #    organ = serializers.RelatedField(read_only=True)
+    #    values = serializers.JSONField()
 
     class Meta:
         model = OrganAndValues
-        fields = ['grouping_name', 'values']
+        fields = ["grouping_name", "values"]
 
 
 class CellQueryResultsSerializer(serializers.ModelSerializer):
@@ -99,7 +118,7 @@ class CellQueryResultsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CellQueryResults
-        fields = ['cells_and_values', 'mean', 'covariance', 'correlation']
+        fields = ["cells_and_values", "mean", "covariance", "correlation"]
 
 
 class GeneQueryResultsSerializer(serializers.ModelSerializer):
@@ -107,7 +126,7 @@ class GeneQueryResultsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneQueryResults
-        fields = ['genes_and_values', 'mean', 'covariance', 'correlation']
+        fields = ["genes_and_values", "mean", "covariance", "correlation"]
 
 
 class OrganQueryResultsSerializer(serializers.ModelSerializer):
@@ -115,4 +134,4 @@ class OrganQueryResultsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrganQueryResults
-        fields = ['organs_and_values', 'mean', 'covariance', 'correlation']
+        fields = ["organs_and_values", "mean", "covariance", "correlation"]

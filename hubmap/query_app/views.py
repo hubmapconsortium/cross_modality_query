@@ -8,19 +8,8 @@ from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from .forms import (
-    QueryForm,
-    CellForm,
-    GeneQueryForm,
-    OrganQueryForm,
-)
-from .models import (
-    Cell,
-    Gene,
-    Organ,
-    Protein,
-    Query,
-)
+from .forms import CellForm, GeneQueryForm, OrganQueryForm, QueryForm
+from .models import Cell, Gene, Organ, Protein, Query
 from .serializers import (
     CellSerializer,
     GeneSerializer,
@@ -28,23 +17,23 @@ from .serializers import (
     ProteinSerializer,
 )
 from .tables import (
-    CellTable,
     CellAndValuesTable,
-    GeneTable,
+    CellTable,
     GeneAndValuesTable,
-    OrganTable,
+    GeneTable,
     OrganAndValuesTable,
+    OrganTable,
     ProteinTable,
 )
 from .utils import (
     cell_query,
     gene_query,
-    organ_query,
-    protein_query,
     get_cells_list,
     get_genes_list,
     get_organs_list,
     get_proteins_list,
+    organ_query,
+    protein_query,
 )
 
 
@@ -147,21 +136,21 @@ class CellQueryView(FormView):
 class LandingFormView(FormView):
     form_class = QueryForm
     model = Query
-    template_name = 'landing_page.html'
+    template_name = "landing_page.html"
 
     def post(self, request):
-        if request.POST['output_type'] == 'gene':
-            return redirect('/api/geneform')
-        elif request.POST['output_type'] == 'cell':
-            return redirect('/api/cellform')
-        elif request.POST['output_type'] == 'organ':
-            return redirect('/api/organform')
+        if request.POST["output_type"] == "gene":
+            return redirect("/api/geneform")
+        elif request.POST["output_type"] == "cell":
+            return redirect("/api/cellform")
+        elif request.POST["output_type"] == "organ":
+            return redirect("/api/organform")
 
 
 class CellListView(SingleTableView):
     model = Cell
     table_class = CellAndValuesTable
-    template_name = 'cell_list.html'
+    template_name = "cell_list.html"
     paginator_class = PaginationClass
 
     def post(self, request, format=None):
@@ -171,7 +160,7 @@ class CellListView(SingleTableView):
 class GeneListView(SingleTableView):
     model = Gene
     table_class = GeneAndValuesTable
-    template_name = 'gene_list.html'
+    template_name = "gene_list.html"
     paginator_class = PaginationClass
 
     def post(self, request, format=None):
@@ -181,7 +170,7 @@ class GeneListView(SingleTableView):
 class OrganListView(SingleTableView):
     model = Organ
     table_class = OrganAndValuesTable
-    template_name = 'organ_list.html'
+    template_name = "organ_list.html"
     paginator_class = PaginationClass
 
     def post(self, request, format=None):
@@ -191,7 +180,7 @@ class OrganListView(SingleTableView):
 class AllGeneListView(SingleTableView):
     model = Gene
     table_class = GeneTable
-    template_name = 'gene_list.html'
+    template_name = "gene_list.html"
 
     def post(self, request, format=None):
         return all_gene_list(request)
@@ -200,7 +189,7 @@ class AllGeneListView(SingleTableView):
 class AllOrganListView(SingleTableView):
     model = Organ
     table_class = OrganTable
-    template_name = 'organ_list.html'
+    template_name = "organ_list.html"
 
     def post(self, request, format=None):
         return all_organ_list(request)
@@ -209,91 +198,79 @@ class AllOrganListView(SingleTableView):
 class AllProteinListView(SingleTableView):
     model = Protein
     table_class = ProteinTable
-    template_name = 'protein_list.html'
+    template_name = "protein_list.html"
 
     def post(self, request, format=None):
         return all_protein_list(request)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def cell_list(request):
-    if request.data.dict()['input_type'] == 'gene':
+    if request.data.dict()["input_type"] == "gene":
         table = CellAndValuesTable(get_cells_list(request.data.dict()))
-        print('Calling the right table')
+        print("Calling the right table")
     else:
         table = CellAndValuesTable(get_cells_list(request.data.dict()))
-        print('Calling the wrong table')
+        print("Calling the wrong table")
 
     RequestConfig(request).configure(table)
 
-    export_format = request.data.dict()['export_format']
+    export_format = request.data.dict()["export_format"]
     if TableExport.is_valid_format(export_format):
         exporter = TableExport(export_format, table)
         return exporter.response("table.{}".format(export_format))
 
-    return render(request, "cell_list.html", {
-        "table": table
-    })
+    return render(request, "cell_list.html", {"table": table})
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def gene_list(request):
 
     table = GeneAndValuesTable(get_genes_list(request.data.dict()))
 
     RequestConfig(request).configure(table)
 
-    export_format = request.data.dict()['export_format']
+    export_format = request.data.dict()["export_format"]
 
     if TableExport.is_valid_format(export_format):
         exporter = TableExport(export_format, table)
         return exporter.response("table.{}".format(export_format))
 
-    return render(request, "gene_list.html", {
-        "table": table
-    })
+    return render(request, "gene_list.html", {"table": table})
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def organ_list(request):
 
     table = OrganAndValuesTable(get_organs_list(request.data.dict()))
 
     RequestConfig(request).configure(table)
 
-    export_format = request.data.dict()['export_format']
+    export_format = request.data.dict()["export_format"]
 
     if TableExport.is_valid_format(export_format):
         exporter = TableExport(export_format, table)
         return exporter.response("table.{}".format(export_format))
 
-    return render(request, "organ_list.html", {
-        "table": table
-    })
+    return render(request, "organ_list.html", {"table": table})
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def all_gene_list(request):
-    table = GeneTable(get_genes_list({'input_type': None}))
+    table = GeneTable(get_genes_list({"input_type": None}))
 
-    return render(request, "gene_list.html", {
-        "table": table
-    })
+    return render(request, "gene_list.html", {"table": table})
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def all_organ_list(request):
-    table = OrganTable(get_organs_list({'input_type': None}))
+    table = OrganTable(get_organs_list({"input_type": None}))
 
-    return render(request, "organ_list.html", {
-        "table": table
-    })
+    return render(request, "organ_list.html", {"table": table})
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 def all_protein_list(request):
-    table = ProteinTable(get_proteins_list({'input_type': None}))
+    table = ProteinTable(get_proteins_list({"input_type": None}))
 
-    return render(request, "organ_list.html", {
-        "table": table
-    })
+    return render(request, "organ_list.html", {"table": table})
