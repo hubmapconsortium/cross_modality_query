@@ -1,0 +1,15 @@
+[tool.black]
+line-length = 99
+exclude = '''
+/(
+    \.git
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+src_paths = ["hubmap"]
