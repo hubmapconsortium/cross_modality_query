@@ -13,3 +13,9 @@ end black
 start isort
 isort --check-only .
 end isort
+
+start django
+cd hubmap
+./manage.py test
+cd -
+end django

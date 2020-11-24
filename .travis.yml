@@ -1,7 +1,22 @@
 dist: focal
 language: python
 python: 3.8
+cache: pip
+addons:
+  postgresql: 12
+  apt:
+    packages:
+      - libmemcached-dev
+      - postgresql-12
+      - postgresql-client-12
+services:
+  - memcached
+  - postgresql
 install:
+  - pip install -r docker/base/requirements.txt
   - pip install -r requirements-test.txt
+  - cd hubmap/hubmap_query
+  - mv test_settings.py local_settings.py
+  - cd -
 script:
   - ./test.sh
