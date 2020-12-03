@@ -573,7 +573,8 @@ def make_cell_and_values(query_set, request_dict):
 
     if request_dict["input_type"] == "gene":
 
-        gene_ids = request_dict["input_set"]
+        gene_ids = [split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item.strip() for item
+                   in request_dict['input_set']]
 
         query_sets = [
             cells_from_quants(query_set.filter(q_gene_id=gene), gene, gene == gene_ids[0])
