@@ -52,12 +52,16 @@ def get_zero_cells(gene: str, modality: str) -> List[str]:
 
 def get_max_value_cells(cell_set, limit, values_dict, reverse_order):
     cell_ids = []
-    for i in range(limit):
-        v = list(values_dict.values())
-        k = list(values_dict.keys())
 
-        if len(v) == 0:
-            break
+    if cell_set.count() == 0:
+        return cell_set.filter(pk__in=[])
+
+    limit = min(limit, cell_set.count())
+
+    for i in range(limit):
+
+        k = list(values_dict.keys())
+        v = list(values_dict.values())
 
         if reverse_order:
             cell_ids.append(k[v.index(min(v))])
@@ -79,9 +83,15 @@ def order_cell_set(cell_set, gene, limit):
         gene = split_at_comparator(gene)[0]
 
     dict_keys = [cell.cell_id + gene for cell in cell_set]
+
     cache_dict = cache.get_many(dict_keys)
 
-    vals_dict = {cell.cell_id: cache_dict[cell.cell_id + gene] for cell in cell_set}
+    vals_dict = {}
+    for cell in cell_set:
+        if cell.cell_id + gene in cache_dict.keys():
+            vals_dict[cell.cell_id] = cache_dict[cell.cell_id + gene]
+        else:
+            vals_dict[cell.cell_id] = 0.0
 
     return get_max_value_cells(cell_set, limit, vals_dict, reverse_order)
 
