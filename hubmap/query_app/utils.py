@@ -56,6 +56,9 @@ def get_max_value_cells(cell_set, limit, values_dict, reverse_order):
         v = list(values_dict.values())
         k = list(values_dict.keys())
 
+        if len(v) == 0:
+            break
+
         if reverse_order:
             cell_ids.append(k[v.index(min(v))])
             values_dict.pop(k[v.index(min(v))])
