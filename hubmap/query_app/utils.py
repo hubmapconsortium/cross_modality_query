@@ -51,6 +51,7 @@ def get_zero_cells(gene: str, modality: str) -> List[str]:
 
 
 def get_max_value_cells(cell_set, limit, values_dict, reverse_order):
+    print(cell_set)
     cell_ids = []
 
     if cell_set.count() == 0:
@@ -424,7 +425,7 @@ def get_cells_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params["limit"])
         filter = get_cell_filter(query_params)
-        print("Filter made")
+        print(filter)
 
         if query_params["input_type"] == "gene":
             if query_params["genomic_modality"] == "rna":
@@ -437,6 +438,7 @@ def get_cells_list(query_params: Dict):
             query_set = Cell.objects.filter(pk__in=list(ids))
 
         print("Quant queryset gotten")
+        print(query_set)
         cells_and_values = make_cell_and_values(query_set, query_params)
 
         return cells_and_values
