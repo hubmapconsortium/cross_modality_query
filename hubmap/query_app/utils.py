@@ -259,9 +259,13 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
 
     if input_type == "gene":
 
-        gene_id = split_condition[0].strip()
+        comparator = split_condition[1]
 
-        q = Q(q_gene_id__iexact=gene_id)
+        assert comparator in [">", ">=", "<=", "<", "==", "!="]
+        value = float(split_condition[2].strip())
+
+        var_id = split_condition[0].strip()
+        q = Q(q_gene_id__iexact=var_id)
 
         if comparator == ">":
             q = q & Q(value__gt=value)
@@ -317,11 +321,10 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     if input_type in ["protein", "gene"]:
 
-        if len(split_at_comparator(input_set[0])) == 0:
-            print(len(split_at_comparator(input_set[0])))
-            split_conditions = [[item, ">", "0"] for item in input_set]
-        else:
-            split_conditions = [split_at_comparator(item) for item in input_set]
+        split_conditions = [
+            [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
+            for item in input_set
+        ]
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")
