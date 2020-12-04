@@ -562,6 +562,22 @@ def set_union(query_set_1, query_set_2):
     return query_set_1 | query_set_2
 
 
+def cache_values(query_set, gene_ids, modality):
+    cell_ids = query_set.values_list("cell_id", flat=True)
+    filter = Q(q_gene_id__in=gene_ids) & Q(q_cell_id__in=cell_ids)
+    if modality == "rna":
+        query_set = RnaQuant.objects.filter(filter)
+    elif modality == "atac":
+        query_set = AtacQuant.objects.filter(filter)
+
+    values = query_set.values_list("q_cell_id", "q_gene_id", "value")
+    print("Values gotten")
+
+    values_dict = {triple[0] + triple[1]: triple[2] for triple in values}
+
+    cache.set_many(values_dict, 300)
+
+
 def make_cell_and_values(query_set, request_dict):
     """Takes a query set of quant objects and returns a query set of cell_and_values
     This function will almost definitely have problems with concurrency"""
@@ -592,6 +608,8 @@ def make_cell_and_values(query_set, request_dict):
             query_set = reduce(set_intersection, query_sets)
         elif request_dict["logical_operator"] == "or":
             query_set = reduce(set_union, query_sets)
+            if len(gene_ids) > 1:
+                cache_values(query_set, gene_ids, request_dict["genomic_modality"])
 
         query_set = order_cell_set(query_set, gene_ids[0], limit)
 
