@@ -130,10 +130,9 @@ def cells_from_quants(quant_set, gene, cache_values):
     ids_dict = cache.get_many(ids)
     ids = [ids_dict[id] for id in ids]
 
-    if cache_values:
-        values_dict = {triple[0] + triple[1]: triple[2] for triple in values}
-        cache.set_many(values_dict, 300)
-        print("Values cached")
+    values_dict = {triple[0] + triple[1]: triple[2] for triple in values}
+    cache.set_many(values_dict, 300)
+    print("Values cached")
 
     cells = Cell.objects.filter(pk__in=ids)
 
