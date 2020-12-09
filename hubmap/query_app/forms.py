@@ -3,7 +3,7 @@ from django import forms
 
 class QueryForm(forms.Form):
     output_type = forms.ChoiceField(
-        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ")), widget=forms.Select
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select
     )
 
 
@@ -25,7 +25,7 @@ class QForm(forms.Form):
 
 class CellForm(QForm):
     input_type = forms.ChoiceField(
-        choices=(("gene", "gene"), ("protein", "protein"), ("organ", "organ")),
+        choices=(("gene", "gene"), ("protein", "protein"), ("organ", "organ"), ("dataset", "dataset")),
         required=True,
         widget=forms.Select,
     )
@@ -33,16 +33,20 @@ class CellForm(QForm):
 
 class GeneQueryForm(QForm):
     input_type = forms.ChoiceField(
-        choices=(("organ", "organ"),), required=True, widget=forms.Select
+        choices=(("organ", "organ"), ("cluster", "cluster")), required=True, widget=forms.Select
     )
     p_value = forms.DecimalField(min_value=0.0, max_value=1.0, required=False)
-    genomic_modality = forms.ChoiceField(
-        choices=(("rna", "rna"), ("atac", "atac")), required=False, widget=forms.Select
-    )
 
 
 class OrganQueryForm(QForm):
     input_type = forms.ChoiceField(
         choices=(("gene", "gene"), ("cell", "cell")), required=True, widget=forms.Select
+    )
+    p_value = forms.DecimalField(min_value=0.0, max_value=1.0, required=False)
+
+
+class ClusterQueryForm(QForm):
+    input_type = forms.ChoiceField(
+        choices=(("gene", "gene"),), required=True, widget=forms.Select
     )
     p_value = forms.DecimalField(min_value=0.0, max_value=1.0, required=False)

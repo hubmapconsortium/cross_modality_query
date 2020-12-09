@@ -64,7 +64,7 @@ def make_quants_csv(hdf_file):
     sql = (
         "COPY query_app_"
         + modality
-        + "quant(id, q_cell_id, q_gene_id, value)  FROM '"
+        + "quant(id, q_cell_id, q_var_id, value)  FROM '"
         + fspath(csv_file)
         + "' CSV HEADER;"
     )
@@ -198,13 +198,20 @@ def process_pval_args(kwargs: dict, modality: str):
     kwargs.pop("gene_id")
 
     if "organ_name" in kwargs:
-        kwargs["p_group"] = Organ.objects.filter(
+        kwargs["p_organ"] = Organ.objects.filter(
             grouping_name__iexact=kwargs["organ_name"]
         ).first()
         kwargs.pop("organ_name")
     elif "cluster" in kwargs:
-        kwargs["p_group"] = Cluster.objects.filter(grouping_name__iexact=kwargs["cluster"]).first()
+        kwargs["p_cluster"] = Cluster.objects.filter(grouping_name__iexact=str(kwargs["cluster"])).first()
         kwargs.pop("cluster")
+
+    if "leiden" in kwargs:
+        kwargs.pop("leiden")
+
+    if "dataset" in kwargs:
+        kwargs.pop("dataset")
+
 
     kwargs["modality"] = Modality.objects.filter(modality_name__icontains=modality).first()
     return kwargs
@@ -233,16 +240,8 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
 
 def create_cells(hdf_file: Path):
     cell_df = pd.read_hdf(hdf_file, "cell")
-    cluster_assignments = []
 
-    if hdf_file.stem in ["atac", "rna"]:
-        cluster_assignments = get_clusters(cell_df)
     df_to_db(cell_df, "cell")
-
-    for ca in cluster_assignments:
-        cell = Cell.objects.filter(cell_id__iexact=ca["cell_id"]).first()
-        cluster = Cluster.objects.filter(group_name__iexact=ca["leiden"]).first()
-        cell.clusters.add(cluster)
 
 
 def create_genes(hdf_file: Path):
@@ -284,23 +283,30 @@ def create_pvals(hdf_file: Path):
 def create_clusters(hdf_file: Path):
 
     if hdf_file.stem in ["atac", "rna"]:
+        print('True')
         cluster_method = "leiden"
         cluster_data = "UMAP"
         with pd.HDFStore(hdf_file) as store:
 
             cluster_df = store.get("cluster")
-            cell_df = store.get("")
-            for cluster_name in cluster_df["cluster"].unique():
-                cluster = Cluster(
-                    grouping_name=cluster_name,
-                    cluster_method=cluster_method,
-                    cluster_data=cluster_data,
-                )
-                cluster.save()
-                cluster_cell_df = cell_df[cell_df['leiden'] == cluster_name]
-                cluster_cell_ids = list(cluster_cell_df['cell_id'].unique())
-                cluster_cell_pks = Cell.objects.filter(cell_id__in=cluster_cell_ids).values_list('pk', flat=True)
-                cluster.cells.add(*cluster_cell_pks)
+            cell_df = store.get("cell")
+            print(len(cluster_df['dataset'].unique()))
+            for dataset in cluster_df["dataset"].unique():
+                dataset_df = cluster_df[cluster_df["dataset"] == dataset]
+                print(len(dataset_df["cluster"].unique()))
+                dset = Dataset.objects.filter(uuid__iexact=dataset)
+                for cluster_name in dataset_df["cluster"].unique():
+                    cluster = Cluster(
+                        grouping_name=cluster_name,
+                        cluster_method=cluster_method,
+                        cluster_data=cluster_data,
+                        dataset=dset,
+                    )
+                    cluster.save()
+                    cluster_cell_df = cell_df[(cell_df['leiden'] == cluster_name) & (cell_df['dataset'] == dataset)]
+                    cluster_cell_ids = list(cluster_cell_df['cell_id'].unique())
+                    cluster_cell_pks = Cell.objects.filter(cell_id__in=cluster_cell_ids).values_list('pk', flat=True)
+                    cluster.cells.add(*cluster_cell_pks)
 
 def create_modality_and_datasets(hdf_file: Path):
     modality_name = hdf_file.stem

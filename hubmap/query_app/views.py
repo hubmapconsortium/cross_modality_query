@@ -8,17 +8,19 @@ from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from .forms import CellForm, GeneQueryForm, OrganQueryForm, QueryForm
-from .models import Cell, Gene, Organ, Protein, Query
+from .forms import CellForm, ClusterQueryForm, GeneQueryForm, OrganQueryForm, QueryForm
+from .models import Cell, Cluster, Gene, Organ, Protein, Query
 from .serializers import (
-    CellSerializer,
-    GeneSerializer,
-    OrganSerializer,
+    CellAndValuesSerializer,
+    ClusterAndValuesSerializer,
+    GeneAndValuesSerializer,
+    OrganAndValuesSerializer,
     ProteinSerializer,
 )
 from .tables import (
     CellAndValuesTable,
-    CellTable,
+    ClusterTable,
+    ClusterAndValuesTable,
     GeneAndValuesTable,
     GeneTable,
     OrganAndValuesTable,
@@ -27,8 +29,10 @@ from .tables import (
 )
 from .utils import (
     cell_query,
+    cluster_query,
     gene_query,
     get_cells_list,
+    get_clusters_list,
     get_genes_list,
     get_organs_list,
     get_proteins_list,
@@ -44,7 +48,7 @@ class PaginationClass(PageNumberPagination):
 
 class CellViewSet(viewsets.ModelViewSet):
     queryset = Cell.objects.all()
-    serializer_class = CellSerializer
+    serializer_class = CellAndValuesSerializer
     pagination_class = PaginationClass
     model = Cell
 
@@ -63,7 +67,7 @@ class CellViewSet(viewsets.ModelViewSet):
 
 class OrganViewSet(viewsets.ModelViewSet):
     queryset = Organ.objects.all()
-    serializer_class = OrganSerializer
+    serializer_class = OrganAndValuesSerializer
     model = Organ
 
     def post(self, request, format=None):
@@ -77,7 +81,7 @@ class OrganViewSet(viewsets.ModelViewSet):
 
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = Gene.objects.all()
-    serializer_class = GeneSerializer
+    serializer_class = GeneAndValuesSerializer
     pagination_class = PaginationClass
     model = Gene
 
@@ -101,6 +105,23 @@ class ProteinViewSet(viewsets.ModelViewSet):
 
     def get(self, request, format=None):
         response = protein_query(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+class ClusterViewSet(viewsets.ModelViewSet):
+    queryset = Cluster.objects.all()
+    serializer_class = ClusterAndValuesSerializer
+    pagination_class = PaginationClass
+
+    def get(self, request, format=None):
+        response = cluster_query(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+    def post(self, request, format=None):
+        response = cluster_query(self, request)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
@@ -132,6 +153,14 @@ class CellQueryView(FormView):
     def form_valid(self, form):
         return cell_list(self.request)
 
+
+class ClusterQueryView(FormView):
+    form_class = ClusterQueryForm
+    model = Query
+    template_name = "cluster_form.html"
+
+    def form_valid(self, form):
+        return cluster_list(self.request)
 
 class LandingFormView(FormView):
     form_class = QueryForm
@@ -177,6 +206,16 @@ class OrganListView(SingleTableView):
         return organ_list(request)
 
 
+class ClusterListView(SingleTableView):
+    model = Cluster
+    table_class = ClusterAndValuesTable
+    template_name = "cluster_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return cluster_list(request)
+
+
 class AllGeneListView(SingleTableView):
     model = Gene
     table_class = GeneTable
@@ -202,6 +241,14 @@ class AllProteinListView(SingleTableView):
 
     def post(self, request, format=None):
         return all_protein_list(request)
+
+class AllClusterListView(SingleTableView):
+    model = Cluster
+    table_class = ClusterTable
+    template_name = "cluster_list.html"
+
+    def post(self, request, format=None):
+        return all_cluster_list(request)
 
 
 @api_view(["POST"])
@@ -256,6 +303,21 @@ def organ_list(request):
 
 
 @api_view(["POST"])
+def cluster_list(request):
+
+    table = ClusterAndValuesTable(get_clusters_list(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "cluster_list.html", {"table": table})
+
+@api_view(["POST"])
 def all_gene_list(request):
     table = GeneTable(get_genes_list({"input_type": None}))
 
@@ -274,3 +336,10 @@ def all_protein_list(request):
     table = ProteinTable(get_proteins_list({"input_type": None}))
 
     return render(request, "organ_list.html", {"table": table})
+
+@api_view(["POST"])
+def all_cluster_list(request):
+    table = ProteinTable(get_clusters_list({"input_type": None}))
+
+    return render(request, "cluster_list.html", {"table": table})
+

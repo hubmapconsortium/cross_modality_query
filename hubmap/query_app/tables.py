@@ -39,6 +39,15 @@ class ProteinTable(tables.Table):
     class Meta:
         model = models.Protein
 
+class ClusterTable(tables.Table):
+    cluster_method = tables.Column(accessor="cluster_method")
+    cluster_data = tables.Column(accessor="cluster_data")
+    grouping_name = tables.Column(accessor="grouping_name")
+    dataset = tables.Column(accessor="dataset")
+
+    class Meta:
+        model = models.Cluster
+
 
 class CellAndValuesTable(tables.Table):
     class Meta:
@@ -58,4 +67,11 @@ class OrganAndValuesTable(tables.Table):
     class Meta:
         model = models.OrganAndValues
         fields = ["grouping_name", "values"]
+        template_name = "django_tables2/bootstrap4.html"
+
+class ClusterAndValuesTable(tables.Table):
+    dataset = tables.Column(accessor='dataset')
+    class Meta:
+        model = models.ClusterAndValues
+        fields = ["grouping_name", "dataset", "values"]
         template_name = "django_tables2/bootstrap4.html"
