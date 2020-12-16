@@ -152,6 +152,14 @@ class ClusterAndValues(Cluster):
     values = models.JSONField(null=True)
 
 
+class QuerySet(models.Model):
+    query_pickle = models.BinaryField()
+    query_pickle_hash = models.TextField()
+    created = models.DateTimeField(null=True)
+    set_type = models.CharField(max_length=16)
+    count = models.IntegerField(null=True)
+
+
 class Query(models.Model):
     input_type = models.CharField(
         max_length=5, choices=(("Cell", "Cell"), ("Gene", "Gene"), ("Organ", "Organ"))

@@ -12,6 +12,7 @@ from .models import (
     Organ,
     OrganAndValues,
     Protein,
+    QuerySet,
 )
 
 
@@ -34,10 +35,10 @@ class ClusterSerializer(serializers.ModelSerializer):
 
 
 class CellSerializer(serializers.ModelSerializer):
-    modality = serializers.RelatedField(read_only=True)
-    dataset = serializers.RelatedField(read_only=True)
-    organ = serializers.RelatedField(read_only=True)
-    clusters = serializers.RelatedField(read_only=True, many=True)
+    modality = serializers.CharField(read_only=True, source='modality.modality_name')
+    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
+    organ = serializers.CharField(read_only=True, source= 'organ_grouping.name')
+#    clusters = serializers.RelatedField(read_only=True, many=True)
 
     class Meta:
         model = Cell
@@ -74,12 +75,16 @@ class ProteinSerializer(serializers.ModelSerializer):
 class CellAndValuesSerializer(serializers.ModelSerializer):
     #    cell = CellSerializer(read_only=True)
     #    values = serializers.JSONField()
+    modality = serializers.CharField(read_only=True, source='modality.modality_name')
+    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
+    organ = serializers.CharField(read_only=True, source= 'organ_grouping.name')
 
     class Meta:
         model = CellAndValues
         #        fields = ['cell', 'values']
         fields = [
             "cell_id",
+            "modality",
             "dataset",
             "organ",
             "protein_mean",
@@ -117,3 +122,14 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
         fields = ["grouping_name", "dataset", "values"]
 
 
+class QuerySetSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = QuerySet
+        fields = ["query_pickle_hash", "set_type"]
+
+class QuerySetCountSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = QuerySet
+        fields = ["query_pickle_hash", "set_type", "count"]

@@ -15,7 +15,6 @@ class QForm(forms.Form):
     genomic_modality = forms.ChoiceField(
         choices=(("rna", "rna"), ("atac", "atac")), required=False, widget=forms.Select
     )
-    limit = forms.IntegerField(max_value=1000, min_value=0, required=False)
     export_format = forms.ChoiceField(
         choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
         required=True,
@@ -29,6 +28,11 @@ class CellForm(QForm):
         required=True,
         widget=forms.Select,
     )
+    set_type = forms.ChoiceField(
+        choices=(("cell", "cell"),),
+        required=True,
+        widget=forms.Select,
+    )
 
 
 class GeneQueryForm(QForm):
@@ -36,6 +40,11 @@ class GeneQueryForm(QForm):
         choices=(("organ", "organ"), ("cluster", "cluster")), required=True, widget=forms.Select
     )
     p_value = forms.DecimalField(min_value=0.0, max_value=1.0, required=False)
+    set_type = forms.ChoiceField(
+        choices=[("gene", "gene")],
+        required=True,
+        widget=forms.Select,
+    )
 
 
 class OrganQueryForm(QForm):
@@ -43,6 +52,11 @@ class OrganQueryForm(QForm):
         choices=(("gene", "gene"), ("cell", "cell")), required=True, widget=forms.Select
     )
     p_value = forms.DecimalField(min_value=0.0, max_value=1.0, required=False)
+    set_type = forms.ChoiceField(
+        choices=[("organ", "organ")],
+        required=True,
+        widget=forms.Select,
+    )
 
 
 class ClusterQueryForm(QForm):
@@ -50,3 +64,86 @@ class ClusterQueryForm(QForm):
         choices=(("gene", "gene"),), required=True, widget=forms.Select
     )
     p_value = forms.DecimalField(min_value=0.0, max_value=1.0, required=False)
+    set_type = forms.ChoiceField(
+        choices=[("cluster", "cluster")],
+        required=True,
+        widget=forms.Select,
+    )
+
+
+class IntersectionForm(forms.Form):
+    key_one = forms.CharField(max_length=64)
+    key_two = forms.CharField(max_length=64)
+    set_type = forms.ChoiceField(
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+    export_format = forms.ChoiceField(
+        choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
+        required=True,
+        widget=forms.Select,
+    )
+
+
+class UnionForm(forms.Form):
+    key_one = forms.CharField(max_length=64)
+    key_two = forms.CharField(max_length=64)
+    set_type = forms.ChoiceField(
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+    export_format = forms.ChoiceField(
+        choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
+        required=True,
+        widget=forms.Select,
+    )
+
+
+class NegationForm(forms.Form):
+    key = forms.CharField(max_length=64)
+    export_format = forms.ChoiceField(
+        choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
+        required=True,
+        widget=forms.Select,
+    )
+
+
+class EvaluationLandingForm(forms.Form):
+    set_type = forms.ChoiceField(
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+
+
+class ListLandingForm(forms.Form):
+    set_type = forms.ChoiceField(
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+
+
+class EvaluationForm(forms.Form):
+    key = forms.CharField(max_length=64)
+    values_included = forms.CharField(max_length=256, required=False)
+    sort_by = forms.CharField(max_length=32, required=False)
+    export_format = forms.ChoiceField(
+        choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
+        required=True,
+        widget=forms.Select,
+    )
+    limit = forms.IntegerField()
+    values_type = forms.ChoiceField(choices=(("gene", "gene"), ("protein", "protein"), ("organ", "organ"), ("cluster", "cluster")))
+
+class ListForm(forms.Form):
+    key = forms.CharField(max_length=64)
+    set_type = forms.ChoiceField(
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+    export_format = forms.ChoiceField(
+        choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
+        required=True,
+        widget=forms.Select,
+    )
+    limit = forms.IntegerField()
+
+
+class CountForm(forms.Form):
+    key = forms.CharField(max_length=32)
+    set_type = forms.ChoiceField(
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+    export_format = forms.ChoiceField(
+        choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
+        required=True,
+        widget=forms.Select,
+    )

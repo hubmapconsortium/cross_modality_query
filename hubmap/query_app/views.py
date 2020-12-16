@@ -8,16 +8,25 @@ from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from .forms import CellForm, ClusterQueryForm, GeneQueryForm, OrganQueryForm, QueryForm
-from .models import Cell, Cluster, Gene, Organ, Protein, Query
+from .forms import CellForm, ClusterQueryForm, GeneQueryForm, OrganQueryForm, QueryForm, IntersectionForm, UnionForm, \
+    NegationForm, EvaluationForm, CountForm, EvaluationLandingForm, ListForm
+from .models import Cell, Cluster, Gene, Organ, Protein, Query, QuerySet, CellAndValues, OrganAndValues, \
+    ClusterAndValues, GeneAndValues
 from .serializers import (
+    CellSerializer,
     CellAndValuesSerializer,
+    ClusterSerializer,
     ClusterAndValuesSerializer,
+    GeneSerializer,
     GeneAndValuesSerializer,
+    OrganSerializer,
     OrganAndValuesSerializer,
     ProteinSerializer,
+    QuerySetSerializer,
+    QuerySetCountSerializer,
 )
 from .tables import (
+    CellTable,
     CellAndValuesTable,
     ClusterTable,
     ClusterAndValuesTable,
@@ -26,18 +35,38 @@ from .tables import (
     OrganAndValuesTable,
     OrganTable,
     ProteinTable,
+    QuerySetTable,
+    QuerySetCountTable,
 )
 from .utils import (
     cell_query,
+    cell_evaluation_detail,
     cluster_query,
+    cluster_evaluation_detail,
+    evaluate_qs,
+    evaluation_list,
     gene_query,
+    gene_evaluation_detail,
     get_cells_list,
     get_clusters_list,
     get_genes_list,
     get_organs_list,
     get_proteins_list,
+    get_qs_count,
+    make_cell_and_values,
+    make_gene_and_values,
+    make_organ_and_values,
+    make_cluster_and_values,
     organ_query,
+    organ_evaluation_detail,
     protein_query,
+    query_set_count,
+    query_set_intersection,
+    query_set_union,
+    query_set_negation,
+    qs_intersect,
+    qs_union,
+    qs_negate,
 )
 
 
@@ -47,10 +76,10 @@ class PaginationClass(PageNumberPagination):
 
 
 class CellViewSet(viewsets.ModelViewSet):
-    queryset = Cell.objects.all()
-    serializer_class = CellAndValuesSerializer
+    query_set = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
     pagination_class = PaginationClass
-    model = Cell
+    model = QuerySet
 
     def post(self, request, format=None):
         response = cell_query(self, request)
@@ -66,13 +95,17 @@ class CellViewSet(viewsets.ModelViewSet):
 
 
 class OrganViewSet(viewsets.ModelViewSet):
-    queryset = Organ.objects.all()
-    serializer_class = OrganAndValuesSerializer
-    model = Organ
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
+    pagination_class = PaginationClass
+    model = QuerySet
 
     def post(self, request, format=None):
         response = organ_query(self, request)
         return Response(response)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
 
     def get(self, request, format=None):
         response = organ_query(self, request)
@@ -80,10 +113,10 @@ class OrganViewSet(viewsets.ModelViewSet):
 
 
 class GeneViewSet(viewsets.ModelViewSet):
-    queryset = Gene.objects.all()
-    serializer_class = GeneAndValuesSerializer
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
     pagination_class = PaginationClass
-    model = Gene
+    model = QuerySet
 
     def post(self, request, format=None):
         response = gene_query(self, request)
@@ -99,8 +132,8 @@ class GeneViewSet(viewsets.ModelViewSet):
 
 
 class ProteinViewSet(viewsets.ModelViewSet):
-    queryset = Protein.objects.all()
-    serializer_class = ProteinSerializer
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
     pagination_class = PaginationClass
 
     def get(self, request, format=None):
@@ -109,10 +142,12 @@ class ProteinViewSet(viewsets.ModelViewSet):
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
 
+
 class ClusterViewSet(viewsets.ModelViewSet):
-    queryset = Cluster.objects.all()
-    serializer_class = ClusterAndValuesSerializer
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
     pagination_class = PaginationClass
+    model = QuerySet
 
     def get(self, request, format=None):
         response = cluster_query(self, request)
@@ -127,13 +162,159 @@ class ClusterViewSet(viewsets.ModelViewSet):
         return paginated_response
 
 
+class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
+    query_set = CellAndValues.objects.all()
+    serializer_class = CellAndValuesSerializer
+    pagination_class = PaginationClass
+    model = CellAndValues
+
+    def post(self, request, format=None):
+        response = cell_evaluation_detail(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = OrganAndValues.objects.all()
+    serializer_class = OrganAndValuesSerializer
+    model = OrganAndValues
+
+    def post(self, request, format=None):
+        response = organ_evaluation_detail(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class GeneDetailEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = GeneAndValues.objects.all()
+    serializer_class = GeneAndValuesSerializer
+    pagination_class = PaginationClass
+    model = GeneAndValues
+
+    def post(self, request, format=None):
+        response = gene_evaluation_detail(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class ClusterDetailEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = ClusterAndValues.objects.all()
+    serializer_class = ClusterAndValuesSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = cluster_evaluation_detail(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class CellListEvaluationViewSet(viewsets.ModelViewSet):
+    query_set = Cell.objects.all()
+    serializer_class = CellSerializer
+    pagination_class = PaginationClass
+    model = Cell
+
+    def post(self, request, format=None):
+        response = evaluation_list(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class OrganListEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = Organ.objects.all()
+    serializer_class = OrganSerializer
+    model = Organ
+
+    def post(self, request, format=None):
+        response = evaluation_list(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class GeneListEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = Gene.objects.all()
+    serializer_class = GeneSerializer
+    pagination_class = PaginationClass
+    model = Gene
+
+    def post(self, request, format=None):
+        response = evaluation_list(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class ClusterListEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = Cluster.objects.all()
+    serializer_class = ClusterSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = evaluation_list(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+class SetIntersectionViewSet(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = query_set_intersection(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class SetUnionViewSet(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = query_set_union(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class SetNegationViewSet(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = query_set_negation(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+class SetCountViewSet(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = query_set_count(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
 class GeneQueryView(FormView):
     form_class = GeneQueryForm
     model = Query
     template_name = "gene_form.html"
 
     def form_valid(self, form):
-        return gene_list(self.request)
+        return gene_detail(self.request)
 
 
 class OrganQueryView(FormView):
@@ -142,7 +323,7 @@ class OrganQueryView(FormView):
     template_name = "organ_form.html"
 
     def form_valid(self, form):
-        return organ_list(self.request)
+        return organ_detail(self.request)
 
 
 class CellQueryView(FormView):
@@ -151,7 +332,116 @@ class CellQueryView(FormView):
     template_name = "cell_form.html"
 
     def form_valid(self, form):
+        return cell_detail(self.request)
+
+
+class SetIntersectionFormView(FormView):
+    form_class = IntersectionForm
+    template_name = "intersection_form.html"
+
+    def form_valid(self, form):
+        return query_set_intersection(self, self.request)
+
+
+class SetUnionFormView(FormView):
+    form_class = UnionForm
+    template_name = "union_form.html"
+
+    def form_valid(self, form):
+        return query_set_union(self.request)
+
+
+class SetNegationFormView(FormView):
+    form_class = NegationForm
+    template_name = "negation_form.html"
+
+    def form_valid(self, form):
+        return query_set_negation(self.request)
+
+class SetCountFormView(FormView):
+    form_class = CountForm
+    template_name = "count_form.html"
+
+    def form_valid(self, form):
+        return query_set_count(self.request)
+
+
+class EvaluationLandingFormView(FormView):
+    form_class = EvaluationLandingForm
+    template_name = "evaluation_form.html"
+
+    def post(self, request):
+        if request.POST["set_type"] == "gene":
+            return redirect("/api/geneevaluationform")
+        elif request.POST["set_type"] == "cell":
+            return redirect("/api/cellevaluationform")
+        elif request.POST["set_type"] == "organ":
+            return redirect("/api/organevaluationform")
+        elif request.POST["set_type"] == "cluster":
+            return redirect("/api/clusterevaluationform")
+
+
+class CellSetEvaluationFormView(FormView):
+    form_class = EvaluationForm
+    template_name = "cell_evaluation_detail_form.html"
+
+    def form_valid(self, form):
+        return cell_detail(self.request)
+
+
+class GeneSetEvaluationFormView(FormView):
+    form_class = EvaluationForm
+    template_name = "gene_evaluation_detail_form.html"
+
+    def form_valid(self, form):
+        return gene_detail(self.request)
+
+
+class OrganSetEvaluationFormView(FormView):
+    form_class = EvaluationForm
+    template_name = "organ_evaluation_detail_form.html"
+
+    def form_valid(self, form):
+        return organ_detail(self.request)
+
+
+class ClusterSetEvaluationFormView(FormView):
+    form_class = EvaluationForm
+    template_name = "cluster_evaluation_detail_form.html"
+
+    def form_valid(self, form):
+        return cluster_detail(self.request)
+
+class CellSetListFormView(FormView):
+    form_class = ListForm
+    template_name = "cell_evaluation_list_form.html"
+
+    def form_valid(self, form):
         return cell_list(self.request)
+
+
+class GeneSetListFormView(FormView):
+    form_class = ListForm
+    template_name = "gene_evaluation_list_form.html"
+
+    def form_valid(self, form):
+        return gene_list(self.request)
+
+
+class OrganSetListFormView(FormView):
+    form_class = ListForm
+    template_name = "organ_evaluation_list_form.html"
+
+    def form_valid(self, form):
+        return organ_list(self.request)
+
+
+class ClusterSetListFormView(FormView):
+    form_class = ListForm
+    template_name = "cluster_evaluation_list_form.html"
+
+    def form_valid(self, form):
+        return cluster_list(self.request)
 
 
 class ClusterQueryView(FormView):
@@ -161,6 +451,7 @@ class ClusterQueryView(FormView):
 
     def form_valid(self, form):
         return cluster_list(self.request)
+
 
 class LandingFormView(FormView):
     form_class = QueryForm
@@ -174,11 +465,52 @@ class LandingFormView(FormView):
             return redirect("/api/cellform")
         elif request.POST["output_type"] == "organ":
             return redirect("/api/organform")
+        elif request.POST["output_type"] == "cluster":
+            return redirect("/api/clusterform")
 
+
+class CellDetailView(SingleTableView):
+    model = CellAndValues
+    table_class = CellAndValuesTable
+    template_name = "cell_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return cell_detail(request)
+
+
+class GeneDetailView(SingleTableView):
+    model = GeneAndValues
+    table_class = GeneAndValuesTable
+    template_name = "gene_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return gene_detail(request)
+
+
+class OrganDetailView(SingleTableView):
+    model = OrganAndValues
+    table_class = OrganAndValuesTable
+    template_name = "organ_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return organ_detail(request)
+
+
+class ClusterDetailView(SingleTableView):
+    model = ClusterAndValues
+    table_class = ClusterAndValuesTable
+    template_name = "cluster_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return cluster_detail(request)
 
 class CellListView(SingleTableView):
     model = Cell
-    table_class = CellAndValuesTable
+    table_class = CellTable
     template_name = "cell_list.html"
     paginator_class = PaginationClass
 
@@ -188,7 +520,7 @@ class CellListView(SingleTableView):
 
 class GeneListView(SingleTableView):
     model = Gene
-    table_class = GeneAndValuesTable
+    table_class = GeneTable
     template_name = "gene_list.html"
     paginator_class = PaginationClass
 
@@ -198,7 +530,7 @@ class GeneListView(SingleTableView):
 
 class OrganListView(SingleTableView):
     model = Organ
-    table_class = OrganAndValuesTable
+    table_class = OrganTable
     template_name = "organ_list.html"
     paginator_class = PaginationClass
 
@@ -208,57 +540,124 @@ class OrganListView(SingleTableView):
 
 class ClusterListView(SingleTableView):
     model = Cluster
-    table_class = ClusterAndValuesTable
+    table_class = Cluster
     template_name = "cluster_list.html"
     paginator_class = PaginationClass
 
     def post(self, request, format=None):
         return cluster_list(request)
 
-
-class AllGeneListView(SingleTableView):
-    model = Gene
-    table_class = GeneTable
-    template_name = "gene_list.html"
-
-    def post(self, request, format=None):
-        return all_gene_list(request)
-
-
-class AllOrganListView(SingleTableView):
-    model = Organ
-    table_class = OrganTable
-    template_name = "organ_list.html"
+class QuerySetListView(SingleTableView):
+    model = QuerySet
+    table_class = QuerySetTable
+    template_name = "query_set_list.html"
+    paginator_class = PaginationClass
 
     def post(self, request, format=None):
-        return all_organ_list(request)
+        return query_set_list(request)
 
-
-class AllProteinListView(SingleTableView):
-    model = Protein
-    table_class = ProteinTable
-    template_name = "protein_list.html"
-
-    def post(self, request, format=None):
-        return all_protein_list(request)
-
-class AllClusterListView(SingleTableView):
-    model = Cluster
-    table_class = ClusterTable
-    template_name = "cluster_list.html"
+class QuerySetIntersectionListView(SingleTableView):
+    model = QuerySet
+    table_class = QuerySetTable
+    template_name = "query_set_list.html"
+    paginator_class = PaginationClass
 
     def post(self, request, format=None):
-        return all_cluster_list(request)
+        return query_set_intersection_list(request)
+
+class QuerySetUnionListView(SingleTableView):
+    model = QuerySet
+    table_class = QuerySetTable
+    template_name = "query_set_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return query_set_union_list(request)
+
+class QuerySetNegationListView(SingleTableView):
+    model = QuerySet
+    table_class = QuerySetTable
+    template_name = "query_set_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return query_set_negation_list(request)
+
+class QuerySetCountListView(SingleTableView):
+    model = QuerySet
+    table_class = QuerySetCountTable
+    template_name = "query_set_list.html"
+    paginator_class = PaginationClass
+
+    def post(self, request, format=None):
+        return query_set_count_list(request)
+
+@api_view(["POST"])
+def cell_detail(request):
+    table = CellAndValuesTable(make_cell_and_values(request.data.dict()))
+    print("Calling the right table")
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "cell_list.html", {"table": table})
+
+
+@api_view(["POST"])
+def gene_detail(request):
+    table = GeneAndValuesTable(make_gene_and_values(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "gene_list.html", {"table": table})
+
+
+@api_view(["POST"])
+def organ_detail(request):
+    table = OrganAndValuesTable(make_organ_and_values(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "organ_list.html", {"table": table})
+
+
+@api_view(["POST"])
+def cluster_detail(request):
+    table = ClusterAndValuesTable(make_cluster_and_values(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "cluster_list.html", {"table": table})
+
+
 
 
 @api_view(["POST"])
 def cell_list(request):
-    if request.data.dict()["input_type"] == "gene":
-        table = CellAndValuesTable(get_cells_list(request.data.dict()))
-        print("Calling the right table")
-    else:
-        table = CellAndValuesTable(get_cells_list(request.data.dict()))
-        print("Calling the wrong table")
+    table = CellTable(evaluate_qs(request.data.dict()))
+    print("Calling the right table")
 
     RequestConfig(request).configure(table)
 
@@ -272,8 +671,7 @@ def cell_list(request):
 
 @api_view(["POST"])
 def gene_list(request):
-
-    table = GeneAndValuesTable(get_genes_list(request.data.dict()))
+    table = GeneTable(evaluate_qs(request.data.dict()))
 
     RequestConfig(request).configure(table)
 
@@ -288,8 +686,7 @@ def gene_list(request):
 
 @api_view(["POST"])
 def organ_list(request):
-
-    table = OrganAndValuesTable(get_organs_list(request.data.dict()))
+    table = OrganTable(evaluate_qs(request.data.dict()))
 
     RequestConfig(request).configure(table)
 
@@ -304,8 +701,7 @@ def organ_list(request):
 
 @api_view(["POST"])
 def cluster_list(request):
-
-    table = ClusterAndValuesTable(get_clusters_list(request.data.dict()))
+    table = ClusterTable(evaluate_qs(request.data.dict()))
 
     RequestConfig(request).configure(table)
 
@@ -318,28 +714,88 @@ def cluster_list(request):
     return render(request, "cluster_list.html", {"table": table})
 
 @api_view(["POST"])
-def all_gene_list(request):
-    table = GeneTable(get_genes_list({"input_type": None}))
+def query_set_list(request, request_type='query'):
+    if request_type == 'intersection':
+        table = QuerySetTable(query_set_intersection(request.data.dict()))
+    elif request_type == 'union':
+        table = QuerySetTable(query_set_union(request.data.dict()))
+    elif request_type == 'negation':
+        table = QuerySetTable(query_set_negation(request.data.dict()))
+    elif request_type == 'query':
+        output_type = request.data.dict()['set_type']
+        if output_type == 'gene':
+            table = QuerySetTable(get_genes_list(request.data.dict()))
+        elif output_type == 'cell':
+            table = QuerySetTable(get_cells_list(request.data.dict()))
+        elif output_type == 'organ':
+            table = QuerySetTable(get_organs_list(request.data.dict()))
+        elif output_type == 'cluster':
+            table = QuerySetTable(get_clusters_list(request.data.dict()))
 
-    return render(request, "gene_list.html", {"table": table})
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "query_set_list.html", {"table": table})
+
+@api_view(["POST"])
+def query_set_negation_list(request, request_type='query'):
+    table = QuerySetTable(qs_negate(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "query_set_list.html", {"table": table})
+
+@api_view(["POST"])
+def query_set_union_list(request, request_type='query'):
+    table = QuerySetTable(qs_union(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "query_set_list.html", {"table": table})
+
+@api_view(["POST"])
+def query_set_intersection_list(request, request_type='query'):
+    table = QuerySetTable(qs_intersect(request.data.dict()))
+
+    RequestConfig(request).configure(table)
+
+    export_format = request.data.dict()["export_format"]
+
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
+
+    return render(request, "query_set_list.html", {"table": table})
 
 
 @api_view(["POST"])
-def all_organ_list(request):
-    table = OrganTable(get_organs_list({"input_type": None}))
+def query_set_count_list(request, request_type='query'):
+    table = QuerySetCountTable(get_qs_count(request.data.dict()))
 
-    return render(request, "organ_list.html", {"table": table})
+    RequestConfig(request).configure(table)
 
+    export_format = request.data.dict()["export_format"]
 
-@api_view(["POST"])
-def all_protein_list(request):
-    table = ProteinTable(get_proteins_list({"input_type": None}))
+    if TableExport.is_valid_format(export_format):
+        exporter = TableExport(export_format, table)
+        return exporter.response("table.{}".format(export_format))
 
-    return render(request, "organ_list.html", {"table": table})
-
-@api_view(["POST"])
-def all_cluster_list(request):
-    table = ProteinTable(get_clusters_list({"input_type": None}))
-
-    return render(request, "cluster_list.html", {"table": table})
+    return render(request, "query_set_list.html", {"table": table})
 

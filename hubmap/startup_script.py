@@ -294,7 +294,8 @@ def create_clusters(hdf_file: Path):
             for dataset in cluster_df["dataset"].unique():
                 dataset_df = cluster_df[cluster_df["dataset"] == dataset]
                 print(len(dataset_df["cluster"].unique()))
-                dset = Dataset.objects.filter(uuid__iexact=dataset)
+                print(dataset)
+                dset = Dataset.objects.filter(uuid__iexact=dataset).first()
                 for cluster_name in dataset_df["cluster"].unique():
                     cluster = Cluster(
                         grouping_name=cluster_name,
@@ -402,7 +403,7 @@ def main(hdf_files: List[Path]):
             load_codex(file)
             print("CODEX loaded")
 
-    load_cache()
+#    load_cache()
 
 
 if __name__ == "__main__":

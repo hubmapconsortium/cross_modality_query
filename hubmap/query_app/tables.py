@@ -75,3 +75,15 @@ class ClusterAndValuesTable(tables.Table):
         model = models.ClusterAndValues
         fields = ["grouping_name", "dataset", "values"]
         template_name = "django_tables2/bootstrap4.html"
+
+class QuerySetTable(tables.Table):
+    class Meta:
+        model = models.QuerySet
+        fields = ["query_pickle_hash", "set_type"]
+        template_name = "django_tables2/bootstrap4.html"
+
+class QuerySetCountTable(tables.Table):
+    class Meta:
+        model = models.QuerySet
+        fields = ["query_pickle_hash", "set_type", "count"]
+        template_name = "django_tables2/bootstrap4.html"
