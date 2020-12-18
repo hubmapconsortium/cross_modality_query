@@ -8,7 +8,8 @@ class QueryForm(forms.Form):
 
 
 class QForm(forms.Form):
-    input_set = forms.CharField(max_length=1024, required=True, widget=forms.Textarea)
+    set_key = forms.CharField(max_length=64, required=False, widget=forms.Textarea)
+    input_set = forms.CharField(max_length=1024, required=False, widget=forms.Textarea)
     logical_operator = forms.ChoiceField(
         choices=(("and", "and"), ("or", "or")), required=True, widget=forms.Select
     )
@@ -70,6 +71,15 @@ class ClusterQueryForm(QForm):
         widget=forms.Select,
     )
 
+class DatasetQueryForm(QForm):
+    input_type = forms.ChoiceField(
+        choices=(("cell", "cell"),), required=True, widget=forms.Select
+    )
+    set_type = forms.ChoiceField(
+        choices=[("dataset", "dataset")],
+        required=True,
+        widget=forms.Select,
+    )
 
 class IntersectionForm(forms.Form):
     key_one = forms.CharField(max_length=64)
@@ -129,7 +139,7 @@ class EvaluationForm(forms.Form):
 class ListForm(forms.Form):
     key = forms.CharField(max_length=64)
     set_type = forms.ChoiceField(
-        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster"), ("dataset", "dataset")), widget=forms.Select)
     export_format = forms.ChoiceField(
         choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
         required=True,
@@ -141,7 +151,7 @@ class ListForm(forms.Form):
 class CountForm(forms.Form):
     key = forms.CharField(max_length=32)
     set_type = forms.ChoiceField(
-        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster")), widget=forms.Select)
+        choices=(("gene", "gene"), ("cell", "cell"), ("organ", "organ"), ("cluster", "cluster"), ("dataset", "dataset")), widget=forms.Select)
     export_format = forms.ChoiceField(
         choices=(("None", "None"), ("csv", "csv"), ("json", "json")),
         required=True,

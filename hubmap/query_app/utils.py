@@ -11,6 +11,7 @@ from .models import (
     CellAndValues,
     Cluster,
     ClusterAndValues,
+    Dataset,
     Gene,
     GeneAndValues,
     Organ,
@@ -25,6 +26,7 @@ from .models import (
 from .serializers import (
     CellSerializer,
     CellAndValuesSerializer,
+    DatasetSerializer,
     GeneSerializer,
     GeneAndValuesSerializer,
     OrganSerializer,
@@ -159,19 +161,23 @@ def split_and_strip(string: str) -> List[str]:
     return set_strip
 
 
-def process_query_parameters(query_params: Dict) -> Dict:
+def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
     query_params["input_type"] = query_params["input_type"].lower()
-    if 'input_set_key' in query_params.keys() and query_params['input_set_key'] != '':
-        qs = unpickle_query_set(query_params["input_set_key"], query_params["input_type"])
-        identifiers = {"cell":"cell_id", "gene":"gene_symbol", "organ":"grouping_name", "cluster":"grouping_name"}
-        identifier = identifiers["input_type"]
-        query_params["input_set"] = qs.values_list(identifier, flat=True)
+
+    if input_set is not None:
+        query_params["input_set"] = input_set
 
     if isinstance(query_params["input_set"], str):
         query_params["input_set"] = split_and_strip(query_params["input_set"])
     query_params["input_set"] = process_input_set(
         query_params["input_set"], query_params["input_type"]
     )
+    if 'input_set_key' in query_params.keys() and query_params['input_set_key'] != '':
+        qs = unpickle_query_set(query_params["input_set_key"], query_params["input_type"])
+        identifiers = {"cell":"cell_id", "gene":"gene_symbol", "organ":"grouping_name", "cluster":"grouping_name", "dataset":"uuid"}
+        identifier = identifiers[query_params["input_type"]]
+        query_params["input_set"].extend(qs.values_list(identifier, flat=True))
+
     if (
             "limit" not in query_params.keys()
             or not query_params["limit"].isnumeric()
@@ -340,7 +346,13 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
 
-    groupings_dict = {"organ": "grouping_name", "cluster": "grouping_name"}
+    print("Get cell filter")
+    print("Type input set")
+    print(type(input_set))
+    print("Input set")
+    print(input_set)
+
+    groupings_dict = {"organ": "grouping_name", "cluster": "grouping_name", "dataset":"uuid"}
 
     if input_type in ["protein", "gene"]:
 
@@ -357,31 +369,24 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     elif input_type in groupings_dict:
 
-        q_kwargs = [{groupings_dict[input_type] + "__iexact": element} for element in input_set]
-        qs = [Q(**kwargs) for kwargs in q_kwargs]
-
-        q = combine_qs(qs, "or")
-
         # Query groupings and then union their cells fields
         cell_ids = []
 
         if input_type == "organ":
-            for organ in Organ.objects.filter(q):
+            for organ in Organ.objects.filter(grouping_name__in=input_set):
                 cell_ids.extend([cell.cell_id for cell in organ.cells.all()])
 
         elif input_type == "cluster":
-            for cluster in Cluster.objects.filter(q):
+            for cluster in Cluster.objects.filter(grouping_name__in=input_set):
                 cell_ids.extend([cell.cell_id for cell in cluster.cells.all()])
 
-        qs = [Q(cell_id__icontains=cell_id) for cell_id in cell_ids]
-        q = combine_qs(qs, "or")
+        elif input_type == 'dataset':
+            print(Dataset.objects.filter(uuid__in=input_set).count())
+            for dataset in Dataset.objects.filter(uuid__in=input_set):
+                cell_ids.extend([cell.cell_id for cell in dataset.cells.all()])
 
-        return q
+        return Q(cell_id__in=cell_ids)
 
-    elif input_type == 'dataset':
-        datasets = input_set
-        q = Q(dataset__uuid__in=datasets)
-        return q
 
 
 def get_organ_filter(query_params: Dict) -> Q:
@@ -396,21 +401,11 @@ def get_organ_filter(query_params: Dict) -> Q:
 
     if input_type == "cell":
 
-        qs = [Q(cell_id__iexact=item) for item in input_set]
-        q = combine_qs(qs, "or")
+        cell_qs = Cell.objects.filter(cell_id__in=input_set)
 
-        organ_names = [
-            cell.organ.grouping_name
-            for cell in Cell.objects.filter(q)
-            if cell is not None and cell.organ is not None
-        ]
+        organ_pks = cell_qs.distinct('organ').values_list('organ', flat=True)
 
-        qs = [
-            Q(grouping_name__icontains=organ_name)
-            for organ_name in organ_names
-            if organ_name is not None
-        ]
-        q = combine_qs(qs, logical_operator)
+        q = Q(pk__in=organ_pks)
 
         return q
 
@@ -444,6 +439,19 @@ def get_cluster_filter(query_params: dict):
         return q
 
 
+def get_dataset_filter(query_params: dict):
+    input_type = query_params['input_type']
+    input_set = query_params['input_set']
+
+    if input_type == 'cell':
+        cell_qs = Cell.objects.filter(cell_id__in=input_set)
+
+        dataset_pks = cell_qs.distinct('dataset').values_list('dataset', flat=True)
+
+        q = Q(pk__in=dataset_pks)
+
+        return q
+
 
 def get_quant_queryset(query_params: Dict, filter):
     if query_params['input_type'] == 'protein':
@@ -470,11 +478,11 @@ def get_quant_queryset(query_params: Dict, filter):
     return query_set
 
 
-def get_genes_list(query_params: Dict):
+def get_genes_list(query_params: Dict, input_set=None):
     if query_params["input_type"] is None:
         return Gene.objects.all()
     else:
-        query_params = process_query_parameters(query_params)
+        query_params = process_query_parameters(query_params, input_set)
         filter = get_gene_filter(query_params)
         print(filter)
 
@@ -500,11 +508,9 @@ def get_genes_list(query_params: Dict):
 
 
 # Put fork here depending on whether or not we're returning expression values
-def get_cells_list(query_params: Dict):
-    query_params = process_query_parameters(query_params)
+def get_cells_list(query_params: Dict, input_set=None):
+    query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
-    print("Filter made")
-    print(filter)
 
     if query_params['input_type'] in ['gene']:
         query_set = get_quant_queryset(query_params, filter)
@@ -516,13 +522,13 @@ def get_cells_list(query_params: Dict):
 
 
 # Put fork here depending on whether or not we're returning pvals
-def get_organs_list(query_params: Dict):
+def get_organs_list(query_params: Dict, input_set=None):
     if query_params.get("input_type") is None:
         all_clusters = Cluster.objects.all()
         query_pickle_hash = make_pickle_and_hash(all_clusters, "cluster")
         return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
     else:
-        query_params = process_query_parameters(query_params)
+        query_params = process_query_parameters(query_params, input_set)
         filter = get_organ_filter(query_params)
         print(filter)
         limit = int(query_params["limit"])
@@ -548,9 +554,9 @@ def get_organs_list(query_params: Dict):
         return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
 
 
-def get_clusters_list(query_params: Dict):
+def get_clusters_list(query_params: Dict, input_set=None):
 
-    query_params = process_query_parameters(query_params)
+    query_params = process_query_parameters(query_params, input_set)
     filter = get_cluster_filter(query_params)
 
     if query_params["input_type"] == "gene":
@@ -566,6 +572,16 @@ def get_clusters_list(query_params: Dict):
         else:
             query_set = reduce(set_intersection, query_sets)
 
+        query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
+        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+
+def get_datasets_list(query_params: Dict, input_set=None):
+
+    query_params = process_query_parameters(query_params)
+    filter = get_dataset_filter(query_params)
+
+    if query_params["input_type"] == "cell":
+        query_set = Dataset.objects.filter(filter)
         query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
         return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
 
@@ -588,7 +604,7 @@ def gene_query(self, request):
 
     if request.method == "POST":
         query_params = request.data.dict()
-        query_set = get_genes_list(query_params)
+        query_set = get_genes_list(query_params, input_set=request.POST.getlist("input_set"))
 
     self.queryset = query_set
     # Set context
@@ -608,7 +624,12 @@ def cell_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         print(query_params)
-        query_set = get_cells_list(query_params)
+        query_set = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
+
+    if request.method == "GET":
+        all_genes = Cell.objects.all()
+        pickle_hash = make_pickle_and_hash(all_genes, "cell")
+        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -628,7 +649,12 @@ def organ_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         print(query_params)
-        query_set = get_organs_list(query_params)
+        query_set = get_organs_list(query_params, input_set=request.POST.getlist("input_set"))
+
+    if request.method == "GET":
+        all_genes = Organ.objects.all()
+        pickle_hash = make_pickle_and_hash(all_genes, "organ")
+        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -649,7 +675,37 @@ def cluster_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         print(query_params)
-        query_set = get_clusters_list(query_params)
+        query_set = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))
+
+    if request.method == "GET":
+        all_genes = Cluster.objects.all()
+        pickle_hash = make_pickle_and_hash(all_genes, "cluster")
+        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+
+    self.queryset = query_set
+    # Set context
+    context = {
+        "request": request,
+    }
+    #    print(groups)
+    #    print(CellGroupingSerializer(groups, many=True, context=context))
+    # Get serializers lists
+
+    response = QuerySetSerializer(query_set, many=True, context=context).data
+
+    return response
+
+def dataset_query(self, request):
+
+    if request.method == "POST":
+        query_params = request.data.dict()
+        print(query_params)
+        query_set = get_datasets_list(query_params, input_set=request.POST.getlist("input_set"))
+
+    if request.method == "GET":
+        all_genes = Dataset.objects.all()
+        pickle_hash = make_pickle_and_hash(all_genes, "dataset")
+        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -700,11 +756,10 @@ def process_evaluation_args(query_params):
     else:
         include_values = []
 
-
-
-    if "limit" in query_params.keys():
-        if query_params["limit"].isdigit():
-            query_params["limit"] = int(query_params["limit"])
+    if "limit" not in query_params.keys() or not query_params["limit"].isdigit() or int(query_params["limit"]) > 1000:
+        query_params["limit"] = 1000
+    else:
+        query_params["limit"] = int(query_params["limit"])
 
     query_params["sort_by"] = sort_by
     query_params["include_values"] = include_values
@@ -938,6 +993,9 @@ def unpickle_query_set(query_pickle_hash, set_type):
     elif set_type == "organ":
         qs = Organ.objects.all()
 
+    elif set_type == "dataset":
+        qs = Dataset.objects.all()
+
     qs.query = pickle.loads(query_pickle)
 
     return qs
@@ -1018,7 +1076,7 @@ def qs_union(params):
     set_type = params["set_type"]
     qs1 = unpickle_query_set(pickle_hash_1, set_type)
     qs2 = unpickle_query_set(pickle_hash_2, set_type)
-    qs = qs1 & qs2
+    qs = qs1 | qs2
     pickle_hash = make_pickle_and_hash(qs, set_type)
     qs = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
     return qs
@@ -1255,5 +1313,7 @@ def evaluation_list(self, request):
             response = ClusterSerializer(eval_qs, many=True, context=context).data
         if set_type == "organ":
             response = OrganSerializer(eval_qs, many=True, context=context).data
+        if set_type == "dataset":
+            response = DatasetSerializer(eval_qs, many=True, context=context).data
 
         return response

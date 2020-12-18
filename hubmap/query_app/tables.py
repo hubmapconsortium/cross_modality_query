@@ -48,6 +48,11 @@ class ClusterTable(tables.Table):
     class Meta:
         model = models.Cluster
 
+class DatasetTable(tables.Table):
+    uuid = tables.Column(accessor="uuid")
+
+    class Meta:
+        model = models.Dataset
 
 class CellAndValuesTable(tables.Table):
     class Meta:
