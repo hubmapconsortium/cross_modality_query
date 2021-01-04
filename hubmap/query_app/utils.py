@@ -438,6 +438,17 @@ def get_cluster_filter(query_params: dict):
 
         return q
 
+    elif input_type == "cell":
+
+        cell_qs = Cell.objects.filter(cell_id__in=input_set)
+
+        cluster_pks = cell_qs.distinct('dataset').values_list('cluster', flat=True)
+
+        q = Q(pk__in=cluster_pks)
+
+        return q
+
+
 
 def get_dataset_filter(query_params: dict):
     input_type = query_params['input_type']
@@ -958,7 +969,7 @@ def make_cluster_and_values(query_params):
     for cluster in query_set[:limit]:
         values = {} if cluster.grouping_name not in values_dict else values_dict[cluster.grouping_name]
 
-        kwargs = {"grouping_name": cluster.grouping_name, "values": values}
+        kwargs = {"grouping_name": cluster.grouping_name, "dataset":cluster.dataset, "values": values}
         clav = ClusterAndValues(**kwargs)
         clav.save()
 
@@ -1207,9 +1218,9 @@ def get_values(query_set, set_type, values, values_type):
 
     elif set_type == 'cluster':
         # values must be genes
-        pvals = PVal.objects.filter(p_cluster__in=query_set.values_list('pk', flat=True)).filter(p_gene__in=values)
+        pvals = PVal.objects.filter(p_cluster__in=query_set.values_list('pk', flat=True)).filter(p_gene__gene_symbol__in=values)
         for cluster in query_set:
-            cluster_pvals = pvals.filter(p_organ=cluster).values_list('p_gene__gene_symbol', 'value')
+            cluster_pvals = pvals.filter(p_cluster=cluster).values_list('p_gene__gene_symbol', 'value')
             values_dict[cluster.grouping_name] = {cp[0]: cp[1] for cp in cluster_pvals}
         return values_dict
 

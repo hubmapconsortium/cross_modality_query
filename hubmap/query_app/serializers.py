@@ -29,6 +29,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 
 
 class ClusterSerializer(serializers.ModelSerializer):
+    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
     class Meta:
         model = Cluster
         fields = ["cluster_method", "cluster_data", "grouping_name", "dataset"]
@@ -116,6 +117,8 @@ class OrganAndValuesSerializer(serializers.ModelSerializer):
         fields = ["grouping_name", "values"]
 
 class ClusterAndValuesSerializer(serializers.ModelSerializer):
+
+    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
 
     class Meta:
         model = ClusterAndValues
