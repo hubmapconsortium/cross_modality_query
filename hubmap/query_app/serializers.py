@@ -122,7 +122,7 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClusterAndValues
-        fields = ["grouping_name", "dataset", "values"]
+        fields = ["cluster_method", "cluster_data", "grouping_name", "dataset", "values"]
 
 
 class QuerySetSerializer(serializers.ModelSerializer):

@@ -16,6 +16,7 @@ urlpatterns = [
     path("cluster/", views.ClusterViewSet.as_view({"post": "post"}), name="cluster_query"),
     path("dataset/", views.DatasetViewSet.as_view({"post": "post"}), name="dataset_query"),
     path("negation/", views.SetNegationViewSet.as_view({"post": "post"}), name="set_negation"),
+    path("difference/", views.SetDifferenceViewSet.as_view({"post": "post"}), name="set_difference"),
     path("union/", views.SetUnionViewSet.as_view({"post": "post"}), name="set_union"),
     path("intersection/", views.SetIntersectionViewSet.as_view({"post": "post"}), name="set_intersection"),
     path("count/", views.SetCountViewSet.as_view({"post":"post"}), name="set_count"),

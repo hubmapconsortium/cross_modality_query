@@ -64,6 +64,7 @@ from .utils import (
     organ_evaluation_detail,
     protein_query,
     query_set_count,
+    query_set_difference,
     query_set_intersection,
     query_set_union,
     query_set_negation,
@@ -328,6 +329,18 @@ class SetNegationViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         response = query_set_negation(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+
+
+class SetDifferenceViewSet(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        response = query_set_difference(self, request)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
