@@ -52,7 +52,7 @@ def get_zero_cells(gene: str, modality: str):
 
 
 
-def get_max_value_items(query_set, limit, values_dict):
+def get_max_value_items(query_set, limit, values_dict, offset):
     identifiers = []
 
     if query_set.count() == 0:
@@ -65,7 +65,8 @@ def get_max_value_items(query_set, limit, values_dict):
         k = list(values_dict.keys())
         v = list(values_dict.values())
 
-        identifiers.append(k[v.index(max(v))])
+        if i >= offset:
+            identifiers.append(k[v.index(max(v))])
         values_dict.pop(k[v.index(max(v))])
 
     if isinstance(query_set.first(), Cell):
@@ -86,7 +87,7 @@ def get_max_value_items(query_set, limit, values_dict):
     return query_set.filter(q)
 
 
-def order_query_set(query_set, limit, values_dict):
+def order_query_set(query_set, limit, values_dict, offset):
 
     vals_dict = {}
     for item in query_set:
@@ -104,7 +105,7 @@ def order_query_set(query_set, limit, values_dict):
         else:
             vals_dict[identifier] = 0.0
 
-    return get_max_value_items(query_set, limit, vals_dict)
+    return get_max_value_items(query_set, limit, vals_dict, offset)
 
 
 def genes_from_pvals(pval_set):
@@ -767,10 +768,17 @@ def process_evaluation_args(query_params):
     else:
         include_values = []
 
+    if "offset" not in query_params.keys() or not query_params["offset"].isdigit() or int(query_params["offset"]) < 0:
+        query_params["offset"] = 0
+    else:
+        query_params["offset"] = int(query_params["offset"])
+
     if "limit" not in query_params.keys() or not query_params["limit"].isdigit() or int(query_params["limit"]) > 1000:
         query_params["limit"] = 1000
     else:
         query_params["limit"] = int(query_params["limit"])
+
+    query_params["limit"] = query_params["limit"] + query_params["offset"]
 
     query_params["sort_by"] = sort_by
     query_params["include_values"] = include_values
@@ -784,6 +792,7 @@ def make_cell_and_values(query_params):
     pickle_hash = query_params["key"]
     include_values = query_params["include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
 
+    offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
     values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
@@ -798,7 +807,7 @@ def make_cell_and_values(query_params):
 
 
     if query_params["sort_by"] is None:
-        query_set = query_set[:limit]
+        query_set = query_set[offset:limit]
 
     else:
         sort_by_values = get_values(query_set, "cell", [sort_by], values_type)
@@ -809,7 +818,7 @@ def make_cell_and_values(query_params):
             else:
                 sort_by_dict[key] = 0.0
 
-        query_set = order_query_set(query_set, limit, sort_by_dict)
+        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
     values_dict = {} if len(include_values) == 0 else get_values(query_set, "cell", include_values, values_type)
 
@@ -843,7 +852,7 @@ def make_cell_and_values(query_params):
 
     print('Values gotten')
 
-    qs = CellAndValues.objects.all()
+    qs = CellAndValues.objects.all().distinct('cell_id')
 
     return qs
 
@@ -856,6 +865,7 @@ def make_gene_and_values(query_params):
         "include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
+    offset = query_params["offset"]
     values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
     set_type = qs.set_type
@@ -865,7 +875,7 @@ def make_gene_and_values(query_params):
     # Filter on timestamp
 
     if sort_by is None:
-        query_set = query_set[:limit]
+        query_set = query_set[offset:limit]
 
     else:
         sort_by_values = get_values(query_set, "gene", [sort_by], values_type)
@@ -876,7 +886,7 @@ def make_gene_and_values(query_params):
             else:
                 sort_by_dict[key] = 0.0
 
-        query_set = order_query_set(query_set, limit, sort_by_dict)
+        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
 
     values_dict = {} if len(include_values) == 0 else get_values(query_set, "gene", include_values, values_type)
@@ -903,13 +913,14 @@ def make_organ_and_values(query_params):
         "include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
+    offset = query_params["offset"]
     values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
 
     if sort_by is None:
-        query_set = query_set[:limit]
+        query_set = query_set[offset:limit]
 
     else:
         sort_by_values = get_values(query_set, "organ", [sort_by], values_type)
@@ -920,7 +931,7 @@ def make_organ_and_values(query_params):
             else:
                 sort_by_dict[key] = 0.0
 
-        query_set = order_query_set(query_set, limit, sort_by_dict)
+        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
     print('Executing')
     print(include_values)
@@ -945,6 +956,7 @@ def make_cluster_and_values(query_params):
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     values_type = query_params["values_type"]
     limit = query_params["limit"]  # The maximum number of results to return
+    offset = query_params["offset"]
     qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
@@ -952,7 +964,7 @@ def make_cluster_and_values(query_params):
     ClusterAndValues.objects.all().delete()
 
     if sort_by is None:
-        query_set = query_set[:limit]
+        query_set = query_set[offset:limit]
 
     else:
         sort_by_values = get_values(query_set, "cluster", [sort_by], values_type)
@@ -963,7 +975,7 @@ def make_cluster_and_values(query_params):
             else:
                 sort_by_dict[key] = 0.0
 
-        query_set = order_query_set(query_set, limit, sort_by_dict)
+        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
     values_dict = {} if len(include_values) == 0 else get_values(query_set, "cluster", include_values, values_type)
     for cluster in query_set[:limit]:
@@ -1351,12 +1363,14 @@ def evaluate_qs(query_params):
     set_type = query_params["set_type"]
     evaluated_set = unpickle_query_set(query_pickle_hash=pickle_hash, set_type=set_type)
     limit = int(query_params["limit"])
-    evaluated_set = evaluated_set[:limit]
+    offset = int(query_params["offset"])
+    evaluated_set = evaluated_set[offset:limit]
     return evaluated_set
 
 def evaluation_list(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        query_params = process_evaluation_args(query_params)
         set_type = query_params["set_type"]
         eval_qs = evaluate_qs(query_params)
         self.queryset = eval_qs
