@@ -50,7 +50,7 @@ class Cluster(CellGrouping):
 
 
 class Cell(models.Model):
-    cell_id = models.CharField(db_index=True, max_length=64, null=True)
+    cell_id = models.CharField(db_index=True, max_length=128, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
     dataset = models.ForeignKey(to=Dataset, related_name='cells', on_delete=models.CASCADE, null=True)
     barcode = models.CharField(max_length=64, null=True)
@@ -101,7 +101,7 @@ class Protein(models.Model):
 
 
 class Quant(models.Model):
-    q_cell_id = models.CharField(max_length=64, null=True, db_index=True)
+    q_cell_id = models.CharField(max_length=128, null=True, db_index=True)
     q_var_id = models.CharField(max_length=64, null=True, db_index=True)
     value = models.FloatField()
 

@@ -58,7 +58,7 @@ class CellSerializer(serializers.ModelSerializer):
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organ
-        fields = ["grouping_name", "cells"]
+        fields = ["grouping_name"]
 
 
 class GeneSerializer(serializers.ModelSerializer):

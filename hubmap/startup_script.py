@@ -203,7 +203,11 @@ def process_pval_args(kwargs: dict, modality: str):
         ).first()
         kwargs.pop("organ_name")
     elif "cluster" in kwargs:
-        kwargs["p_cluster"] = Cluster.objects.filter(grouping_name__iexact=str(kwargs["cluster"])).first()
+        if len(kwargs["cluster"].split("-")) > 2:
+            cluster_name = "-".join(kwargs["cluster"].split("-")[1:])
+        else:
+            cluster_name = kwargs["cluster"]
+        kwargs["p_cluster"] = Cluster.objects.filter(grouping_name__iexact=cluster_name).first()
         kwargs.pop("cluster")
 
     if "leiden" in kwargs:
@@ -251,6 +255,7 @@ def create_genes(hdf_file: Path):
         for gene in pval_df["gene_id"].unique()
         if Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:64]).first() is None
     ]
+    print(str(len(genes_to_create)) + 'genes to create')
     save_genes(genes_to_create)
 
     return
@@ -297,6 +302,8 @@ def create_clusters(hdf_file: Path):
                 print(dataset)
                 dset = Dataset.objects.filter(uuid__iexact=dataset).first()
                 for cluster_name in dataset_df["cluster"].unique():
+                    if len(cluster_name.split("-")) > 2:
+                        cluster_name = "-".join(cluster_name.split("-")[1:])
                     cluster = Cluster(
                         grouping_name=cluster_name,
                         cluster_method=cluster_method,
