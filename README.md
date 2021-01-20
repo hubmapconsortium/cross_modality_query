@@ -12,8 +12,9 @@ See the [Python client examples](https://github.com/hubmapconsortium/hubmap-api-
 The API supports a small number of basic operations which can be combined to construct more complex queries.
 The API runs at a **`base_url`**: Currently `https://cells.dev.hubmapconsortium.org/api` is available.
 
-Issuing a `POST` to `{base_url}/{output_type}/` (where `output_type` is `cell`, `organ`, `gene`, or `cluster`),
-with query parameters in the body, will return a **query handle**.
+Issuing a `POST` to `{base_url}/{output_type}/`, with query parameters in the body,
+will return a **query handle** representing `output_type` entities.
+`output_type` is currently limited to `cell`, `organ`, `gene`, and `cluster`.
 (The Python and Javascript interfaces provide a **query** abstraction, so you don't need to deal directly with the handle.)
 
 Issuing a `POST` to `{base_url}/{operation}/` (where `operation` is `union`, `intersection`, or `difference`),
