@@ -13,14 +13,14 @@ The API supports a small number of basic operations which can be combined to con
 The API runs at a **`base_url`**: Currently `https://cells.dev.hubmapconsortium.org/api` is available.
 
 Issuing a `POST` to `{base_url}/{output_type}/` (where `output_type` is `cell`, `organ`, `gene`, or `cluster`),
-with query parameters in the body, will return a **query set handle**.
-(The Python and Javascript interfaces provide a **query set** abstraction, so you don't need to deal directly with the handle.)
+with query parameters in the body, will return a **query handle**.
+(The Python and Javascript interfaces provide a **query** abstraction, so you don't need to deal directly with the handle.)
 
 Issuing a `POST` to `{base_url}/{operation}/` (where `operation` is `union`, `intersection`, or `difference`),
-with query set handles provided as `key_one` and `key_two` in the body, will return a new query set handle,
+with query handles provided as `key_one` and `key_two` in the body, will return a new query handle,
 representing the result of the operation.
 
-Three endpoints are provided for getting more information, given a query set handle:
+Three endpoints are provided for getting more information, given a query handle:
 - `{base_url}/count/` will return the number of matching records.
 - `{base_url}/evaluation/` will quickly return a limited set of fields from the records.
 - `{base_url}/detailevaluation/` can sort the results, and may return more fields, but may be a slower operation.
@@ -33,9 +33,9 @@ At this point, only some of the possible combinations of constraint type and out
 This matrix will be expanded over time, but queries that are better satisfied by other APIs will not be duplicated by this API.
 
 | output / constraint | `cell`    | `cluster` | `dataset` | `gene`    | `organ`   | `protein` |
-| ------------------ | --------- | --------- | --------- | --------- | --------- | --------- |
-| `cells`            |           |           | ✓         | ✓         | ✓         | ✓         |
-| `clusters`         |           |           |           | ✓         |           |           |
-| `genes`            |           | ✓         |           |           | ✓         |           |
-| `organs`           | ✓         |           |           | ✓         |           |           |
+| ------------------- | --------- | --------- | --------- | --------- | --------- | --------- |
+| `cells`             |           |           | ✓         | ✓         | ✓         | ✓         |
+| `clusters`          |           |           |           | ✓         |           |           |
+| `genes`             |           | ✓         |           |           | ✓         |           |
+| `organs`            | ✓         |           |           | ✓         |           |           |
 
