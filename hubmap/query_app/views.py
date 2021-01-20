@@ -6,12 +6,14 @@ from django_tables2.export.export import TableExport
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
 
-from .forms import CellForm, ClusterQueryForm, DatasetQueryForm, GeneQueryForm, OrganQueryForm, QueryForm, IntersectionForm, UnionForm, \
+from .forms import CellForm, ClusterQueryForm, DatasetQueryForm, GeneQueryForm, OrganQueryForm, QueryForm, \
+    IntersectionForm, UnionForm, \
     NegationForm, EvaluationForm, CountForm, EvaluationLandingForm, ListForm
-from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, Query, QuerySet, CellAndValues, OrganAndValues, \
+from .models import Cell, Cluster, Dataset, Gene, Organ, Query, QuerySet, CellAndValues, OrganAndValues, \
     ClusterAndValues, GeneAndValues
+from .queries import cell_query, cluster_query, dataset_query, gene_query, organ_query, protein_query, get_cells_list, \
+    get_genes_list, get_organs_list, get_clusters_list
 from .serializers import (
     CellSerializer,
     CellAndValuesSerializer,
@@ -22,10 +24,14 @@ from .serializers import (
     GeneAndValuesSerializer,
     OrganSerializer,
     OrganAndValuesSerializer,
-    ProteinSerializer,
     QuerySetSerializer,
     QuerySetCountSerializer,
 )
+from .set_evaluators import cell_evaluation_detail, organ_evaluation_detail, gene_evaluation_detail, \
+    cluster_evaluation_detail, evaluation_list, query_set_count, make_gene_and_values, make_cell_and_values, \
+    make_cluster_and_values, make_organ_and_values, evaluate_qs, get_qs_count
+from .set_operators import query_set_intersection, query_set_difference, query_set_union, query_set_negation, \
+    qs_intersect, qs_negate, qs_union
 from .tables import (
     CellTable,
     CellAndValuesTable,
@@ -36,41 +42,8 @@ from .tables import (
     GeneTable,
     OrganAndValuesTable,
     OrganTable,
-    ProteinTable,
     QuerySetTable,
     QuerySetCountTable,
-)
-from .utils import (
-    cell_query,
-    cell_evaluation_detail,
-    cluster_query,
-    dataset_query,
-    cluster_evaluation_detail,
-    evaluate_qs,
-    evaluation_list,
-    gene_query,
-    gene_evaluation_detail,
-    get_cells_list,
-    get_clusters_list,
-    get_genes_list,
-    get_organs_list,
-    get_proteins_list,
-    get_qs_count,
-    make_cell_and_values,
-    make_gene_and_values,
-    make_organ_and_values,
-    make_cluster_and_values,
-    organ_query,
-    organ_evaluation_detail,
-    protein_query,
-    query_set_count,
-    query_set_difference,
-    query_set_intersection,
-    query_set_union,
-    query_set_negation,
-    qs_intersect,
-    qs_union,
-    qs_negate,
 )
 
 
@@ -106,7 +79,7 @@ class OrganViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         response = organ_query(self, request)
-#        return Response(response)
+        #        return Response(response)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
@@ -116,6 +89,7 @@ class OrganViewSet(viewsets.ModelViewSet):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
+
 
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = QuerySet.objects.all()
@@ -185,6 +159,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
 
+
 class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
     query_set = CellAndValues.objects.all()
     serializer_class = CellAndValuesSerializer
@@ -206,7 +181,7 @@ class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         response = organ_evaluation_detail(self, request)
-#        return Response(response)
+        #        return Response(response)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
@@ -287,6 +262,7 @@ class ClusterListEvaluationViewSet(viewsets.ModelViewSet):
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
 
+
 class DatasetListEvaluationViewSet(viewsets.ModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
@@ -297,6 +273,7 @@ class DatasetListEvaluationViewSet(viewsets.ModelViewSet):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
+
 
 class SetIntersectionViewSet(viewsets.ModelViewSet):
     queryset = QuerySet.objects.all()
@@ -345,6 +322,7 @@ class SetDifferenceViewSet(viewsets.ModelViewSet):
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
 
+
 class SetCountViewSet(viewsets.ModelViewSet):
     queryset = QuerySet.objects.all()
     serializer_class = QuerySetCountSerializer
@@ -355,6 +333,7 @@ class SetCountViewSet(viewsets.ModelViewSet):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
+
 
 class LandingFormView(FormView):
     form_class = QueryForm
@@ -372,6 +351,7 @@ class LandingFormView(FormView):
             return redirect("/api/clusterform")
         elif request.POST["output_type"] == "dataset":
             return redirect("/api/datasetform")
+
 
 class GeneQueryView(FormView):
     form_class = GeneQueryForm
@@ -408,6 +388,7 @@ class ClusterQueryView(FormView):
     def form_valid(self, form):
         return cluster_list(self.request)
 
+
 class DatasetQueryView(FormView):
     form_class = DatasetQueryForm
     model = Query
@@ -439,6 +420,7 @@ class SetNegationFormView(FormView):
 
     def form_valid(self, form):
         return query_set_negation(self.request)
+
 
 class SetCountFormView(FormView):
     form_class = CountForm
@@ -496,6 +478,7 @@ class ClusterSetEvaluationFormView(FormView):
     def form_valid(self, form):
         return cluster_detail(self.request)
 
+
 class CellSetListFormView(FormView):
     form_class = ListForm
     template_name = "cell_evaluation_list_form.html"
@@ -534,6 +517,7 @@ class DatasetSetListFormView(FormView):
 
     def form_valid(self, form):
         return dataset_list(self.request)
+
 
 class CellDetailView(SingleTableView):
     model = CellAndValues
@@ -574,6 +558,7 @@ class ClusterDetailView(SingleTableView):
     def post(self, request, format=None):
         return cluster_detail(request)
 
+
 class CellListView(SingleTableView):
     model = Cell
     table_class = CellTable
@@ -613,6 +598,7 @@ class ClusterListView(SingleTableView):
     def post(self, request, format=None):
         return cluster_list(request)
 
+
 class DatasetListView(SingleTableView):
     model = Dataset
     table_class = DatasetTable
@@ -621,6 +607,7 @@ class DatasetListView(SingleTableView):
 
     def post(self, request, format=None):
         return dataset_list(request)
+
 
 class QuerySetListView(SingleTableView):
     model = QuerySet
@@ -631,6 +618,7 @@ class QuerySetListView(SingleTableView):
     def post(self, request, format=None):
         return query_set_list(request)
 
+
 class QuerySetIntersectionListView(SingleTableView):
     model = QuerySet
     table_class = QuerySetTable
@@ -639,6 +627,7 @@ class QuerySetIntersectionListView(SingleTableView):
 
     def post(self, request, format=None):
         return query_set_intersection_list(request)
+
 
 class QuerySetUnionListView(SingleTableView):
     model = QuerySet
@@ -649,6 +638,7 @@ class QuerySetUnionListView(SingleTableView):
     def post(self, request, format=None):
         return query_set_union_list(request)
 
+
 class QuerySetNegationListView(SingleTableView):
     model = QuerySet
     table_class = QuerySetTable
@@ -658,6 +648,7 @@ class QuerySetNegationListView(SingleTableView):
     def post(self, request, format=None):
         return query_set_negation_list(request)
 
+
 class QuerySetCountListView(SingleTableView):
     model = QuerySet
     table_class = QuerySetCountTable
@@ -666,6 +657,7 @@ class QuerySetCountListView(SingleTableView):
 
     def post(self, request, format=None):
         return query_set_count_list(request)
+
 
 @api_view(["POST"])
 def cell_detail(request):
@@ -727,8 +719,6 @@ def cluster_detail(request):
     return render(request, "cluster_list.html", {"table": table})
 
 
-
-
 @api_view(["POST"])
 def cell_list(request):
     table = CellTable(evaluate_qs(request.data.dict()))
@@ -788,6 +778,7 @@ def cluster_list(request):
 
     return render(request, "cluster_list.html", {"table": table})
 
+
 @api_view(["POST"])
 def dataset_list(request):
     table = DatasetTable(evaluate_qs(request.data.dict()))
@@ -801,6 +792,7 @@ def dataset_list(request):
         return exporter.response("table.{}".format(export_format))
 
     return render(request, "dataset_list.html", {"table": table})
+
 
 @api_view(["POST"])
 def query_set_list(request, request_type='query'):
@@ -831,6 +823,7 @@ def query_set_list(request, request_type='query'):
 
     return render(request, "query_set_list.html", {"table": table})
 
+
 @api_view(["POST"])
 def query_set_negation_list(request, request_type='query'):
     table = QuerySetTable(qs_negate(request.data.dict()))
@@ -845,6 +838,7 @@ def query_set_negation_list(request, request_type='query'):
 
     return render(request, "query_set_list.html", {"table": table})
 
+
 @api_view(["POST"])
 def query_set_union_list(request, request_type='query'):
     table = QuerySetTable(qs_union(request.data.dict()))
@@ -858,6 +852,7 @@ def query_set_union_list(request, request_type='query'):
         return exporter.response("table.{}".format(export_format))
 
     return render(request, "query_set_list.html", {"table": table})
+
 
 @api_view(["POST"])
 def query_set_intersection_list(request, request_type='query'):
@@ -887,4 +882,3 @@ def query_set_count_list(request, request_type='query'):
         return exporter.response("table.{}".format(export_format))
 
     return render(request, "query_set_list.html", {"table": table})
-
