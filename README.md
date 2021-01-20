@@ -23,10 +23,11 @@ representing the result of the operation.
 
 Three endpoints are provided for getting more information, given a query handle:
 - `{base_url}/count/` will return the number of matching entities.
-- `{base_url}/evaluation/` will return a pre-defined set of fields from the entities selected by the query in random order.
-- `{base_url}/detailevaluation/` can sort the results, and may return more fields, but may be a slower operation.
+- `{base_url}/evaluation/` will return a pre-defined set of fields from the entities selected by the query in an arbitrary order.
+- `{base_url}/detailevaluation/` will return both pre-defined and user-defined fields, optionally sorted by a specified field.
 
-To page through the results, `offset` and `limit` can be provided to `evaluation` and `detailevaluation`.
+The `detailevaluation` endpoint may be slower that `evaluation`. 
+To page through the results, `offset` and `limit` can be provided to both `evaluation` and `detailevaluation`.
 
 ## Coverage
 
