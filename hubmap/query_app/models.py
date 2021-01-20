@@ -4,7 +4,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
-
 class CellGrouping(models.Model):
     grouping_name = models.CharField(max_length=64, null=True)
 
@@ -46,18 +45,22 @@ class Organ(CellGrouping):
 class Cluster(CellGrouping):
     cluster_method = models.CharField(max_length=16)  # i.e. leiden, k means
     cluster_data = models.CharField(max_length=16)  # UMAP, protein mean, cell shape
-    dataset = models.ForeignKey(to=Dataset, related_name='clusters', on_delete=models.CASCADE, null=True)
+    dataset = models.ForeignKey(
+        to=Dataset, related_name="clusters", on_delete=models.CASCADE, null=True
+    )
 
 
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=128, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
-    dataset = models.ForeignKey(to=Dataset, related_name='cells', on_delete=models.CASCADE, null=True)
+    dataset = models.ForeignKey(
+        to=Dataset, related_name="cells", on_delete=models.CASCADE, null=True
+    )
     barcode = models.CharField(max_length=64, null=True)
     tile = models.CharField(max_length=32, null=True)
     mask_index = models.IntegerField(null=True)
-    organ = models.ForeignKey(to=Organ, related_name='cells', on_delete=models.CASCADE, null=True)
-    clusters = models.ManyToManyField(to=Cluster, related_name='cells')
+    organ = models.ForeignKey(to=Organ, related_name="cells", on_delete=models.CASCADE, null=True)
+    clusters = models.ManyToManyField(to=Cluster, related_name="cells")
     protein_mean = models.JSONField(db_index=True, null=True, blank=True)
     protein_total = models.JSONField(db_index=True, null=True, blank=True)
     protein_covar = models.JSONField(db_index=True, null=True, blank=True)
@@ -110,19 +113,18 @@ class Quant(models.Model):
 
 
 class RnaQuant(Quant):
-
     def __repr__(self):
         return str(self.value)
 
 
 class AtacQuant(Quant):
-
     def __repr__(self):
         return str(self.value)
 
 
 class CodexQuant(Quant):
-    statistic = models.CharField(max_length=16, null=True) #One of mean, total, covariance
+    statistic = models.CharField(max_length=16, null=True)  # One of mean, total, covariance
+
 
 class PVal(models.Model):
     p_cluster = models.ForeignKey(to=Cluster, on_delete=models.CASCADE, null=True)
@@ -147,6 +149,7 @@ class OrganAndValues(Organ):
 
 class GeneAndValues(Gene):
     values = models.JSONField(null=True)
+
 
 class ClusterAndValues(Cluster):
     values = models.JSONField(null=True)

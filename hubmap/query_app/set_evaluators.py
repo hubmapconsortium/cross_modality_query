@@ -1,10 +1,36 @@
 from functools import reduce
 from operator import or_
-from .models import QuerySet, Cell, Gene, AtacQuant, RnaQuant, Organ, PVal, Cluster, CellAndValues, ClusterAndValues, GeneAndValues, OrganAndValues
-from .serializers import QuerySetCountSerializer, CellAndValuesSerializer, GeneAndValuesSerializer, OrganAndValuesSerializer, ClusterAndValuesSerializer, CellSerializer, OrganSerializer, GeneSerializer, DatasetSerializer, ClusterSerializer
+
+from django.db.models import Q
+
+from .models import (
+    AtacQuant,
+    Cell,
+    CellAndValues,
+    Cluster,
+    ClusterAndValues,
+    Gene,
+    GeneAndValues,
+    Organ,
+    OrganAndValues,
+    PVal,
+    QuerySet,
+    RnaQuant,
+)
+from .serializers import (
+    CellAndValuesSerializer,
+    CellSerializer,
+    ClusterAndValuesSerializer,
+    ClusterSerializer,
+    DatasetSerializer,
+    GeneAndValuesSerializer,
+    GeneSerializer,
+    OrganAndValuesSerializer,
+    OrganSerializer,
+    QuerySetCountSerializer,
+)
 from .utils import unpickle_query_set
 from .validation import process_evaluation_args
-from django.db.models import Q
 
 
 def get_max_value_items(query_set, limit, values_dict, offset):
@@ -60,6 +86,7 @@ def order_query_set(query_set, limit, values_dict, offset):
 
     return get_max_value_items(query_set, limit, vals_dict, offset)
 
+
 def get_values(query_set, set_type, values, values_type):
     print("Values param")
     print(values)
@@ -68,78 +95,98 @@ def get_values(query_set, set_type, values, values_type):
 
     if set_type == "cell":
         # values must be genes
-        if values_type == 'gene':
-            pks = query_set.values_list('pk', flat=True)
+        if values_type == "gene":
+            pks = query_set.values_list("pk", flat=True)
             query_set = Cell.objects.filter(pk__in=pks)
-            atac_cells = query_set.filter(modality__modality_name='atac').values_list('cell_id', flat=True)
-            rna_cells = query_set.filter(modality__modality_name='rna').values_list('cell_id', flat=True)
+            atac_cells = query_set.filter(modality__modality_name="atac").values_list(
+                "cell_id", flat=True
+            )
+            rna_cells = query_set.filter(modality__modality_name="rna").values_list(
+                "cell_id", flat=True
+            )
             print("rna_cells")
             print((len(rna_cells)))
-            atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(q_var_id__in=values)
-            rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(q_var_id__in=values)
+            atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
+                q_var_id__in=values
+            )
+            rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
+                q_var_id__in=values
+            )
             print("rna quants")
             print(len(rna_quants))
             for cell in atac_cells:
-                cell_values = atac_quants.filter(q_cell_id=cell).values_list('q_var_id', 'value')
+                cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
                 print(len(cell_values))
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
             for cell in rna_cells:
-                cell_values = rna_quants.filter(q_cell_id=cell).values_list('q_var_id', 'value')
+                cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
 
-        elif values_type == 'protein':
+        elif values_type == "protein":
             for cell in query_set:
-                values_dict[cell.cell_id] = {protein: cell.protein_mean[protein] for protein in values}
+                values_dict[cell.cell_id] = {
+                    protein: cell.protein_mean[protein] for protein in values
+                }
 
         return values_dict
 
-    elif set_type == 'gene':
+    elif set_type == "gene":
         # values must be organs or clusters
-        gene_ids = query_set.values_list('gene_symbol', flat=True)
+        gene_ids = query_set.values_list("gene_symbol", flat=True)
 
-        if values_type == 'organ':
-            organs = Organ.objects.filter(grouping_name__in=values).values_list('pk', flat=True)
-            pvals = PVal.objects.filter(p_organ__in=organs).filter(p_gene__gene_symbol__in=gene_ids)
+        if values_type == "organ":
+            organs = Organ.objects.filter(grouping_name__in=values).values_list("pk", flat=True)
+            pvals = PVal.objects.filter(p_organ__in=organs).filter(
+                p_gene__gene_symbol__in=gene_ids
+            )
             for gene in query_set:
-                gene_pvals = pvals.filter(p_gene__gene_symbol=gene.gene_symbol).values_list('p_organ__grouping_name',
-                                                                                            'value')
+                gene_pvals = pvals.filter(p_gene__gene_symbol=gene.gene_symbol).values_list(
+                    "p_organ__grouping_name", "value"
+                )
                 values_dict[gene.gene_symbol] = {gp[0]: gp[1] for gp in gene_pvals}
 
-        elif values_type == 'cluster':
-            cluster_split = [(value.split('-')[0], value.split('-')[1]) for value in values]
+        elif values_type == "cluster":
+            cluster_split = [(value.split("-")[0], value.split("-")[1]) for value in values]
             qs = [Q(dataset__uuid=cs[0]) & Q(grouping_name=cs[1]) for cs in cluster_split]
             q = reduce(or_, qs)
-            clusters = Cluster.objects.filter(q).values_list('pk', flat=True)
-            pvals = PVal.objects.filter(p_cluster__in=clusters).filter(p_gene__gene_symbol__in=gene_ids)
+            clusters = Cluster.objects.filter(q).values_list("pk", flat=True)
+            pvals = PVal.objects.filter(p_cluster__in=clusters).filter(
+                p_gene__gene_symbol__in=gene_ids
+            )
             for gene in query_set:
-                gene_pvals = pvals.filter(p_gene__gene_symbol=gene.gene_symbol).values_list('p_cluster__grouping_name',
-                                                                                            'value')
+                gene_pvals = pvals.filter(p_gene__gene_symbol=gene.gene_symbol).values_list(
+                    "p_cluster__grouping_name", "value"
+                )
                 values_dict[gene.gene_symbol] = {gp[0]: gp[1] for gp in gene_pvals}
 
         return values_dict
 
-
-    elif set_type == 'organ':
+    elif set_type == "organ":
         # values must be genes
         print("Organs")
-        print(query_set.values_list('pk', flat=True))
+        print(query_set.values_list("pk", flat=True))
         print("Genes")
         print(values)
-        pvals = PVal.objects.filter(p_organ__in=query_set.values_list('pk', flat=True)).filter(
-            p_gene__gene_symbol__in=values)
+        pvals = PVal.objects.filter(p_organ__in=query_set.values_list("pk", flat=True)).filter(
+            p_gene__gene_symbol__in=values
+        )
         for organ in query_set:
-            organ_pvals = pvals.filter(p_organ=organ).values_list('p_gene__gene_symbol', 'value')
+            organ_pvals = pvals.filter(p_organ=organ).values_list("p_gene__gene_symbol", "value")
             values_dict[organ.grouping_name] = {op[0]: op[1] for op in organ_pvals}
         return values_dict
 
-    elif set_type == 'cluster':
+    elif set_type == "cluster":
         # values must be genes
-        pvals = PVal.objects.filter(p_cluster__in=query_set.values_list('pk', flat=True)).filter(
-            p_gene__gene_symbol__in=values)
+        pvals = PVal.objects.filter(p_cluster__in=query_set.values_list("pk", flat=True)).filter(
+            p_gene__gene_symbol__in=values
+        )
         for cluster in query_set:
-            cluster_pvals = pvals.filter(p_cluster=cluster).values_list('p_gene__gene_symbol', 'value')
+            cluster_pvals = pvals.filter(p_cluster=cluster).values_list(
+                "p_gene__gene_symbol", "value"
+            )
             values_dict[cluster.grouping_name] = {cp[0]: cp[1] for cp in cluster_pvals}
         return values_dict
+
 
 def get_qs_count(query_params):
     pickle_hash = query_params["key"]
@@ -179,7 +226,8 @@ def make_cell_and_values(query_params):
 
     pickle_hash = query_params["key"]
     include_values = query_params[
-        "include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
+        "include_values"
+    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
 
     offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
@@ -207,38 +255,41 @@ def make_cell_and_values(query_params):
 
         query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
-    values_dict = {} if len(include_values) == 0 else get_values(query_set, "cell", include_values, values_type)
+    values_dict = (
+        {}
+        if len(include_values) == 0
+        else get_values(query_set, "cell", include_values, values_type)
+    )
 
     for cell in query_set:
         values = {} if cell.cell_id not in values_dict else values_dict[cell.cell_id]
 
         kwargs = {
-
             "cell_id": cell.cell_id,
-
             "dataset": cell.dataset,
-
             "modality": cell.modality,
-
             "organ": cell.organ,
-
             "values": values,
-
         }
 
         cav = CellAndValues(**kwargs)
 
         cav.save()
 
-        kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
-                  'organ': cell.organ, 'values': values}
+        kwargs = {
+            "cell_id": cell.cell_id,
+            "dataset": cell.dataset,
+            "modality": cell.modality,
+            "organ": cell.organ,
+            "values": values,
+        }
 
         cav = CellAndValues(**kwargs)
         cav.save()
 
-    print('Values gotten')
+    print("Values gotten")
 
-    qs = CellAndValues.objects.all().distinct('cell_id')
+    qs = CellAndValues.objects.all().distinct("cell_id")
 
     return qs
 
@@ -248,7 +299,8 @@ def make_gene_and_values(query_params):
 
     pickle_hash = query_params["key"]
     include_values = query_params[
-        "include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
+        "include_values"
+    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
@@ -274,11 +326,15 @@ def make_gene_and_values(query_params):
 
         query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
-    values_dict = {} if len(include_values) == 0 else get_values(query_set, "gene", include_values, values_type)
+    values_dict = (
+        {}
+        if len(include_values) == 0
+        else get_values(query_set, "gene", include_values, values_type)
+    )
 
     for gene in query_set:
         values = {} if gene.gene_symbol not in values_dict else values_dict[gene.gene_symbol]
-        kwargs = {'gene_symbol': gene.gene_symbol, 'values': values}
+        kwargs = {"gene_symbol": gene.gene_symbol, "values": values}
 
         gav = GeneAndValues(**kwargs)
         gav.save()
@@ -294,7 +350,8 @@ def make_organ_and_values(query_params):
 
     pickle_hash = query_params["key"]
     include_values = query_params[
-        "include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
+        "include_values"
+    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
@@ -317,9 +374,13 @@ def make_organ_and_values(query_params):
 
         query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
-    print('Executing')
+    print("Executing")
     print(include_values)
-    values_dict = {} if len(include_values) == 0 else get_values(query_set, "organ", include_values, values_type)
+    values_dict = (
+        {}
+        if len(include_values) == 0
+        else get_values(query_set, "organ", include_values, values_type)
+    )
     for organ in query_set:
         values = {} if organ.grouping_name not in values_dict else values_dict[organ.grouping_name]
 
@@ -336,7 +397,8 @@ def make_cluster_and_values(query_params):
 
     pickle_hash = query_params["key"]
     include_values = query_params[
-        "include_values"]  # A list of genes, proteins, organs, etc. for which to include values, optional
+        "include_values"
+    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     values_type = query_params["values_type"]
     limit = query_params["limit"]  # The maximum number of results to return
@@ -361,11 +423,21 @@ def make_cluster_and_values(query_params):
 
         query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
-    values_dict = {} if len(include_values) == 0 else get_values(query_set, "cluster", include_values, values_type)
+    values_dict = (
+        {}
+        if len(include_values) == 0
+        else get_values(query_set, "cluster", include_values, values_type)
+    )
     for cluster in query_set[:limit]:
-        values = {} if cluster.grouping_name not in values_dict else values_dict[cluster.grouping_name]
+        values = (
+            {} if cluster.grouping_name not in values_dict else values_dict[cluster.grouping_name]
+        )
 
-        kwargs = {"grouping_name": cluster.grouping_name, "dataset": cluster.dataset, "values": values}
+        kwargs = {
+            "grouping_name": cluster.grouping_name,
+            "dataset": cluster.dataset,
+            "values": values,
+        }
         clav = ClusterAndValues(**kwargs)
         clav.save()
 

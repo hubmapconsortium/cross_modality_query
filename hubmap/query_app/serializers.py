@@ -29,17 +29,18 @@ class DatasetSerializer(serializers.ModelSerializer):
 
 
 class ClusterSerializer(serializers.ModelSerializer):
-    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
+    dataset = serializers.CharField(read_only=True, source="dataset.uuid")
+
     class Meta:
         model = Cluster
         fields = ["cluster_method", "cluster_data", "grouping_name", "dataset"]
 
 
 class CellSerializer(serializers.ModelSerializer):
-    modality = serializers.CharField(read_only=True, source='modality.modality_name')
-    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
-    organ = serializers.CharField(read_only=True, source= 'organ_grouping.name')
-#    clusters = serializers.RelatedField(read_only=True, many=True)
+    modality = serializers.CharField(read_only=True, source="modality.modality_name")
+    dataset = serializers.CharField(read_only=True, source="dataset.uuid")
+    organ = serializers.CharField(read_only=True, source="organ_grouping.name")
+    #    clusters = serializers.RelatedField(read_only=True, many=True)
 
     class Meta:
         model = Cell
@@ -76,9 +77,9 @@ class ProteinSerializer(serializers.ModelSerializer):
 class CellAndValuesSerializer(serializers.ModelSerializer):
     #    cell = CellSerializer(read_only=True)
     #    values = serializers.JSONField()
-    modality = serializers.CharField(read_only=True, source='modality.modality_name')
-    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
-    organ = serializers.CharField(read_only=True, source= 'organ_grouping.name')
+    modality = serializers.CharField(read_only=True, source="modality.modality_name")
+    dataset = serializers.CharField(read_only=True, source="dataset.uuid")
+    organ = serializers.CharField(read_only=True, source="organ_grouping.name")
 
     class Meta:
         model = CellAndValues
@@ -116,9 +117,10 @@ class OrganAndValuesSerializer(serializers.ModelSerializer):
         model = OrganAndValues
         fields = ["grouping_name", "values"]
 
+
 class ClusterAndValuesSerializer(serializers.ModelSerializer):
 
-    dataset = serializers.CharField(read_only=True, source = 'dataset.uuid')
+    dataset = serializers.CharField(read_only=True, source="dataset.uuid")
 
     class Meta:
         model = ClusterAndValues
@@ -126,13 +128,12 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
 
 
 class QuerySetSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = QuerySet
         fields = ["query_pickle_hash", "set_type"]
 
-class QuerySetCountSerializer(serializers.ModelSerializer):
 
+class QuerySetCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuerySet
         fields = ["query_pickle_hash", "set_type", "count"]

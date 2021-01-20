@@ -1,25 +1,53 @@
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
-from .models import Cell, Cluster, Dataset, Gene, Organ, QuerySet, CellAndValues, OrganAndValues, \
-    ClusterAndValues, GeneAndValues
-from .queries import cell_query, cluster_query, dataset_query, gene_query, organ_query, protein_query
-from .serializers import (
-    CellSerializer,
-    CellAndValuesSerializer,
-    ClusterSerializer,
-    ClusterAndValuesSerializer,
-    DatasetSerializer,
-    GeneSerializer,
-    GeneAndValuesSerializer,
-    OrganSerializer,
-    OrganAndValuesSerializer,
-    QuerySetSerializer,
-    QuerySetCountSerializer,
+from .models import (
+    Cell,
+    CellAndValues,
+    Cluster,
+    ClusterAndValues,
+    Dataset,
+    Gene,
+    GeneAndValues,
+    Organ,
+    OrganAndValues,
+    QuerySet,
 )
-from .set_evaluators import cell_evaluation_detail, organ_evaluation_detail, gene_evaluation_detail, \
-    cluster_evaluation_detail, evaluation_list, query_set_count
-from .set_operators import query_set_intersection, query_set_difference, query_set_union, query_set_negation
+from .queries import (
+    cell_query,
+    cluster_query,
+    dataset_query,
+    gene_query,
+    organ_query,
+    protein_query,
+)
+from .serializers import (
+    CellAndValuesSerializer,
+    CellSerializer,
+    ClusterAndValuesSerializer,
+    ClusterSerializer,
+    DatasetSerializer,
+    GeneAndValuesSerializer,
+    GeneSerializer,
+    OrganAndValuesSerializer,
+    OrganSerializer,
+    QuerySetCountSerializer,
+    QuerySetSerializer,
+)
+from .set_evaluators import (
+    cell_evaluation_detail,
+    cluster_evaluation_detail,
+    evaluation_list,
+    gene_evaluation_detail,
+    organ_evaluation_detail,
+    query_set_count,
+)
+from .set_operators import (
+    query_set_difference,
+    query_set_intersection,
+    query_set_negation,
+    query_set_union,
+)
 
 
 class PaginationClass(PageNumberPagination):
@@ -308,4 +336,3 @@ class SetCountViewSet(viewsets.ModelViewSet):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
-

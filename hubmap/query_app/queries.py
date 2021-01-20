@@ -1,19 +1,48 @@
-from typing import Dict
 from functools import reduce
 from operator import and_, or_
+from typing import Dict
+
 from django.core.cache import cache
-from .models import Cell, Cluster, Dataset, Gene, Organ, PVal, QuerySet, CodexQuant, RnaQuant, AtacQuant, Protein
-from .serializers import QuerySetSerializer, ProteinSerializer
-from .validation import process_query_parameters, split_at_comparator, validate_cell_query_params, validate_cluster_query_params, validate_dataset_query_params, validate_gene_query_params, validate_organ_query_params
-from .filters import get_cell_filter, get_cluster_filter, get_dataset_filter, get_gene_filter, get_organ_filter
+
+from .filters import (
+    get_cell_filter,
+    get_cluster_filter,
+    get_dataset_filter,
+    get_gene_filter,
+    get_organ_filter,
+)
+from .models import (
+    AtacQuant,
+    Cell,
+    Cluster,
+    CodexQuant,
+    Dataset,
+    Gene,
+    Organ,
+    Protein,
+    PVal,
+    QuerySet,
+    RnaQuant,
+)
+from .serializers import ProteinSerializer, QuerySetSerializer
 from .utils import make_pickle_and_hash
+from .validation import (
+    process_query_parameters,
+    split_at_comparator,
+    validate_cell_query_params,
+    validate_cluster_query_params,
+    validate_dataset_query_params,
+    validate_gene_query_params,
+    validate_organ_query_params,
+)
+
 
 def get_zero_cells(gene: str, modality: str):
-    gene = gene.split('<')[0]
-    if modality == 'rna':
-        non_zero_pks = cache.get('rna' + gene)
-    elif modality == 'atac':
-        non_zero_pks = cache.get('atac' + gene)
+    gene = gene.split("<")[0]
+    if modality == "rna":
+        non_zero_pks = cache.get("rna" + gene)
+    elif modality == "atac":
+        non_zero_pks = cache.get("atac" + gene)
 
     zero_cells = Cell.objects.exclude(pk__in=non_zero_pks)
 
@@ -54,14 +83,14 @@ def cells_from_quants(quant_set, var):
 
     print(cells.count())
 
-    if '<' in var:
+    if "<" in var:
         if isinstance(quant_set.first(), RnaQuant):
-            modality = 'rna'
+            modality = "rna"
         elif isinstance(quant_set.first(), AtacQuant):
-            modality = 'atac'
+            modality = "atac"
         else:
-            modality = 'protein'
-        if modality in ['rna', 'atac']:
+            modality = "protein"
+        if modality in ["rna", "atac"]:
             zero_cells = get_zero_cells(var, modality)
             cells = zero_cells | cells
 
@@ -69,25 +98,26 @@ def cells_from_quants(quant_set, var):
 
 
 def get_quant_queryset(query_params: Dict, filter):
-    if query_params['input_type'] == 'protein':
+    if query_params["input_type"] == "protein":
         query_set = CodexQuant.objects.filter(filter)
-    elif query_params['genomic_modality'] == 'rna':
+    elif query_params["genomic_modality"] == "rna":
         query_set = RnaQuant.objects.filter(filter)
-    elif query_params['genomic_modality'] == 'atac':
+    elif query_params["genomic_modality"] == "atac":
         query_set = AtacQuant.objects.filter(filter)
 
-    var_ids = [split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item for item in
-               query_params['input_set']]
+    var_ids = [
+        split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
+        for item in query_params["input_set"]
+    ]
 
-    query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in
-                  var_ids]
+    query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
 
     if len(query_sets) == 0:
         query_set = Cell.objects.filter(pk__in=[])
     else:
-        if query_params['logical_operator'] == 'and':
+        if query_params["logical_operator"] == "and":
             query_set = reduce(and_, query_sets)
-        elif query_params['logical_operator'] == 'or':
+        elif query_params["logical_operator"] == "or":
             query_set = reduce(or_, query_sets)
 
     return query_set
@@ -127,7 +157,7 @@ def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
 
-    if query_params['input_type'] in ['gene']:
+    if query_params["input_type"] in ["gene"]:
         query_set = get_quant_queryset(query_params, filter)
     else:
         query_set = Cell.objects.filter(filter)

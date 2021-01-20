@@ -1,6 +1,6 @@
-from .serializers import QuerySetSerializer
 from .models import Cell, Cluster, Dataset, Gene, Organ, QuerySet
-from .utils import unpickle_query_set, make_pickle_and_hash
+from .serializers import QuerySetSerializer
+from .utils import make_pickle_and_hash, unpickle_query_set
 
 
 def query_set_intersection(self, request):
@@ -105,7 +105,12 @@ def qs_union(params):
 
 def qs_negate(params):
     pickle_hash = params["key"]
-    set_type = QuerySet.objects.filter(query_pickle_hash__icontains=pickle_hash).reverse().first().set_type
+    set_type = (
+        QuerySet.objects.filter(query_pickle_hash__icontains=pickle_hash)
+        .reverse()
+        .first()
+        .set_type
+    )
 
     if set_type == "cell":
         qs1 = Cell.objects.all()

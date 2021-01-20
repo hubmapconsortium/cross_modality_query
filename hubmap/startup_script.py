@@ -40,19 +40,22 @@ def load_cache():
     print(len(ids_dict))
     cache.set_many(ids_dict, None)
 
-    #Load non-zero RNA quants
+    # Load non-zero RNA quants
+
+
 #    rna_dict = {}
 #    for gene in RnaQuant.objects.all().distinct('q_gene_id').values_list('q_gene_id', flat=True):
 #        cell_pks = RnaQuant.objects.filter(q_gene_id=gene).distinct('q_cell_id').values_list('q_cell_id', flat=True)
 #        rna_dict['rna' + gene] = cell_pks
 #    cache.set_many(rna_dict, None)
 
-    #Load non-zero RNA quants
+# Load non-zero RNA quants
 #    atac_dict = {}
 #    for gene in AtacQuant.objects.all().distinct('q_gene_id').values_list('q_gene_id', flat=True):
 #        cell_pks = AtacQuant.objects.filter(q_gene_id=gene).distinct('q_cell_id').values_list('q_cell_id', flat=True)
 #        atac_dict['atac' + gene] = cell_pks
 #    cache.set_many(atac_dict, None)
+
 
 def make_quants_csv(hdf_file):
     modality = hdf_file.stem
@@ -216,7 +219,6 @@ def process_pval_args(kwargs: dict, modality: str):
     if "dataset" in kwargs:
         kwargs.pop("dataset")
 
-
     kwargs["modality"] = Modality.objects.filter(modality_name__icontains=modality).first()
     return kwargs
 
@@ -255,7 +257,7 @@ def create_genes(hdf_file: Path):
         for gene in pval_df["gene_id"].unique()
         if Gene.objects.filter(gene_symbol__icontains=sanitize_string(gene)[:64]).first() is None
     ]
-    print(str(len(genes_to_create)) + 'genes to create')
+    print(str(len(genes_to_create)) + "genes to create")
     save_genes(genes_to_create)
 
     return
@@ -288,14 +290,14 @@ def create_pvals(hdf_file: Path):
 def create_clusters(hdf_file: Path):
 
     if hdf_file.stem in ["atac", "rna"]:
-        print('True')
+        print("True")
         cluster_method = "leiden"
         cluster_data = "UMAP"
         with pd.HDFStore(hdf_file) as store:
 
             cluster_df = store.get("cluster")
             cell_df = store.get("cell")
-            print(len(cluster_df['dataset'].unique()))
+            print(len(cluster_df["dataset"].unique()))
             for dataset in cluster_df["dataset"].unique():
                 dataset_df = cluster_df[cluster_df["dataset"] == dataset]
                 print(len(dataset_df["cluster"].unique()))
@@ -311,10 +313,15 @@ def create_clusters(hdf_file: Path):
                         dataset=dset,
                     )
                     cluster.save()
-                    cluster_cell_df = cell_df[(cell_df['leiden'] == cluster_name) & (cell_df['dataset'] == dataset)]
-                    cluster_cell_ids = list(cluster_cell_df['cell_id'].unique())
-                    cluster_cell_pks = Cell.objects.filter(cell_id__in=cluster_cell_ids).values_list('pk', flat=True)
+                    cluster_cell_df = cell_df[
+                        (cell_df["leiden"] == cluster_name) & (cell_df["dataset"] == dataset)
+                    ]
+                    cluster_cell_ids = list(cluster_cell_df["cell_id"].unique())
+                    cluster_cell_pks = Cell.objects.filter(
+                        cell_id__in=cluster_cell_ids
+                    ).values_list("pk", flat=True)
                     cluster.cells.add(*cluster_cell_pks)
+
 
 def create_modality_and_datasets(hdf_file: Path):
     modality_name = hdf_file.stem
@@ -409,6 +416,7 @@ def main(hdf_files: List[Path]):
         elif "codex" in file.stem:
             load_codex(file)
             print("CODEX loaded")
+
 
 #    load_cache()
 

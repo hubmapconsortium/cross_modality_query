@@ -5,29 +5,64 @@ from django_tables2.config import RequestConfig
 from django_tables2.export.export import TableExport
 from rest_framework.decorators import api_view
 
-from .forms import CellForm, ClusterQueryForm, DatasetQueryForm, GeneQueryForm, OrganQueryForm, QueryForm, \
-    IntersectionForm, UnionForm, \
-    NegationForm, EvaluationForm, CountForm, EvaluationLandingForm, ListForm
-from .models import Cell, Cluster, Dataset, Gene, Organ, Query, QuerySet, CellAndValues, OrganAndValues, \
-    ClusterAndValues, GeneAndValues
-from .queries import get_cells_list, \
-    get_genes_list, get_organs_list, get_clusters_list
-from .set_evaluators import query_set_count, make_gene_and_values, make_cell_and_values, \
-    make_cluster_and_values, make_organ_and_values, evaluate_qs, get_qs_count
-from .set_operators import query_set_intersection, query_set_union, query_set_negation, \
-    qs_intersect, qs_negate, qs_union
+from .forms import (
+    CellForm,
+    ClusterQueryForm,
+    CountForm,
+    DatasetQueryForm,
+    EvaluationForm,
+    EvaluationLandingForm,
+    GeneQueryForm,
+    IntersectionForm,
+    ListForm,
+    NegationForm,
+    OrganQueryForm,
+    QueryForm,
+    UnionForm,
+)
+from .models import (
+    Cell,
+    CellAndValues,
+    Cluster,
+    ClusterAndValues,
+    Dataset,
+    Gene,
+    GeneAndValues,
+    Organ,
+    OrganAndValues,
+    Query,
+    QuerySet,
+)
+from .queries import get_cells_list, get_clusters_list, get_genes_list, get_organs_list
+from .set_evaluators import (
+    evaluate_qs,
+    get_qs_count,
+    make_cell_and_values,
+    make_cluster_and_values,
+    make_gene_and_values,
+    make_organ_and_values,
+    query_set_count,
+)
+from .set_operators import (
+    qs_intersect,
+    qs_negate,
+    qs_union,
+    query_set_intersection,
+    query_set_negation,
+    query_set_union,
+)
 from .tables import (
-    CellTable,
     CellAndValuesTable,
-    ClusterTable,
+    CellTable,
     ClusterAndValuesTable,
+    ClusterTable,
     DatasetTable,
     GeneAndValuesTable,
     GeneTable,
     OrganAndValuesTable,
     OrganTable,
-    QuerySetTable,
     QuerySetCountTable,
+    QuerySetTable,
 )
 from .views import PaginationClass
 
@@ -492,22 +527,22 @@ def dataset_list(request):
 
 
 @api_view(["POST"])
-def query_set_list(request, request_type='query'):
-    if request_type == 'intersection':
+def query_set_list(request, request_type="query"):
+    if request_type == "intersection":
         table = QuerySetTable(query_set_intersection(request.data.dict()))
-    elif request_type == 'union':
+    elif request_type == "union":
         table = QuerySetTable(query_set_union(request.data.dict()))
-    elif request_type == 'negation':
+    elif request_type == "negation":
         table = QuerySetTable(query_set_negation(request.data.dict()))
-    elif request_type == 'query':
-        output_type = request.data.dict()['set_type']
-        if output_type == 'gene':
+    elif request_type == "query":
+        output_type = request.data.dict()["set_type"]
+        if output_type == "gene":
             table = QuerySetTable(get_genes_list(request.data.dict()))
-        elif output_type == 'cell':
+        elif output_type == "cell":
             table = QuerySetTable(get_cells_list(request.data.dict()))
-        elif output_type == 'organ':
+        elif output_type == "organ":
             table = QuerySetTable(get_organs_list(request.data.dict()))
-        elif output_type == 'cluster':
+        elif output_type == "cluster":
             table = QuerySetTable(get_clusters_list(request.data.dict()))
 
     RequestConfig(request).configure(table)
@@ -522,7 +557,7 @@ def query_set_list(request, request_type='query'):
 
 
 @api_view(["POST"])
-def query_set_negation_list(request, request_type='query'):
+def query_set_negation_list(request, request_type="query"):
     table = QuerySetTable(qs_negate(request.data.dict()))
 
     RequestConfig(request).configure(table)
@@ -537,7 +572,7 @@ def query_set_negation_list(request, request_type='query'):
 
 
 @api_view(["POST"])
-def query_set_union_list(request, request_type='query'):
+def query_set_union_list(request, request_type="query"):
     table = QuerySetTable(qs_union(request.data.dict()))
 
     RequestConfig(request).configure(table)
@@ -552,7 +587,7 @@ def query_set_union_list(request, request_type='query'):
 
 
 @api_view(["POST"])
-def query_set_intersection_list(request, request_type='query'):
+def query_set_intersection_list(request, request_type="query"):
     table = QuerySetTable(qs_intersect(request.data.dict()))
 
     RequestConfig(request).configure(table)
@@ -567,7 +602,7 @@ def query_set_intersection_list(request, request_type='query'):
 
 
 @api_view(["POST"])
-def query_set_count_list(request, request_type='query'):
+def query_set_count_list(request, request_type="query"):
     table = QuerySetCountTable(get_qs_count(request.data.dict()))
 
     RequestConfig(request).configure(table)

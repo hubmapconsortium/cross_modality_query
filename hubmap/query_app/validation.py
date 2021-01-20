@@ -1,11 +1,16 @@
+from typing import Dict, List, Set
+
 from .utils import unpickle_query_set
-from typing import List, Dict, Set
 
 
 def check_input_type(input_type, permitted_input_types):
     if input_type not in permitted_input_types:
-        print("input_type: " + input_type + " is not supported.  Supported input types are: " + ",".join(
-            permitted_input_types))
+        print(
+            "input_type: "
+            + input_type
+            + " is not supported.  Supported input types are: "
+            + ",".join(permitted_input_types)
+        )
 
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
@@ -22,7 +27,14 @@ def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_f
 
 def validate_gene_query_params(query_params):
     required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-    permitted_fields = {"input_type", "input_set", "genomic_modality", "logical_operator", "p_value", "input_set_token"}
+    permitted_fields = {
+        "input_type",
+        "input_set",
+        "genomic_modality",
+        "logical_operator",
+        "p_value",
+        "input_set_token",
+    }
 
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
@@ -39,8 +51,14 @@ def validate_organ_query_params(query_params):
 
     if input_type == "gene":
         required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-        permitted_fields = {"input_type", "input_set", "genomic_modality", "logical_operator", "p_value",
-                            "input_set_token"}
+        permitted_fields = {
+            "input_type",
+            "input_set",
+            "genomic_modality",
+            "logical_operator",
+            "p_value",
+            "input_set_token",
+        }
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "cell":
@@ -56,8 +74,14 @@ def validate_cluster_query_params(query_params):
 
     if input_type == "gene":
         required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-        permitted_fields = {"input_type", "input_set", "genomic_modality", "logical_operator", "p_value",
-                            "input_set_token"}
+        permitted_fields = {
+            "input_type",
+            "input_set",
+            "genomic_modality",
+            "logical_operator",
+            "p_value",
+            "input_set_token",
+        }
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "cell":
@@ -72,8 +96,7 @@ def validate_dataset_query_params(query_params):
     check_input_type(input_type, permitted_input_types)
 
     required_fields = {"input_type", "input_set"}
-    permitted_fields = {"input_type", "input_set",
-                        "input_set_token"}
+    permitted_fields = {"input_type", "input_set", "input_set_token"}
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
 
@@ -84,8 +107,13 @@ def validate_cell_query_params(query_params):
 
     if input_type == "gene":
         required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-        permitted_fields = {"input_type", "input_set", "genomic_modality", "logical_operator",
-                            "input_set_token"}
+        permitted_fields = {
+            "input_type",
+            "input_set",
+            "genomic_modality",
+            "logical_operator",
+            "input_set_token",
+        }
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "organ":
@@ -121,24 +149,29 @@ def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
     query_params["input_set"] = process_input_set(
         query_params["input_set"], query_params["input_type"]
     )
-    if 'input_set_key' in query_params.keys() and query_params['input_set_key'] != '':
+    if "input_set_key" in query_params.keys() and query_params["input_set_key"] != "":
         qs = unpickle_query_set(query_params["input_set_key"], query_params["input_type"])
-        identifiers = {"cell": "cell_id", "gene": "gene_symbol", "organ": "grouping_name", "cluster": "grouping_name",
-                       "dataset": "uuid"}
+        identifiers = {
+            "cell": "cell_id",
+            "gene": "gene_symbol",
+            "organ": "grouping_name",
+            "cluster": "grouping_name",
+            "dataset": "uuid",
+        }
         identifier = identifiers[query_params["input_type"]]
         query_params["input_set"].extend(qs.values_list(identifier, flat=True))
 
     if (
-            "limit" not in query_params.keys()
-            or not query_params["limit"].isnumeric()
-            or int(query_params["limit"]) > 1000
+        "limit" not in query_params.keys()
+        or not query_params["limit"].isnumeric()
+        or int(query_params["limit"]) > 1000
     ):
         query_params["limit"] = 1000
     if (
-            "p_value" not in query_params.keys()
-            or query_params["p_value"] == ""
-            or float(query_params["p_value"]) < 0.0
-            or float(query_params["p_value"]) > 1.0
+        "p_value" not in query_params.keys()
+        or query_params["p_value"] == ""
+        or float(query_params["p_value"]) < 0.0
+        or float(query_params["p_value"]) > 1.0
     ):
         query_params["p_value"] = 0.05
     else:
@@ -191,12 +224,20 @@ def process_evaluation_args(query_params):
     else:
         include_values = []
 
-    if "offset" not in query_params.keys() or not query_params["offset"].isdigit() or int(query_params["offset"]) < 0:
+    if (
+        "offset" not in query_params.keys()
+        or not query_params["offset"].isdigit()
+        or int(query_params["offset"]) < 0
+    ):
         query_params["offset"] = 0
     else:
         query_params["offset"] = int(query_params["offset"])
 
-    if "limit" not in query_params.keys() or not query_params["limit"].isdigit() or int(query_params["limit"]) > 1000:
+    if (
+        "limit" not in query_params.keys()
+        or not query_params["limit"].isdigit()
+        or int(query_params["limit"]) > 1000
+    ):
         query_params["limit"] = 1000
     else:
         query_params["limit"] = int(query_params["limit"])
