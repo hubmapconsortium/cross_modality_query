@@ -32,11 +32,10 @@ To page through the results, `offset` and `limit` can be provided to `evaluation
 At this point, only some of the possible combinations of constraint type and output type have been implemented.
 This matrix will be expanded over time, but queries that are better satisfied by other APIs will not be duplicated by this API.
 
-| ouput / constraint | `cell`    | `cluster` | `dataset` | `gene`    | `organ`   | `protein` |
+| output / constraint | `cell`    | `cluster` | `dataset` | `gene`    | `organ`   | `protein` |
 | ------------------ | --------- | --------- | --------- | --------- | --------- | --------- |
 | `cells`            |           |           | ✓         | ✓         | ✓         | ✓         |
 | `clusters`         |           |           |           | ✓         |           |           |
 | `genes`            |           | ✓         |           |           | ✓         |           |
 | `organs`           | ✓         |           |           | ✓         |           |           |
-
 
