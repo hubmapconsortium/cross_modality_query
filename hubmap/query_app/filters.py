@@ -77,7 +77,6 @@ def get_gene_filter(query_params: Dict) -> Q:
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
     p_value = query_params["p_value"]
-    genomic_modality = query_params["genomic_modality"]
 
     groupings_dict = {
         "organ": "p_organ__grouping_name__iexact",
@@ -86,6 +85,8 @@ def get_gene_filter(query_params: Dict) -> Q:
 
     if input_type == "gene":
         return Q(gene_symbol__in=input_set)
+
+    genomic_modality = query_params["genomic_modality"]
 
     if input_type in groupings_dict:
 
@@ -171,10 +172,11 @@ def get_organ_filter(query_params: Dict) -> Q:
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
     logical_operator = query_params["logical_operator"]
-    genomic_modality = query_params["genomic_modality"]
 
     if input_type == "organ":
         return Q(grouping_name__in=input_set)
+
+    genomic_modality = query_params["genomic_modality"]
 
     if input_type == "cell":
 
@@ -204,10 +206,11 @@ def get_organ_filter(query_params: Dict) -> Q:
 def get_cluster_filter(query_params: dict):
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
-    genomic_modality = query_params["genomic_modality"]
 
     if input_type == "cluster":
         return Q(grouping_name__in=input_set)
+
+    genomic_modality = query_params["genomic_modality"]
 
     if input_type == "gene":
         # Query those genes and return their associated groupings

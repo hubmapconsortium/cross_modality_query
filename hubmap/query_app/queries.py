@@ -148,6 +148,9 @@ def get_genes_list(query_params: Dict, input_set=None):
             else:
                 query_set = reduce(or_, query_sets)
 
+        elif query_params["input_type"] == "gene":
+            query_set = Gene.objects.filter(filter)
+
         query_pickle_hash = make_pickle_and_hash(query_set, "gene")
         return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
 
@@ -191,7 +194,7 @@ def get_organs_list(query_params: Dict, input_set=None):
                 query_set = reduce(or_, query_sets)
 
         else:
-            query_set = Organ.objects.filter(filter)[:limit]
+            query_set = Organ.objects.filter(filter)
             ids = query_set.values_list("pk", flat=True)
             query_set = Organ.objects.filter(pk__in=list(ids))
 
@@ -216,17 +219,20 @@ def get_clusters_list(query_params: Dict, input_set=None):
         else:
             query_set = reduce(or_, query_sets)
 
-        query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
-        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+    elif query_params["input_type"] == "cluster":
+        query_set = Cluster.objects.filter(filter)
+
+    query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
+    return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
 
 
 def get_datasets_list(query_params: Dict, input_set=None):
-    query_params = process_query_parameters(query_params)
+    query_params = process_query_parameters(query_params, input_set)
     filter = get_dataset_filter(query_params)
 
-    if query_params["input_type"] in ["cell", "cluster"]:
+    if query_params["input_type"] in ["cell", "cluster", "dataset"]:
         query_set = Dataset.objects.filter(filter)
-        query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
+        query_pickle_hash = make_pickle_and_hash(query_set, "dataset")
         return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
 
 
