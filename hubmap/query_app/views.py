@@ -1,3 +1,7 @@
+import traceback
+from typing import Callable
+
+from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
@@ -55,23 +59,28 @@ class PaginationClass(PageNumberPagination):
     max_page_size = 10
 
 
+def get_response(self, request, callable: Callable):
+    try:
+        response = callable(self, request)
+        paginated_queryset = self.paginate_queryset(response)
+        paginated_response = self.get_paginated_response(paginated_queryset)
+        return paginated_response
+    except:
+        tb = traceback.format_exc()
+        return HttpResponse(tb)
+
+
 class CellViewSet(viewsets.ModelViewSet):
     query_set = QuerySet.objects.all()
     serializer_class = QuerySetSerializer
     pagination_class = PaginationClass
     model = QuerySet
 
-    def post(self, request, format=None):
-        response = cell_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
-
     def get(self, request, format=None):
-        response = cell_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, cell_query)
+
+    def post(self, request, format=None):
+        return get_response(self, request, cell_query)
 
 
 class OrganViewSet(viewsets.ModelViewSet):
@@ -80,18 +89,11 @@ class OrganViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
     model = QuerySet
 
-    def post(self, request, format=None):
-        response = organ_query(self, request)
-        #        return Response(response)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
-
     def get(self, request, format=None):
-        response = organ_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, organ_query)
+
+    def post(self, request, format=None):
+        return get_response(self, request, organ_query)
 
 
 class GeneViewSet(viewsets.ModelViewSet):
@@ -100,17 +102,11 @@ class GeneViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
     model = QuerySet
 
-    def post(self, request, format=None):
-        response = gene_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
-
     def get(self, request, format=None):
-        response = gene_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, gene_query)
+
+    def post(self, request, format=None):
+        return get_response(self, request, gene_query)
 
 
 class ProteinViewSet(viewsets.ModelViewSet):
@@ -119,10 +115,7 @@ class ProteinViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def get(self, request, format=None):
-        response = protein_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, protein_query)
 
 
 class ClusterViewSet(viewsets.ModelViewSet):
@@ -132,16 +125,10 @@ class ClusterViewSet(viewsets.ModelViewSet):
     model = QuerySet
 
     def get(self, request, format=None):
-        response = cluster_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, cluster_query)
 
     def post(self, request, format=None):
-        response = cluster_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, cluster_query)
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
@@ -151,16 +138,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
     model = QuerySet
 
     def get(self, request, format=None):
-        response = dataset_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, dataset_query)
 
     def post(self, request, format=None):
-        response = dataset_query(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, dataset_query)
 
 
 class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -170,10 +151,8 @@ class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
     model = CellAndValues
 
     def post(self, request, format=None):
-        response = cell_evaluation_detail(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        def post(self, request, format=None):
+            return get_response(self, request, cell_evaluation_detail)
 
 
 class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -183,11 +162,7 @@ class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = organ_evaluation_detail(self, request)
-        #        return Response(response)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, organ_evaluation_detail)
 
 
 class GeneDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -197,10 +172,7 @@ class GeneDetailEvaluationViewSet(viewsets.ModelViewSet):
     model = GeneAndValues
 
     def post(self, request, format=None):
-        response = gene_evaluation_detail(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, gene_evaluation_detail)
 
 
 class ClusterDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -209,10 +181,7 @@ class ClusterDetailEvaluationViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = cluster_evaluation_detail(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, cluster_evaluation_detail)
 
 
 class CellListEvaluationViewSet(viewsets.ModelViewSet):
@@ -222,10 +191,7 @@ class CellListEvaluationViewSet(viewsets.ModelViewSet):
     model = Cell
 
     def post(self, request, format=None):
-        response = evaluation_list(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, evaluation_list)
 
 
 class OrganListEvaluationViewSet(viewsets.ModelViewSet):
@@ -235,10 +201,7 @@ class OrganListEvaluationViewSet(viewsets.ModelViewSet):
     model = Organ
 
     def post(self, request, format=None):
-        response = evaluation_list(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, evaluation_list)
 
 
 class GeneListEvaluationViewSet(viewsets.ModelViewSet):
@@ -248,10 +211,7 @@ class GeneListEvaluationViewSet(viewsets.ModelViewSet):
     model = Gene
 
     def post(self, request, format=None):
-        response = evaluation_list(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, evaluation_list)
 
 
 class ClusterListEvaluationViewSet(viewsets.ModelViewSet):
@@ -260,10 +220,7 @@ class ClusterListEvaluationViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = evaluation_list(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, evaluation_list)
 
 
 class DatasetListEvaluationViewSet(viewsets.ModelViewSet):
@@ -272,10 +229,7 @@ class DatasetListEvaluationViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = evaluation_list(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, evaluation_list)
 
 
 class SetIntersectionViewSet(viewsets.ModelViewSet):
@@ -284,10 +238,7 @@ class SetIntersectionViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = query_set_intersection(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, query_set_intersection)
 
 
 class SetUnionViewSet(viewsets.ModelViewSet):
@@ -296,10 +247,7 @@ class SetUnionViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = query_set_union(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, query_set_union)
 
 
 class SetNegationViewSet(viewsets.ModelViewSet):
@@ -308,10 +256,7 @@ class SetNegationViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = query_set_negation(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, query_set_negation)
 
 
 class SetDifferenceViewSet(viewsets.ModelViewSet):
@@ -320,10 +265,7 @@ class SetDifferenceViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = query_set_difference(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, query_set_difference)
 
 
 class SetCountViewSet(viewsets.ModelViewSet):
@@ -332,7 +274,4 @@ class SetCountViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        response = query_set_count(self, request)
-        paginated_queryset = self.paginate_queryset(response)
-        paginated_response = self.get_paginated_response(paginated_queryset)
-        return paginated_response
+        return get_response(self, request, query_set_count)
