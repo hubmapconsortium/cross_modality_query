@@ -21,8 +21,8 @@ with query handles provided as `key_one` and `key_two` in the body, will return 
 representing the result of the operation.
 
 Three endpoints are provided for getting more information, given a query handle:
-- `{base_url}/count/` will return the number of matching records.
-- `{base_url}/evaluation/` will return a limited set of fields from the records.
+- `{base_url}/count/` will return the number of matching entities.
+- `{base_url}/evaluation/` will return a limited set of fields from the entities.
 - `{base_url}/detailevaluation/` can sort the results, and may return more fields, but may be a slower operation.
 
 To page through the results, `offset` and `limit` can be provided to `evaluation` and `detailevaluation`.
