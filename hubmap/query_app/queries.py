@@ -56,32 +56,22 @@ def genes_from_pvals(pval_set):
 
 def organs_from_pvals(pval_set):
     ids = pval_set.values_list("p_organ", flat=True).distinct()
-    print(ids)
     return Organ.objects.filter(pk__in=list(ids))
 
 
 def clusters_from_pvals(pval_set):
     ids = pval_set.values_list("p_cluster", flat=True).distinct()
-    print(ids)
     return Cluster.objects.filter(pk__in=list(ids))
 
 
 def cells_from_quants(quant_set, var):
-    print("Cells from quants called")
-
-    print("query_set.count")
-    print(quant_set.count())
 
     cell_ids = quant_set.distinct("q_cell_id").values_list("q_cell_id", flat=True)
 
-    print("len(cell_ids)")
-    print(len(cell_ids))
     if len(cell_ids) > 0:
         print(cell_ids[0])
 
     cells = Cell.objects.filter(cell_id__in=cell_ids)
-
-    print(cells.count())
 
     if "<" in var:
         if isinstance(quant_set.first(), RnaQuant):
@@ -129,7 +119,6 @@ def get_genes_list(query_params: Dict, input_set=None):
     else:
         query_params = process_query_parameters(query_params, input_set)
         filter = get_gene_filter(query_params)
-        print(filter)
 
         if query_params["input_type"] in ["organ", "cluster"]:
             query_set = PVal.objects.filter(filter)
@@ -169,7 +158,6 @@ def get_cells_list(query_params: Dict, input_set=None):
     return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
 
 
-# Put fork here depending on whether or not we're returning pvals
 def get_organs_list(query_params: Dict, input_set=None):
     if query_params.get("input_type") is None:
         all_clusters = Cluster.objects.all()
@@ -178,12 +166,9 @@ def get_organs_list(query_params: Dict, input_set=None):
     else:
         query_params = process_query_parameters(query_params, input_set)
         filter = get_organ_filter(query_params)
-        print(filter)
-        limit = int(query_params["limit"])
 
         if query_params["input_type"] == "gene":
             query_set = PVal.objects.filter(filter)
-            print(query_set.count())
             genes = query_set.values("p_gene").distinct()
             query_sets = [
                 organs_from_pvals(query_set.filter(p_gene=gene["p_gene"])) for gene in genes
@@ -208,7 +193,6 @@ def get_clusters_list(query_params: Dict, input_set=None):
 
     if query_params["input_type"] == "gene":
         query_set = PVal.objects.filter(filter).order_by("value")
-        print(query_set.count())
         genes = query_set.values("p_gene").distinct()
 
         query_sets = [
@@ -244,7 +228,6 @@ def get_proteins_list(query_params: Dict):
 
 
 def gene_query(self, request):
-    print(request.method)
 
     if request.method == "GET":
         all_genes = Gene.objects.all()
@@ -260,9 +243,6 @@ def gene_query(self, request):
     context = {
         "request": request,
     }
-    #    print(genes)
-    #    print(GeneSerializer(genes, many=True, context=context))
-    # Get serializers lists
 
     response = QuerySetSerializer(query_set, many=True, context=context).data
 
@@ -272,7 +252,6 @@ def gene_query(self, request):
 def cell_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-        print(query_params)
         query_set = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -285,9 +264,7 @@ def cell_query(self, request):
     context = {
         "request": request,
     }
-    #    print(cells)
-    #    print(CellSerializer(cells, many=True, context=context))
-    # Get serializers lists
+
     response = QuerySetSerializer(query_set, many=True, context=context).data
 
     return response
@@ -296,7 +273,6 @@ def cell_query(self, request):
 def organ_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-        print(query_params)
         query_set = get_organs_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -321,7 +297,6 @@ def organ_query(self, request):
 def cluster_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-        print(query_params)
         query_set = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -334,9 +309,6 @@ def cluster_query(self, request):
     context = {
         "request": request,
     }
-    #    print(groups)
-    #    print(CellGroupingSerializer(groups, many=True, context=context))
-    # Get serializers lists
 
     response = QuerySetSerializer(query_set, many=True, context=context).data
 
@@ -346,7 +318,6 @@ def cluster_query(self, request):
 def dataset_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-        print(query_params)
         query_set = get_datasets_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -359,9 +330,6 @@ def dataset_query(self, request):
     context = {
         "request": request,
     }
-    #    print(groups)
-    #    print(CellGroupingSerializer(groups, many=True, context=context))
-    # Get serializers lists
 
     response = QuerySetSerializer(query_set, many=True, context=context).data
 
@@ -376,8 +344,5 @@ def protein_query(self, request):
         context = {
             "request": request,
         }
-        #        print(proteins)
-        #        print(ProteinSerializer(proteins, many=True, context=context))
-        # Get serializers lists
         response = ProteinSerializer(proteins, many=True, context=context).data
         return response
