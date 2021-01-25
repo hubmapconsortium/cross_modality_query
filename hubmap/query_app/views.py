@@ -151,8 +151,7 @@ class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
     model = CellAndValues
 
     def post(self, request, format=None):
-        def post(self, request, format=None):
-            return get_response(self, request, cell_evaluation_detail)
+        return get_response(self, request, cell_evaluation_detail)
 
 
 class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):

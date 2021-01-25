@@ -5,24 +5,17 @@ from .utils import unpickle_query_set
 
 def check_input_type(input_type, permitted_input_types):
     if input_type not in permitted_input_types:
-        print(
-            "input_type: "
-            + input_type
-            + " is not supported.  Supported input types are: "
-            + ",".join(permitted_input_types)
-        )
+        raise ValueError(f"{input_type} not in {permitted_input_types}")
 
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
     param_fields = set(query_params.keys())
     missing_fields = required_fields - param_fields
     if len(missing_fields) > 0:
-        print("Missing parameters: " + ",".join(missing_fields))
-        assert False
+        raise ValueError(f"Missing parameters: {missing_fields}")
     extra_fields = param_fields - permitted_fields
     if len(extra_fields) > 0:
-        print("Invalid parameters: " + ",".join(extra_fields))
-        assert False
+        raise ValueError(f"Invalid parameters: {extra_fields}")
 
 
 def validate_gene_query_params(query_params):
@@ -221,6 +214,8 @@ def process_evaluation_args(query_params):
         if isinstance(query_params["values_included"], str):
             include_values = query_params["values_included"].split(",")
             include_values = [value.strip() for value in include_values]
+        else:
+            include_values = query_params["values_included"]
     else:
         include_values = []
 
