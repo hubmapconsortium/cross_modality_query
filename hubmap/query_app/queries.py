@@ -236,6 +236,7 @@ def gene_query(self, request):
 
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_dataset_query_params(query_params)
         query_set = get_genes_list(query_params, input_set=request.POST.getlist("input_set"))
 
     self.queryset = query_set
@@ -252,6 +253,7 @@ def gene_query(self, request):
 def cell_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_cell_query_params(query_params)
         query_set = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -273,6 +275,7 @@ def cell_query(self, request):
 def organ_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_organ_query_params(query_params)
         query_set = get_organs_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -297,6 +300,7 @@ def organ_query(self, request):
 def cluster_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_cluster_query_params(query_params)
         query_set = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
@@ -318,6 +322,7 @@ def cluster_query(self, request):
 def dataset_query(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_dataset_query_params(query_params)
         query_set = get_datasets_list(query_params, input_set=request.POST.getlist("input_set"))
 
     if request.method == "GET":
