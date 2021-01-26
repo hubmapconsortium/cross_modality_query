@@ -203,7 +203,7 @@ def get_clusters_list(query_params: Dict, input_set=None):
         else:
             query_set = reduce(or_, query_sets)
 
-    elif query_params["input_type"] == "cluster":
+    elif query_params["input_type"] in ["cluster", "dataset"]:
         query_set = Cluster.objects.filter(filter)
 
     query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
@@ -236,7 +236,7 @@ def gene_query(self, request):
 
     if request.method == "POST":
         query_params = request.data.dict()
-        validate_dataset_query_params(query_params)
+        validate_gene_query_params(query_params)
         query_set = get_genes_list(query_params, input_set=request.POST.getlist("input_set"))
 
     self.queryset = query_set

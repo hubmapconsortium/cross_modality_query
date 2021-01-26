@@ -61,7 +61,7 @@ def validate_organ_query_params(query_params):
 
 
 def validate_cluster_query_params(query_params):
-    permitted_input_types = ["cell", "gene"]
+    permitted_input_types = ["cell", "gene", "dataset"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 

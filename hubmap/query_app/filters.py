@@ -171,12 +171,9 @@ def get_organ_filter(query_params: Dict) -> Q:
 
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
-    logical_operator = query_params["logical_operator"]
 
     if input_type == "organ":
         return Q(grouping_name__in=input_set)
-
-    genomic_modality = query_params["genomic_modality"]
 
     if input_type == "cell":
 
@@ -191,6 +188,7 @@ def get_organ_filter(query_params: Dict) -> Q:
     elif input_type == "gene":
         # Query those genes and return their associated groupings
         p_value = query_params["p_value"]
+        genomic_modality = query_params["genomic_modality"]
 
         q = (
             Q(p_gene__gene_symbol__in=input_set)
@@ -210,9 +208,9 @@ def get_cluster_filter(query_params: dict):
     if input_type == "cluster":
         return Q(grouping_name__in=input_set)
 
-    genomic_modality = query_params["genomic_modality"]
-
     if input_type == "gene":
+
+        genomic_modality = query_params["genomic_modality"]
         # Query those genes and return their associated groupings
         p_value = query_params["p_value"]
 
@@ -235,6 +233,17 @@ def get_cluster_filter(query_params: dict):
         q = Q(pk__in=cluster_pks)
 
         return q
+
+    elif input_type == "dataset":
+
+        print(Dataset.objects.filter(uuid__in=input_set).count())
+
+        cluster_ids = []
+
+        for dataset in Dataset.objects.filter(uuid__in=input_set):
+            cluster_ids.extend([cluster.grouping_name for cluster in dataset.clusters.all()])
+
+        return Q(grouping_name__in=cluster_ids)
 
 
 def get_dataset_filter(query_params: dict):
