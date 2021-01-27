@@ -30,7 +30,6 @@ from .models import (
     GeneAndValues,
     Organ,
     OrganAndValues,
-    Query,
     QuerySet,
 )
 from .queries import get_cells_list, get_clusters_list, get_genes_list, get_organs_list
@@ -69,7 +68,6 @@ from .views import PaginationClass
 
 class LandingFormView(FormView):
     form_class = QueryForm
-    model = Query
     template_name = "landing_page.html"
 
     def post(self, request):
@@ -87,7 +85,6 @@ class LandingFormView(FormView):
 
 class GeneQueryView(FormView):
     form_class = GeneQueryForm
-    model = Query
     template_name = "query_form.html"
 
     def form_valid(self, form):
@@ -96,7 +93,6 @@ class GeneQueryView(FormView):
 
 class OrganQueryView(FormView):
     form_class = OrganQueryForm
-    model = Query
     template_name = "query_form.html"
 
     def form_valid(self, form):
@@ -105,7 +101,6 @@ class OrganQueryView(FormView):
 
 class CellQueryView(FormView):
     form_class = CellForm
-    model = Query
     template_name = "query_form.html"
 
     def form_valid(self, form):
@@ -114,7 +109,6 @@ class CellQueryView(FormView):
 
 class ClusterQueryView(FormView):
     form_class = ClusterQueryForm
-    model = Query
     template_name = "query_form.html"
 
     def form_valid(self, form):
@@ -123,7 +117,6 @@ class ClusterQueryView(FormView):
 
 class DatasetQueryView(FormView):
     form_class = DatasetQueryForm
-    model = Query
     template_name = "query_form.html"
 
     def form_valid(self, form):

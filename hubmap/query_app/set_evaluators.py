@@ -193,11 +193,11 @@ def get_qs_count(query_params):
     set_type = query_params["set_type"]
 
     qs = unpickle_query_set(pickle_hash, set_type)
-    query_set = QuerySet.objects.get(query_pickle_hash=pickle_hash)
+    query_set = QuerySet.objects.get(query_handle=pickle_hash)
     query_set.count = qs.count()
     query_set.save()
 
-    qs_count = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+    qs_count = QuerySet.objects.filter(query_handle=pickle_hash)
     return qs_count
 
 
@@ -232,7 +232,7 @@ def make_cell_and_values(query_params):
     offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
     values_type = query_params["values_type"]
-    qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
     sort_by = query_params["sort_by"]
@@ -305,7 +305,7 @@ def make_gene_and_values(query_params):
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
     values_type = query_params["values_type"]
-    qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
 
@@ -356,7 +356,7 @@ def make_organ_and_values(query_params):
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
     values_type = query_params["values_type"]
-    qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
 
@@ -403,7 +403,7 @@ def make_cluster_and_values(query_params):
     values_type = query_params["values_type"]
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
-    qs = QuerySet.objects.get(query_pickle_hash__icontains=pickle_hash)
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
 
@@ -520,7 +520,7 @@ def cluster_evaluation_detail(self, request):
 def evaluate_qs(query_params):
     pickle_hash = query_params["key"]
     set_type = query_params["set_type"]
-    evaluated_set = unpickle_query_set(query_pickle_hash=pickle_hash, set_type=set_type)
+    evaluated_set = unpickle_query_set(query_handle=pickle_hash, set_type=set_type)
     limit = int(query_params["limit"])
     offset = int(query_params["offset"])
     evaluated_set = evaluated_set[offset:limit]

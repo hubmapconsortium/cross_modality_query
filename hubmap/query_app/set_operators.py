@@ -87,7 +87,7 @@ def qs_intersect(params):
     qs2 = unpickle_query_set(pickle_hash_2, set_type)
     qs = qs1 & qs2
     pickle_hash = make_pickle_and_hash(qs, set_type)
-    qs = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle=pickle_hash)
     return qs
 
 
@@ -99,17 +99,14 @@ def qs_union(params):
     qs2 = unpickle_query_set(pickle_hash_2, set_type)
     qs = qs1 | qs2
     pickle_hash = make_pickle_and_hash(qs, set_type)
-    qs = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle=pickle_hash)
     return qs
 
 
 def qs_negate(params):
     pickle_hash = params["key"]
     set_type = (
-        QuerySet.objects.filter(query_pickle_hash__icontains=pickle_hash)
-        .reverse()
-        .first()
-        .set_type
+        QuerySet.objects.filter(query_handle__icontains=pickle_hash).reverse().first().set_type
     )
 
     if set_type == "cell":
@@ -127,7 +124,7 @@ def qs_negate(params):
     qs2 = unpickle_query_set(pickle_hash, set_type)
     qs = qs1.difference(qs2)
     pickle_hash = make_pickle_and_hash(qs, set_type)
-    qs = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle=pickle_hash)
     return qs
 
 
@@ -139,5 +136,5 @@ def qs_subtract(params):
     qs2 = unpickle_query_set(pickle_hash_2, set_type)
     qs = qs1.difference(qs2)
     pickle_hash = make_pickle_and_hash(qs, set_type)
-    qs = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle=pickle_hash)
     return qs

@@ -130,10 +130,10 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
 class QuerySetSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuerySet
-        fields = ["query_pickle_hash", "set_type"]
+        fields = ["query_handle", "set_type"]
 
 
 class QuerySetCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuerySet
-        fields = ["query_pickle_hash", "set_type", "count"]
+        fields = ["query_handle", "set_type", "count"]

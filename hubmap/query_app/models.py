@@ -1,7 +1,10 @@
 import json
 
+import django.utils.timezone
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+
+EXPIRATION_TIME = 14400  # 4 hours in seconds
 
 
 class CellGrouping(models.Model):
@@ -70,7 +73,6 @@ class Cell(models.Model):
         return self.cell_id
 
     def __str__(self):
-
         cell_dict = {
             "cell_id": self.cell_id,
             "modality": self.modality,
@@ -157,15 +159,12 @@ class ClusterAndValues(Cluster):
 
 class QuerySet(models.Model):
     query_pickle = models.BinaryField()
-    query_pickle_hash = models.TextField()
-    created = models.DateTimeField(null=True)
+    query_handle = models.TextField()
+    created = models.DateTimeField(null=True, auto_now_add=True)
     set_type = models.CharField(max_length=16)
     count = models.IntegerField(null=True)
 
-
-class Query(models.Model):
-    input_type = models.CharField(
-        max_length=5, choices=(("Cell", "Cell"), ("Gene", "Gene"), ("Organ", "Organ"))
-    )
-    input_set = ArrayField(base_field=models.CharField(max_length=1024))
-    logical_operator = models.CharField(max_length=3, choices=(("and", "or"), ("or", "or")))
+    @property
+    def is_expired(self):
+        age = django.utils.timezone.now() - self.created
+        return age.total_seconds() > EXPIRATION_TIME
