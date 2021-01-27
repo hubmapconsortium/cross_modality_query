@@ -140,8 +140,8 @@ def get_genes_list(query_params: Dict, input_set=None):
         elif query_params["input_type"] == "gene":
             query_set = Gene.objects.filter(filter)
 
-        query_pickle_hash = make_pickle_and_hash(query_set, "gene")
-        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+        query_handle = make_pickle_and_hash(query_set, "gene")
+        return QuerySet.objects.filter(query_handle=query_handle)
 
 
 # Put fork here depending on whether or not we're returning expression values
@@ -154,15 +154,15 @@ def get_cells_list(query_params: Dict, input_set=None):
     else:
         query_set = Cell.objects.filter(filter)
 
-    query_pickle_hash = make_pickle_and_hash(query_set, "cell")
-    return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+    query_handle = make_pickle_and_hash(query_set, "cell")
+    return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def get_organs_list(query_params: Dict, input_set=None):
     if query_params.get("input_type") is None:
         all_clusters = Cluster.objects.all()
-        query_pickle_hash = make_pickle_and_hash(all_clusters, "cluster")
-        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+        query_handle = make_pickle_and_hash(all_clusters, "cluster")
+        return QuerySet.objects.filter(query_handle=query_handle)
     else:
         query_params = process_query_parameters(query_params, input_set)
         filter = get_organ_filter(query_params)
@@ -183,8 +183,8 @@ def get_organs_list(query_params: Dict, input_set=None):
             ids = query_set.values_list("pk", flat=True)
             query_set = Organ.objects.filter(pk__in=list(ids))
 
-        query_pickle_hash = make_pickle_and_hash(query_set, "organ")
-        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+        query_handle = make_pickle_and_hash(query_set, "organ")
+        return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def get_clusters_list(query_params: Dict, input_set=None):
@@ -206,8 +206,8 @@ def get_clusters_list(query_params: Dict, input_set=None):
     elif query_params["input_type"] in ["cluster", "dataset"]:
         query_set = Cluster.objects.filter(filter)
 
-    query_pickle_hash = make_pickle_and_hash(query_set, "cluster")
-    return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+    query_handle = make_pickle_and_hash(query_set, "cluster")
+    return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def get_datasets_list(query_params: Dict, input_set=None):
@@ -216,15 +216,15 @@ def get_datasets_list(query_params: Dict, input_set=None):
 
     if query_params["input_type"] in ["cell", "cluster", "dataset"]:
         query_set = Dataset.objects.filter(filter)
-        query_pickle_hash = make_pickle_and_hash(query_set, "dataset")
-        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+        query_handle = make_pickle_and_hash(query_set, "dataset")
+        return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def get_proteins_list(query_params: Dict):
     if query_params.get("input_type") is None:
         all_proteins = Protein.objects.all()
-        query_pickle_hash = make_pickle_and_hash(all_proteins, "cluster")
-        return QuerySet.objects.filter(query_pickle_hash=query_pickle_hash)
+        query_handle = make_pickle_and_hash(all_proteins, "cluster")
+        return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def gene_query(self, request):
@@ -232,7 +232,7 @@ def gene_query(self, request):
     if request.method == "GET":
         all_genes = Gene.objects.all()
         pickle_hash = make_pickle_and_hash(all_genes, "gene")
-        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     if request.method == "POST":
         query_params = request.data.dict()
@@ -259,7 +259,7 @@ def cell_query(self, request):
     if request.method == "GET":
         all_genes = Cell.objects.all()
         pickle_hash = make_pickle_and_hash(all_genes, "cell")
-        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -281,7 +281,7 @@ def organ_query(self, request):
     if request.method == "GET":
         all_genes = Organ.objects.all()
         pickle_hash = make_pickle_and_hash(all_genes, "organ")
-        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -306,7 +306,7 @@ def cluster_query(self, request):
     if request.method == "GET":
         all_genes = Cluster.objects.all()
         pickle_hash = make_pickle_and_hash(all_genes, "cluster")
-        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -328,7 +328,7 @@ def dataset_query(self, request):
     if request.method == "GET":
         all_genes = Dataset.objects.all()
         pickle_hash = make_pickle_and_hash(all_genes, "dataset")
-        query_set = QuerySet.objects.filter(query_pickle_hash=pickle_hash)
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
