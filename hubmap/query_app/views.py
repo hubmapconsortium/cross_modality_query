@@ -1,3 +1,4 @@
+import json
 import traceback
 from typing import Callable
 
@@ -61,13 +62,16 @@ class PaginationClass(PageNumberPagination):
 
 def get_response(self, request, callable: Callable):
     try:
+        print(request.data.dict())
         response = callable(self, request)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
     except:
         tb = traceback.format_exc()
-        return HttpResponse(tb)
+        json_error_response = json.dumps({"error": {"stack_trace": tb}})
+        print(json_error_response)
+        return HttpResponse(json_error_response)
 
 
 class CellViewSet(viewsets.ModelViewSet):

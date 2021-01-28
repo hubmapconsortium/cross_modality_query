@@ -1,9 +1,5 @@
 import hashlib
 import pickle
-from functools import reduce
-from operator import or_
-
-from django.db.models import Q
 
 from .models import Cell, Cluster, Dataset, Gene, Organ, QuerySet
 
@@ -30,6 +26,8 @@ def make_pickle_and_hash(qs, set_type):
 
 
 def unpickle_query_set(query_handle, set_type):
+
+    print(query_handle)
 
     query_object = QuerySet.objects.filter(query_handle=query_handle).first()
     query_pickle = query_object.query_pickle

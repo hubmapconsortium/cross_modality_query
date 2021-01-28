@@ -19,15 +19,10 @@ def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_f
 
 
 def validate_gene_query_params(query_params):
-    required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-    permitted_fields = {
-        "input_type",
-        "input_set",
-        "genomic_modality",
-        "logical_operator",
-        "p_value",
-        "input_set_token",
-    }
+    required_fields = {"input_type", "input_set", "genomic_modality"}
+    if len(query_params["input_set"]) > 1:
+        required_fields.add("logical_operator")
+    permitted_fields = required_fields | {"p_value", "input_set_token"}
 
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
@@ -43,20 +38,15 @@ def validate_organ_query_params(query_params):
     check_input_type(input_type, permitted_input_types)
 
     if input_type == "gene":
-        required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-        permitted_fields = {
-            "input_type",
-            "input_set",
-            "genomic_modality",
-            "logical_operator",
-            "p_value",
-            "input_set_token",
-        }
+        required_fields = {"input_type", "input_set", "genomic_modality"}
+        if len(query_params["input_set"]) > 1:
+            required_fields.add("logical_operator")
+        permitted_fields = required_fields | {"p_value", "input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "cell":
         required_fields = {"input_type", "input_set"}
-        permitted_fields = {"input_type", "input_set", "input_set_token"}
+        permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
 
@@ -66,20 +56,15 @@ def validate_cluster_query_params(query_params):
     check_input_type(input_type, permitted_input_types)
 
     if input_type == "gene":
-        required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-        permitted_fields = {
-            "input_type",
-            "input_set",
-            "genomic_modality",
-            "logical_operator",
-            "p_value",
-            "input_set_token",
-        }
+        required_fields = {"input_type", "input_set", "genomic_modality"}
+        if len(query_params["input_set"]) > 1:
+            required_fields.add("logical_operator")
+        permitted_fields = required_fields | {"p_value", "input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "cell":
         required_fields = {"input_type", "input_set"}
-        permitted_fields = {"input_type", "input_set", "input_set_token"}
+        permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
 
@@ -89,7 +74,7 @@ def validate_dataset_query_params(query_params):
     check_input_type(input_type, permitted_input_types)
 
     required_fields = {"input_type", "input_set"}
-    permitted_fields = {"input_type", "input_set", "input_set_token"}
+    permitted_fields = required_fields | {"input_set_token"}
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
 
@@ -100,28 +85,31 @@ def validate_cell_query_params(query_params):
 
     if input_type == "gene":
         required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
-        permitted_fields = {
-            "input_type",
-            "input_set",
-            "genomic_modality",
-            "logical_operator",
-            "input_set_token",
-        }
+        if len(query_params["input_set"]) > 1:
+            required_fields.add("logical_operator")
+        permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "organ":
         required_fields = {"input_type", "input_set"}
-        permitted_fields = {"input_type", "input_set", "input_set_token"}
+        permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "dataset":
         required_fields = {"input_type", "input_set"}
-        permitted_fields = {"input_type", "input_set", "input_set_token"}
+        permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
     elif input_type == "cluster":
         required_fields = {"input_type", "input_set"}
-        permitted_fields = {"input_type", "input_set", "input_set_token"}
+        permitted_fields = required_fields | {"input_set_token"}
+        check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    elif input_type == "protein":
+        required_fields = {"input_type", "input_set"}
+        if len(query_params["input_set"]) > 1:
+            required_fields.add("logical_operator")
+        permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
 
