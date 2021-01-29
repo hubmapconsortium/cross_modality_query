@@ -27,6 +27,7 @@ from .serializers import (
     GeneSerializer,
     OrganAndValuesSerializer,
     OrganSerializer,
+    ProteinSerializer,
     QuerySetCountSerializer,
 )
 from .utils import unpickle_query_set
@@ -552,5 +553,7 @@ def evaluation_list(self, request):
             response = OrganSerializer(eval_qs, many=True, context=context).data
         if set_type == "dataset":
             response = DatasetSerializer(eval_qs, many=True, context=context).data
+        if set_type == "protein":
+            response = ProteinSerializer(eval_qs, many=True, context=context).data
 
         return response

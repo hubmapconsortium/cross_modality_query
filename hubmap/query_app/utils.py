@@ -1,7 +1,7 @@
 import hashlib
 import pickle
 
-from .models import Cell, Cluster, Dataset, Gene, Organ, QuerySet
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet
 
 
 def set_intersection(query_set_1, query_set_2):
@@ -30,6 +30,8 @@ def unpickle_query_set(query_handle, set_type):
     print(query_handle)
 
     query_object = QuerySet.objects.filter(query_handle=query_handle).first()
+    if query_object is None:
+        raise ValueError(f"Query handle {query_handle} is not valid")
     query_pickle = query_object.query_pickle
 
     #    query_pickle = QuerySet.objects.get(query_handle=query_handle).query_pickle
@@ -48,6 +50,9 @@ def unpickle_query_set(query_handle, set_type):
 
     elif set_type == "dataset":
         qs = Dataset.objects.all()
+
+    elif set_type == "protein":
+        qs = Protein.objects.all()
 
     qs.query = pickle.loads(query_pickle)
 

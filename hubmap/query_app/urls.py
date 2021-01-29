@@ -54,6 +54,11 @@ urlpatterns = [
         name="dataset_list_evaluation",
     ),
     path(
+        "proteinevaluation/",
+        views.ProteinListEvaluationViewSet.as_view({"post": "post"}),
+        name="protein_list_evaluation",
+    ),
+    path(
         "celldetailevaluation/",
         views.CellDetailEvaluationViewSet.as_view({"post": "post"}),
         name="celL_detail_evaluation",
@@ -71,6 +76,16 @@ urlpatterns = [
     path(
         "clusterdetailevaluation/",
         views.ClusterDetailEvaluationViewSet.as_view({"post": "post"}),
+        name="cluster_detail_evaluation",
+    ),
+    path(
+        "datasetdetailevaluation/",
+        views.DatasetListEvaluationViewSet.as_view({"post": "post"}),
+        name="dataset_detail_evaluation",
+    ),
+    path(
+        "proteindetailevaluation/",
+        views.ProteinListEvaluationViewSet.as_view({"post": "post"}),
         name="cluster_detail_evaluation",
     ),
     path("geneform/", GeneQueryView.as_view(), name="gene_query_form"),

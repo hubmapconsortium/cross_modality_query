@@ -16,6 +16,7 @@ from .models import (
     GeneAndValues,
     Organ,
     OrganAndValues,
+    Protein,
     QuerySet,
 )
 from .queries import (
@@ -36,6 +37,7 @@ from .serializers import (
     GeneSerializer,
     OrganAndValuesSerializer,
     OrganSerializer,
+    ProteinSerializer,
     QuerySetCountSerializer,
     QuerySetSerializer,
 )
@@ -62,7 +64,6 @@ class PaginationClass(PageNumberPagination):
 
 def get_response(self, request, callable: Callable):
     try:
-        print(request.data.dict())
         response = callable(self, request)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
@@ -229,6 +230,15 @@ class ClusterListEvaluationViewSet(viewsets.ModelViewSet):
 class DatasetListEvaluationViewSet(viewsets.ModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, evaluation_list)
+
+
+class ProteinListEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = Protein.objects.all()
+    serializer_class = ProteinSerializer
     pagination_class = PaginationClass
 
     def post(self, request, format=None):

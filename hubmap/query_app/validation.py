@@ -8,6 +8,22 @@ def check_input_type(input_type, permitted_input_types):
         raise ValueError(f"{input_type} not in {permitted_input_types}")
 
 
+def check_parameter_types_and_values(query_params):
+
+    if not isinstance(query_params["input_set"], list):
+        raise ValueError(f"Input must be of type list, not {type(query_params['input_set'])}")
+
+    genomic_modalities = ["rna", "atac"]  # Used for quantitative gene->cell queries
+    if "genomic_modality" in query_params.keys():
+        if query_params["genomic_modality"] not in genomic_modalities:
+            raise ValueError(f"{query_params['genomic_modality']} not in {genomic_modalities}")
+
+    if "p_value" in query_params.keys():
+        p_value = query_params["p_value"]
+        if p_value is None or float(p_value) < 0 or float(p_value) > 1:
+            raise ValueError(f"p_value {p_value} should be in [0,1]")
+
+
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
     param_fields = set(query_params.keys())
     missing_fields = required_fields - param_fields
@@ -31,6 +47,8 @@ def validate_gene_query_params(query_params):
 
     check_input_type(input_type, permitted_input_types)
 
+    check_parameter_types_and_values(query_params)
+
 
 def validate_organ_query_params(query_params):
     permitted_input_types = ["cell", "gene"]
@@ -48,6 +66,8 @@ def validate_organ_query_params(query_params):
         required_fields = {"input_type", "input_set"}
         permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    check_parameter_types_and_values(query_params)
 
 
 def validate_cluster_query_params(query_params):
@@ -67,6 +87,8 @@ def validate_cluster_query_params(query_params):
         permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
 
+    check_parameter_types_and_values(query_params)
+
 
 def validate_dataset_query_params(query_params):
     permitted_input_types = ["cell", "cluster"]
@@ -77,6 +99,8 @@ def validate_dataset_query_params(query_params):
     permitted_fields = required_fields | {"input_set_token"}
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
+    check_parameter_types_and_values(query_params)
+
 
 def validate_cell_query_params(query_params):
     permitted_input_types = ["organ", "gene", "dataset", "cluster", "protein"]
@@ -84,7 +108,7 @@ def validate_cell_query_params(query_params):
     check_input_type(input_type, permitted_input_types)
 
     if input_type == "gene":
-        required_fields = {"input_type", "input_set", "genomic_modality", "logical_operator"}
+        required_fields = {"input_type", "input_set", "genomic_modality"}
         if len(query_params["input_set"]) > 1:
             required_fields.add("logical_operator")
         permitted_fields = required_fields | {"input_set_token"}
@@ -111,6 +135,8 @@ def validate_cell_query_params(query_params):
             required_fields.add("logical_operator")
         permitted_fields = required_fields | {"input_set_token"}
         check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    check_parameter_types_and_values(query_params)
 
 
 def split_and_strip(string: str) -> List[str]:
