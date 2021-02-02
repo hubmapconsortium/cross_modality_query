@@ -31,40 +31,20 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
 
     var_id = split_condition[0].strip()
 
-    if input_type == "protein":
-        protein_id = split_condition[0].strip()
+    q = Q(q_var_id__iexact=var_id)
 
-        if comparator == ">":
-            kwargs = {"protein_mean__" + protein_id + "__gt": value}
-        elif comparator == ">=":
-            kwargs = {"protein_mean__" + protein_id + "__gte": value}
-        elif comparator == "<":
-            kwargs = {"protein_mean__" + protein_id + "__lt": value}
-        elif comparator == "<=":
-            kwargs = {"protein_mean__" + protein_id + "__lte": value}
-        elif comparator == "==":
-            kwargs = {"protein_mean__" + protein_id + "__exact": value}
-        elif comparator == "!=":
-            kwargs = {"protein_mean__" + protein_id + "__exact": value}
-            return ~Q(kwargs)
-
-        return Q(**kwargs)
-
-    if input_type == "gene":
-        q = Q(q_var_id__iexact=var_id)
-
-        if comparator == ">":
-            q = q & Q(value__gt=value)
-        elif comparator == ">=":
-            q = q & Q(value__gte=value)
-        elif comparator == "<":
-            q = q & (Q(value__lt=value))
-        elif comparator == "<=":
-            q = q & (Q(value__lte=value))
-        elif comparator == "==":
-            q = q & Q(value__exact=value)
-        elif comparator == "!=":
-            q = q & ~Q(value__exact=value)
+    if comparator == ">":
+        q = q & Q(value__gt=value)
+    elif comparator == ">=":
+        q = q & Q(value__gte=value)
+    elif comparator == "<":
+        q = q & (Q(value__lt=value))
+    elif comparator == "<=":
+        q = q & (Q(value__lte=value))
+    elif comparator == "==":
+        q = q & Q(value__exact=value)
+    elif comparator == "!=":
+        q = q & ~Q(value__exact=value)
 
     return q
 
@@ -116,12 +96,6 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
 
-    print("Get cell filter")
-    print("Type input set")
-    print(type(input_set))
-    print("Input set")
-    print(input_set)
-
     groupings_dict = {"organ": "grouping_name", "cluster": "grouping_name", "dataset": "uuid"}
 
     if input_type == "cell":
@@ -133,12 +107,9 @@ def get_cell_filter(query_params: Dict) -> Q:
             [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
             for item in input_set
         ]
-        print(split_conditions)
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")
-
-        print(q)
 
         return q
 

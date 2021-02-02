@@ -50,9 +50,6 @@ class CellSerializer(serializers.ModelSerializer):
             "dataset",
             "organ",
             "clusters",
-            "protein_mean",
-            "protein_total",
-            "protein_covar",
         ]
 
 
@@ -89,9 +86,6 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             "modality",
             "dataset",
             "organ",
-            "protein_mean",
-            "protein_total",
-            "protein_covar",
             "organ",
             "values",
         ]

@@ -64,10 +64,6 @@ class Cell(models.Model):
     mask_index = models.IntegerField(null=True)
     organ = models.ForeignKey(to=Organ, related_name="cells", on_delete=models.CASCADE, null=True)
     clusters = models.ManyToManyField(to=Cluster, related_name="cells")
-    protein_mean = models.JSONField(db_index=True, null=True, blank=True)
-    protein_total = models.JSONField(db_index=True, null=True, blank=True)
-    protein_covar = models.JSONField(db_index=True, null=True, blank=True)
-    cell_shape = ArrayField(models.FloatField(), db_index=True, null=True, blank=True)
 
     def __repr__(self):
         return self.cell_id
@@ -78,9 +74,6 @@ class Cell(models.Model):
             "modality": self.modality,
             "dataset": self.dataset,
             "organ": self.organ,
-            "protein_mean": self.protein_mean,
-            "protein_total": self.protein_total,
-            "protein_covar": self.protein_covar,
         }
 
         return json.dumps(cell_dict)
@@ -126,6 +119,9 @@ class AtacQuant(Quant):
 
 class CodexQuant(Quant):
     statistic = models.CharField(max_length=16, null=True)  # One of mean, total, covariance
+    region = models.CharField(
+        max_length=16, null=True
+    )  # One of nucleus, membrane, cytoplasm, cell
 
 
 class PVal(models.Model):

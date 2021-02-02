@@ -105,29 +105,31 @@ def get_values(query_set, set_type, values, values_type):
             rna_cells = query_set.filter(modality__modality_name="rna").values_list(
                 "cell_id", flat=True
             )
-            print("rna_cells")
-            print((len(rna_cells)))
+
             atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
                 q_var_id__in=values
             )
             rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
                 q_var_id__in=values
             )
-            print("rna quants")
-            print(len(rna_quants))
+
             for cell in atac_cells:
                 cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                print(len(cell_values))
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
             for cell in rna_cells:
                 cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
 
         elif values_type == "protein":
-            for cell in query_set:
-                values_dict[cell.cell_id] = {
-                    protein: cell.protein_mean[protein] for protein in values
-                }
+            codex_cells = query_set.filter(modality__modality_name="codex").values_list(
+                "cell_id", flat=True
+            )
+            codex_quants = RnaQuant.objects.filter(q_cell_id__in=codex_cells).filter(
+                q_var_id__in=values
+            )
+            for cell in codex_cells:
+                cell_values = codex_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
+                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
 
         return values_dict
 

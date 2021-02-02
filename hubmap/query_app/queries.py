@@ -151,7 +151,7 @@ def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
 
-    if query_params["input_type"] in ["gene"]:
+    if query_params["input_type"] in ["gene", "protein"]:
         query_set = get_quant_queryset(query_params, filter)
     else:
         query_set = Cell.objects.filter(filter)
