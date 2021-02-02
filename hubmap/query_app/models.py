@@ -1,12 +1,14 @@
 import json
 
+import django.utils.timezone
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+EXPIRATION_TIME = 14400  # 4 hours in seconds
 
 
 class CellGrouping(models.Model):
-    grouping_name = models.CharField(max_length=64)
+    grouping_name = models.CharField(max_length=64, null=True)
 
     class Meta:
         abstract = True
@@ -46,23 +48,31 @@ class Organ(CellGrouping):
 class Cluster(CellGrouping):
     cluster_method = models.CharField(max_length=16)  # i.e. leiden, k means
     cluster_data = models.CharField(max_length=16)  # UMAP, protein mean, cell shape
+    dataset = models.ForeignKey(
+        to=Dataset, related_name="clusters", on_delete=models.CASCADE, null=True
+    )
 
 
 class Cell(models.Model):
-    cell_id = models.CharField(db_index=True, max_length=64, null=True)
+    cell_id = models.CharField(db_index=True, max_length=128, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
-    dataset = models.ForeignKey(to=Dataset, related_name='cells', on_delete=models.CASCADE, null=True)
+    dataset = models.ForeignKey(
+        to=Dataset, related_name="cells", on_delete=models.CASCADE, null=True
+    )
     barcode = models.CharField(max_length=64, null=True)
     tile = models.CharField(max_length=32, null=True)
-    mask_index = models.IntegerField()
-    organ = models.ForeignKey(to=Organ, related_name='cells', on_delete=models.CASCADE, null=True)
-    clusters = models.ManyToManyField(to=Cluster, related_name='cells', null=True)
+    mask_index = models.IntegerField(null=True)
+    organ = models.ForeignKey(to=Organ, related_name="cells", on_delete=models.CASCADE, null=True)
+    clusters = models.ManyToManyField(to=Cluster, related_name="cells")
+    protein_mean = models.JSONField(db_index=True, null=True, blank=True)
+    protein_total = models.JSONField(db_index=True, null=True, blank=True)
+    protein_covar = models.JSONField(db_index=True, null=True, blank=True)
+    cell_shape = ArrayField(models.FloatField(), db_index=True, null=True, blank=True)
 
     def __repr__(self):
         return self.cell_id
 
     def __str__(self):
-
         cell_dict = {
             "cell_id": self.cell_id,
             "modality": self.modality,
@@ -96,7 +106,7 @@ class Protein(models.Model):
 
 
 class Quant(models.Model):
-    q_cell_id = models.CharField(max_length=32, null=True)
+    q_cell_id = models.CharField(max_length=128, null=True, db_index=True)
     q_var_id = models.CharField(max_length=64, null=True, db_index=True)
     value = models.FloatField()
 
@@ -105,22 +115,22 @@ class Quant(models.Model):
 
 
 class RnaQuant(Quant):
-
     def __repr__(self):
         return str(self.value)
 
 
 class AtacQuant(Quant):
-
     def __repr__(self):
         return str(self.value)
 
 
 class CodexQuant(Quant):
-    statistic = models.CharField(max_length=16, null=True) #One of mean, total, covariance
+    statistic = models.CharField(max_length=16, null=True)  # One of mean, total, covariance
+
 
 class PVal(models.Model):
-    p_group = models.ForeignKey(to=CellGrouping, on_delete=models.CASCADE, null=True)
+    p_cluster = models.ForeignKey(to=Cluster, on_delete=models.CASCADE, null=True)
+    p_organ = models.ForeignKey(to=Organ, on_delete=models.CASCADE, null=True)
     p_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
     value = models.FloatField(null=True, db_index=True)
@@ -143,28 +153,18 @@ class GeneAndValues(Gene):
     values = models.JSONField(null=True)
 
 
-class QueryResults(models.Model):
-    created = models.DateTimeField(auto_created=True)
-    mean = models.JSONField()
-    covariance = models.JSONField()
-    correlation = models.JSONField()
+class ClusterAndValues(Cluster):
+    values = models.JSONField(null=True)
 
 
-class CellQueryResults(QueryResults):
-    cells_and_values = models.ManyToManyField(to=CellAndValues, related_name="queries")
+class QuerySet(models.Model):
+    query_pickle = models.BinaryField()
+    query_handle = models.TextField()
+    created = models.DateTimeField(null=True, auto_now_add=True)
+    set_type = models.CharField(max_length=16)
+    count = models.IntegerField(null=True)
 
-
-class GeneQueryResults(QueryResults):
-    genes_and_values = models.ManyToManyField(to=GeneAndValues, related_name="queries")
-
-
-class OrganQueryResults(QueryResults):
-    organs_and_values = models.ManyToManyField(to=OrganAndValues, related_name="queries")
-
-
-class Query(models.Model):
-    input_type = models.CharField(
-        max_length=5, choices=(("Cell", "Cell"), ("Gene", "Gene"), ("Organ", "Organ"))
-    )
-    input_set = ArrayField(base_field=models.CharField(max_length=1024))
-    logical_operator = models.CharField(max_length=3, choices=(("and", "or"), ("or", "or")))
+    @property
+    def is_expired(self):
+        age = django.utils.timezone.now() - self.created
+        return age.total_seconds() > EXPIRATION_TIME
