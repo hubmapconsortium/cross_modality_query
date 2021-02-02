@@ -9,4 +9,4 @@ SECRET_PATH = Path("/opt/secret")
 with open(SECRET_PATH / "django_secret_key.txt") as f:
     SECRET_KEY = f.read().strip()
 
-ALLOWED_HOSTS = ["cells.test.hubmapconsortium.org"]
+ALLOWED_HOSTS = ["cells.test.hubmapconsortium.org", "cells.dev.hubmapconsortium.org"]

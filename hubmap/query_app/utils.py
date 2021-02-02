@@ -5,17 +5,17 @@ from django.core.cache import cache
 from django.db.models import Q
 
 from .models import (
+    AtacQuant,
     Cell,
     CellAndValues,
     Cluster,
+    CodexQuant,
     Gene,
     GeneAndValues,
     Organ,
     OrganAndValues,
     Protein,
     PVal,
-    AtacQuant,
-    CodexQuant,
     RnaQuant,
 )
 from .serializers import (
@@ -27,28 +27,31 @@ from .serializers import (
 
 
 def get_zero_cells(gene: str, modality: str):
-    gene = gene.split('<')[0]
-    if modality == 'rna':
-        non_zero_pks = cache.get('rna' + gene)
-    elif modality == 'atac':
-        non_zero_pks = cache.get('atac' + gene)
+    gene = gene.split("<")[0]
+    if modality == "rna":
+        non_zero_pks = cache.get("rna" + gene)
+    elif modality == "atac":
+        non_zero_pks = cache.get("atac" + gene)
 
     zero_cells = Cell.objects.exclude(pk__in=non_zero_pks)
 
     return zero_cells
 
+
 def get_non_zero_cells(gene: str, modality: str):
-    gene = gene.split('<')[0]
-    if modality == 'rna':
-        non_zero_pks = cache.get('rna' + gene)
-    elif modality == 'atac':
-        non_zero_pks = cache.get('atac' + gene)
+    gene = gene.split("<")[0]
+    if modality == "rna":
+        non_zero_pks = cache.get("rna" + gene)
+    elif modality == "atac":
+        non_zero_pks = cache.get("atac" + gene)
 
     non_zero_cells = Cell.objects.filter(pk__in=non_zero_pks)
 
     return non_zero_cells
 
+
 def get_max_value_cells(cell_set, limit, values_dict, reverse_order):
+    print(cell_set)
     cell_ids = []
 
     if cell_set.count() == 0:
@@ -128,14 +131,14 @@ def cells_from_quants(quant_set, var):
 
     print(cells.count())
 
-    if '<' in var:
+    if "<" in var:
         if isinstance(quant_set.first(), RnaQuant):
-            modality = 'rna'
+            modality = "rna"
         elif isinstance(quant_set.first(), AtacQuant):
-            modality = 'atac'
+            modality = "atac"
         else:
-            modality = 'protein'
-        if modality in ['rna', 'atac']:
+            modality = "protein"
+        if modality in ["rna", "atac"]:
             zero_cells = get_zero_cells(var, modality)
             cells = zero_cells | cells
 
@@ -234,23 +237,49 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
     assert comparator in [">", ">=", "<=", "<", "==", "!="]
     value = float(split_condition[2].strip())
 
-    var_id = split_condition[0].strip()
-    q = Q(q_var_id__iexact=var_id)
+    if input_type == "protein":
+        protein_id = split_condition[0].strip()
 
-    if comparator == '>':
-        q = q & Q(value__gt=value)
-    elif comparator == '>=':
-        q = q & Q(value__gte=value)
-    elif comparator == '<':
-        q = q & (Q(value__lt=value))
-    elif comparator == '<=':
-        q = q & (Q(value__lte=value))
-    elif comparator == '==':
-        q = q & Q(value__exact=value)
-    elif comparator == '!=':
-        q = q & ~Q(value__exact=value)
+        if comparator == ">":
+            kwargs = {"protein_mean__" + protein_id + "__gt": value}
+        elif comparator == ">=":
+            kwargs = {"protein_mean__" + protein_id + "__gte": value}
+        elif comparator == "<":
+            kwargs = {"protein_mean__" + protein_id + "__lt": value}
+        elif comparator == "<=":
+            kwargs = {"protein_mean__" + protein_id + "__lte": value}
+        elif comparator == "==":
+            kwargs = {"protein_mean__" + protein_id + "__exact": value}
+        elif comparator == "!=":
+            kwargs = {"protein_mean__" + protein_id + "__exact": value}
+            return ~Q(kwargs)
 
-    return q
+        return Q(**kwargs)
+
+    if input_type == "gene":
+
+        comparator = split_condition[1]
+
+        assert comparator in [">", ">=", "<=", "<", "==", "!="]
+        value = float(split_condition[2].strip())
+
+        var_id = split_condition[0].strip()
+        q = Q(q_gene_id__iexact=var_id)
+
+        if comparator == ">":
+            q = q & Q(value__gt=value)
+        elif comparator == ">=":
+            q = q & Q(value__gte=value)
+        elif comparator == "<":
+            q = q & (Q(value__lt=value))
+        elif comparator == "<=":
+            q = q & (Q(value__lte=value))
+        elif comparator == "==":
+            q = q & Q(value__exact=value)
+        elif comparator == "!=":
+            q = q & ~Q(value__exact=value)
+
+        return q
 
 
 def get_gene_filter(query_params: Dict) -> Q:
@@ -292,7 +321,10 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     if input_type in ["protein", "gene"]:
 
-        split_conditions = [[item, '>', '0'] if len(split_at_comparator(item)) == 0 else split_at_comparator(item) for item in input_set]
+        split_conditions = [
+            [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
+            for item in input_set
+        ]
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")
@@ -383,47 +415,52 @@ def get_genes_list(query_params: Dict):
             genes_and_values = make_gene_and_values(query_set, query_params)
             return genes_and_values
 
+
 def cache_values(query_set, gene_ids, modality):
-    cell_ids = query_set.values_list('cell_id', flat=True)
+    cell_ids = query_set.values_list("cell_id", flat=True)
     filter = Q(q_var_id__in=gene_ids) & Q(q_cell_id__in=cell_ids)
-    if modality == 'rna':
+    if modality == "rna":
         query_set = RnaQuant.objects.filter(filter)
-    elif modality == 'atac':
+    elif modality == "atac":
         query_set = AtacQuant.objects.filter(filter)
 
-    values = query_set.values_list('q_cell_id', 'q_var_id', 'value')
-    print('Values gotten')
+    values = query_set.values_list("q_cell_id", "q_var_id", "value")
+    print("Values gotten")
 
     values_dict = {triple[0] + triple[1]: triple[2] for triple in values}
 
     cache.set_many(values_dict, 300)
 
-def get_quant_queryset(query_params:Dict, filter):
 
-    zeroes = [item[2] == 0 for item in query_params['input_set']]
+def get_quant_queryset(query_params: Dict, filter):
+
+    zeroes = [item[2] == 0 for item in query_params["input_set"]]
 
     if False:
         #            if all(zeroes):
-        query_sets = [get_zero_cells(gene[0], genomic_modality) for gene in query_params['input_set']]
+        query_sets = [
+            get_zero_cells(gene[0], genomic_modality) for gene in query_params["input_set"]
+        ]
 
     else:
 
-        if query_params['input_type'] == 'protein':
+        if query_params["input_type"] == "protein":
             query_set = CodexQuant.objects.filter(filter)
-        elif query_params['genomic_modality'] == 'rna':
+        elif query_params["genomic_modality"] == "rna":
             query_set = RnaQuant.objects.filter(filter)
-        elif query_params['genomic_modality'] == 'rna':
+        elif query_params["genomic_modality"] == "rna":
             query_set = AtacQuant.objects.filter(filter)
 
-        var_ids = [split_at_comparator(item)[0] if len(split_at_comparator(item)) > 0 else item for item in
-                   query_params['input_set']]
+        var_ids = [
+            split_at_comparator(item)[0] if len(split_at_comparator(item)) > 0 else item
+            for item in query_params["input_set"]
+        ]
 
-        query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in
-                      var_ids]
+        query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
 
-    if query_params['logical_operator'] == 'and':
+    if query_params["logical_operator"] == "and":
         query_set = reduce(set_intersection, query_sets)
-    elif query_params['logical_operator'] == 'or':
+    elif query_params["logical_operator"] == "or":
         query_set = reduce(set_union, query_sets)
         if len(var_ids) > 1:
             cache_values(query_set, var_ids, genomic_modality)
@@ -431,6 +468,7 @@ def get_quant_queryset(query_params:Dict, filter):
     query_set = order_cell_set(query_set, var_ids[0], limit)
 
     return query_set
+
 
 # Put fork here depending on whether or not we're returning expression values
 def get_cells_list(query_params: Dict):
@@ -440,9 +478,9 @@ def get_cells_list(query_params: Dict):
         query_params = process_query_parameters(query_params)
         limit = int(query_params["limit"])
         filter = get_cell_filter(query_params)
-        print("Filter made")
+        print(filter)
 
-        if query_params['input_type'] in ['gene', 'protein']:
+        if query_params["input_type"] in ["gene", "protein"]:
             query_set = get_quant_queryset(query_params, filter)
 
         else:
@@ -451,6 +489,7 @@ def get_cells_list(query_params: Dict):
             query_set = Cell.objects.filter(pk__in=list(ids))
 
         print("Quant queryset gotten")
+        print(query_set)
         cells_and_values = make_cell_and_values(query_set, query_params)
 
         return cells_and_values
@@ -571,6 +610,22 @@ def set_union(query_set_1, query_set_2):
     return query_set_1 | query_set_2
 
 
+def cache_values(query_set, gene_ids, modality):
+    cell_ids = query_set.values_list("cell_id", flat=True)
+    filter = Q(q_gene_id__in=gene_ids) & Q(q_cell_id__in=cell_ids)
+    if modality == "rna":
+        query_set = RnaQuant.objects.filter(filter)
+    elif modality == "atac":
+        query_set = AtacQuant.objects.filter(filter)
+
+    values = query_set.values_list("q_cell_id", "q_gene_id", "value")
+    print("Values gotten")
+
+    values_dict = {triple[0] + triple[1]: triple[2] for triple in values}
+
+    cache.set_many(values_dict, 300)
+
+
 def make_cell_and_values(query_set, request_dict):
     """Takes a query set of quant objects and returns a query set of cell_and_values
     This function will almost definitely have problems with concurrency"""
@@ -581,59 +636,92 @@ def make_cell_and_values(query_set, request_dict):
 
     print(query_set.count())
 
-    genomic_modality = request_dict['genomic_modality']
+    limit = int(request_dict["limit"])
 
-    for cell in query_set:
+    if request_dict["input_type"] == "gene":
 
-        if request_dict['input_type'] in ['gene', 'protein']:
+        gene_ids = [
+            split_at_comparator(item)[0].strip()
+            if len(split_at_comparator(item)) > 0
+            else item.strip()
+            for item in request_dict["input_set"]
+        ]
 
-            var_ids = [split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item.strip() for item in request_dict['input_set']]
-            cell_ids = query_set.values_list('cell_id', flat=True)
-            id_pairs = [cell_id + gene_id for cell_id in cell_ids for gene_id in var_ids]
-            values_dict = cache.get_many(id_pairs)
+        query_sets = [
+            cells_from_quants(query_set.filter(q_gene_id=gene), gene, gene == gene_ids[0])
+            for gene in gene_ids
+        ]
 
-            print('Values loaded from cache')
-            if len(values_dict) > 0:
-                values = {
-                    var_id: values_dict[
-                        cell.cell_id + var_id] if cell.cell_id + var_id in values_dict.keys() else 0.0
-                    for var_id in var_ids}
+        if request_dict["logical_operator"] == "and":
+            query_set = reduce(set_intersection, query_sets)
+        elif request_dict["logical_operator"] == "or":
+            query_set = reduce(set_union, query_sets)
+            if len(gene_ids) > 1:
+                cache_values(query_set, gene_ids, request_dict["genomic_modality"])
+
+        query_set = order_cell_set(query_set, gene_ids[0], limit)
+
+        print("Cells gotten")
+
+        cell_ids = query_set.values_list("cell_id", flat=True)
+        id_pairs = [cell_id + gene_id for cell_id in cell_ids for gene_id in gene_ids]
+        values_dict = cache.get_many(id_pairs)
+
+        print("Values loaded from cache")
+
+        for cell in query_set:
+            values = {
+                gene_id: values_dict[cell.cell_id + gene_id]
+                if cell.cell_id + gene_id in values_dict.keys()
+                else 0.0
+                for gene_id in gene_ids
+            }
+
+            kwargs = {
+                "cell_id": cell.cell_id,
+                "dataset": cell.dataset,
+                "modality": cell.modality,
+                "organ": cell.organ,
+                "values": values,
+            }
+
+            cav = CellAndValues(**kwargs)
+            cav.save()
+
+        to_return = query_set.count()
+        start = CellAndValues.objects.all().count() - to_return
+
+        print("Values gotten")
+
+        qs = CellAndValues.objects.all()[start:]
+
+        return qs
+
+    else:
+        for cell in query_set:
+            if request_dict["input_type"] == "protein":
+                # This is a cell query set
+                proteins = []
+                for protein in request_dict["input_set"]:
+                    if len(split_at_comparator(protein)) > 0:
+                        proteins.append(split_at_comparator(protein)[0].strip())
+                    else:
+                        proteins.append(protein)
+                values = {protein: cell.protein_mean[protein] for protein in proteins}
             else:
-                if request_dict['input_type'] == 'protein':
-                    values = {
-                        var_id: CodexQuant.objects.filter(q_var_id=var_id).filter(
-                            q_cell_id=cell.cell_id).first().value if CodexQuant.objects.filter(q_var_id=var_id).filter(
-                            q_cell_id=cell.cell_id).first() is not None else 0.0
-                        for var_id in var_ids}
+                values = {}
+            kwargs = {
+                "cell_id": cell.cell_id,
+                "dataset": cell.dataset,
+                "modality": cell.modality,
+                "organ": cell.organ,
+                "values": values,
+            }
+            cav = CellAndValues(**kwargs)
+            cav.save()
 
-                elif genomic_modality == 'rna':
-                    values = {
-                        var_id: RnaQuant.objects.filter(q_var_id=var_id).filter(
-                            q_cell_id=cell.cell_id).first().value if RnaQuant.objects.filter(q_var_id=var_id).filter(
-                            q_cell_id=cell.cell_id).first() is not None else 0.0
-                        for var_id in var_ids}
-
-                elif genomic_modality == 'atac':
-                    values = {
-                        var_id: AtacQuant.objects.filter(q_var_id=var_id).filter(
-                            q_cell_id=cell.cell_id).first().value if AtacQuant.objects.filter(q_var_id=var_id).filter(
-                            q_cell_id=cell.cell_id).first() is not None else 0.0
-                        for var_id in var_ids}
-
-        else:
-            values = {}
-
-        kwargs = {'cell_id': cell.cell_id, 'dataset': cell.dataset, 'modality': cell.modality,
-                  'organ': cell.organ, 'values': values}
-
-        cav = CellAndValues(**kwargs)
-        cav.save()
-
-    print('Values gotten')
-
-    qs = CellAndValues.objects.all()
-
-    return qs
+    # Filter this on request hash
+    return CellAndValues.objects.all()
 
 
 def make_gene_and_values(query_set, request_dict):
@@ -656,14 +744,17 @@ def make_gene_and_values(query_set, request_dict):
         print(gene)
         values = {}
 
-        if request_dict['input_type'] in ['organ', 'cluster', 'dataset']:
-            for group_id in request_dict['input_set']:
-                pval = PVal.objects.filter(p_group__grouping_name=group_id).filter(
-                    p_gene=gene).first()
+        if request_dict["input_type"] in ["organ", "cluster", "dataset"]:
+            for group_id in request_dict["input_set"]:
+                pval = (
+                    PVal.objects.filter(p_group__grouping_name=group_id)
+                    .filter(p_gene=gene)
+                    .first()
+                )
                 if pval is not None:
                     values[group_id] = pval.value
 
-        kwargs = {'gene_symbol': gene.gene_symbol, 'values': values}
+        kwargs = {"gene_symbol": gene.gene_symbol, "values": values}
 
         gav = GeneAndValues(**kwargs)
         gav.save()
