@@ -230,6 +230,39 @@ def split_at_comparator(item: str) -> List:
     return []
 
 
+def validate_list_evaluation_args(query_params):
+
+    required_fields = {"key", "set_type", "limit"}
+    permitted_fields = required_fields | {"offset"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+
+def validate_detail_evaluation_args(query_params):
+
+    required_fields = {"key", "set_type", "limit"}
+    permitted_fields = required_fields | {"offset", "sort_by", "values_included", "values_type"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    if "values_included" in query_params.keys() and "values_type" not in query_params.keys():
+        raise ValueError("values_type must be provided with values_included")
+
+    set_type = query_params["set_type"]
+    type_map = {
+        "cell": ["gene", "protein"],
+        "gene": ["organ", "cluster"],
+        "cluster": ["gene"],
+        "organ": ["gene"],
+    }
+    allowed_types = type_map[set_type]
+
+    if "values_type" in query_params.keys():
+        values_type = query_params["values_type"]
+        if query_params["values_type"] not in allowed_types:
+            raise ValueError(
+                f'For "{set_type}", only {allowed_types} allowed, not "{values_type}"'
+            )
+
+
 def process_evaluation_args(query_params):
     if "sort_by" in query_params.keys() and query_params["sort_by"] != "":
         sort_by = query_params["sort_by"]  # Must be empty or an element of include values

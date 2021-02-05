@@ -31,7 +31,11 @@ from .serializers import (
     QuerySetCountSerializer,
 )
 from .utils import unpickle_query_set
-from .validation import process_evaluation_args
+from .validation import (
+    process_evaluation_args,
+    validate_detail_evaluation_args,
+    validate_list_evaluation_args,
+)
 
 
 def get_max_value_items(query_set, limit, values_dict, offset):
@@ -449,6 +453,7 @@ def make_cluster_and_values(query_params):
 def cell_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_cell_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -467,6 +472,7 @@ def cell_evaluation_detail(self, request):
 def gene_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_gene_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -485,6 +491,7 @@ def gene_evaluation_detail(self, request):
 def organ_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_organ_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -503,6 +510,7 @@ def organ_evaluation_detail(self, request):
 def cluster_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_cluster_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -531,6 +539,7 @@ def evaluate_qs(query_params):
 def evaluation_list(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_list_evaluation_args(query_params)
         query_params = process_evaluation_args(query_params)
         set_type = query_params["set_type"]
         eval_qs = evaluate_qs(query_params)
