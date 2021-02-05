@@ -10,6 +10,7 @@ from .filters import (
     get_dataset_filter,
     get_gene_filter,
     get_organ_filter,
+    get_protein_filter,
 )
 from .models import (
     AtacQuant,
@@ -34,6 +35,7 @@ from .validation import (
     validate_dataset_query_params,
     validate_gene_query_params,
     validate_organ_query_params,
+    validate_protein_query_params,
 )
 
 
@@ -222,9 +224,11 @@ def get_datasets_list(query_params: Dict, input_set=None):
         return QuerySet.objects.filter(query_handle=query_handle)
 
 
-def get_proteins_list(query_params: Dict):
-    all_proteins = Protein.objects.all()
-    query_handle = make_pickle_and_hash(all_proteins, "protein")
+def get_proteins_list(query_params: Dict, input_set=None):
+    query_params = process_query_parameters(query_params, input_set)
+    filter = get_protein_filter(query_params)
+    proteins = Protein.objects.filter(filter)
+    query_handle = make_pickle_and_hash(proteins, "protein")
     return QuerySet.objects.filter(query_handle=query_handle)
 
 
@@ -352,10 +356,17 @@ def protein_query(self, request):
         all_proteins = Protein.objects.all()
         pickle_hash = make_pickle_and_hash(all_proteins, "protein")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
-        self.queryset = query_set
-        # Set context
-        context = {
-            "request": request,
-        }
-        response = QuerySetSerializer(query_set, many=True, context=context).data
-        return response
+
+    if request.method == "POST":
+        query_params = request.data.dict()
+        query_params["input_set"] = request.POST.getlist("input_set")
+        validate_protein_query_params(query_params)
+        query_set = get_proteins_list(query_params, input_set=request.POST.getlist("input_set"))
+
+    self.queryset = query_set
+    # Set context
+    context = {
+        "request": request,
+    }
+    response = QuerySetSerializer(query_set, many=True, context=context).data
+    return response
