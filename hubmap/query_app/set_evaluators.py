@@ -236,7 +236,8 @@ def make_cell_and_values(query_params):
 
     offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
@@ -309,7 +310,8 @@ def make_gene_and_values(query_params):
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
@@ -360,7 +362,8 @@ def make_organ_and_values(query_params):
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
@@ -405,7 +408,8 @@ def make_cluster_and_values(query_params):
         "include_values"
     ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
