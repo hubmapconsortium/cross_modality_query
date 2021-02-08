@@ -236,7 +236,7 @@ def make_cell_and_values(query_params):
 
     offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
-    if len(include_values) > 0:
+    if len(include_values) > 0 or "sort_by" in query_params.keys():
         values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
@@ -457,6 +457,8 @@ def make_cluster_and_values(query_params):
 def cell_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_cell_and_values(query_params)
         self.queryset = evaluated_set
@@ -476,6 +478,8 @@ def cell_evaluation_detail(self, request):
 def gene_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_gene_and_values(query_params)
         self.queryset = evaluated_set
@@ -495,6 +499,8 @@ def gene_evaluation_detail(self, request):
 def organ_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_organ_and_values(query_params)
         self.queryset = evaluated_set
@@ -514,6 +520,8 @@ def organ_evaluation_detail(self, request):
 def cluster_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_cluster_and_values(query_params)
         self.queryset = evaluated_set

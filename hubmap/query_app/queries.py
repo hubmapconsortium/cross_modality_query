@@ -314,6 +314,7 @@ def cluster_query(self, request):
 
     else:
         query_params = request.data.dict()
+        print(query_params.keys())
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cluster_query_params(query_params)
         query_set = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))
