@@ -93,8 +93,6 @@ def order_query_set(query_set, limit, values_dict, offset):
 
 
 def get_values(query_set, set_type, values, values_type):
-    print("Values param")
-    print(values)
 
     values_dict = {}
 
@@ -109,19 +107,16 @@ def get_values(query_set, set_type, values, values_type):
             rna_cells = query_set.filter(modality__modality_name="rna").values_list(
                 "cell_id", flat=True
             )
-            print("rna_cells")
-            print((len(rna_cells)))
+
             atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
                 q_var_id__in=values
             )
             rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
                 q_var_id__in=values
             )
-            print("rna quants")
-            print(len(rna_quants))
+
             for cell in atac_cells:
                 cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                print(len(cell_values))
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
             for cell in rna_cells:
                 cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
@@ -168,10 +163,6 @@ def get_values(query_set, set_type, values, values_type):
 
     elif set_type == "organ":
         # values must be genes
-        print("Organs")
-        print(query_set.values_list("pk", flat=True))
-        print("Genes")
-        print(values)
         pvals = PVal.objects.filter(p_organ__in=query_set.values_list("pk", flat=True)).filter(
             p_gene__gene_symbol__in=values
         )
@@ -243,8 +234,6 @@ def make_cell_and_values(query_params):
     query_set = unpickle_query_set(pickle_hash, set_type)
     sort_by = query_params["sort_by"]
 
-    print("Making cells and values")
-
     if query_params["sort_by"] is None:
         query_set = query_set[offset:limit]
 
@@ -294,8 +283,6 @@ def make_cell_and_values(query_params):
 
         cav = CellAndValues(**kwargs)
         cav.save()
-
-    print("Values gotten")
 
     qs = CellAndValues.objects.filter(pk__in=cavs)
 
@@ -385,8 +372,6 @@ def make_organ_and_values(query_params):
 
         query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
-    print("Executing")
-    print(include_values)
     values_dict = (
         {}
         if len(include_values) == 0
@@ -467,8 +452,6 @@ def cell_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         if "values_included" in query_params.keys():
-            print(request.POST)
-            print(request.POST.getlist("values_included"))
             query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_cell_and_values(query_params)
@@ -490,8 +473,6 @@ def gene_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         if "values_included" in query_params.keys():
-            print(request.POST)
-            print(request.POST.getlist("values_included"))
             query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_gene_and_values(query_params)
@@ -513,8 +494,6 @@ def organ_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         if "values_included" in query_params.keys():
-            print(request.POST)
-            print(request.POST.getlist("values_included"))
             query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_organ_and_values(query_params)
@@ -536,8 +515,6 @@ def cluster_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         if "values_included" in query_params.keys():
-            print(request.POST)
-            print(request.POST.getlist("values_included"))
             query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         evaluated_set = make_cluster_and_values(query_params)
