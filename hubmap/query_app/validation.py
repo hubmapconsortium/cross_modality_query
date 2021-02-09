@@ -4,6 +4,7 @@ from .utils import unpickle_query_set
 
 
 def check_input_type(input_type, permitted_input_types):
+    permitted_input_types.sort()
     if input_type not in permitted_input_types:
         raise ValueError(f"{input_type} not in {permitted_input_types}")
 
@@ -16,6 +17,7 @@ def check_parameter_types_and_values(query_params):
     genomic_modalities = ["rna", "atac"]  # Used for quantitative gene->cell queries
     if "genomic_modality" in query_params.keys():
         if query_params["genomic_modality"] not in genomic_modalities:
+            genomic_modalities.sort()
             raise ValueError(f"{query_params['genomic_modality']} not in {genomic_modalities}")
 
     if "p_value" in query_params.keys():
@@ -26,10 +28,12 @@ def check_parameter_types_and_values(query_params):
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
     param_fields = set(query_params.keys())
-    missing_fields = required_fields - param_fields
+    missing_fields = list(required_fields - param_fields)
+    missing_fields.sort()
     if len(missing_fields) > 0:
         raise ValueError(f"Missing parameters: {missing_fields}")
-    extra_fields = param_fields - permitted_fields
+    extra_fields = list(param_fields - permitted_fields)
+    extra_fields.sort()
     if len(extra_fields) > 0:
         raise ValueError(f"Invalid parameters: {extra_fields}")
 
@@ -254,6 +258,7 @@ def validate_detail_evaluation_args(query_params):
         "organ": ["gene"],
     }
     allowed_types = type_map[set_type]
+    allowed_types.sort()
 
     if "values_type" in query_params.keys():
         values_type = query_params["values_type"]
