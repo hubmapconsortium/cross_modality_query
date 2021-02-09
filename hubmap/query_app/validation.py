@@ -276,6 +276,8 @@ def process_evaluation_args(query_params):
         else:
             include_values = query_params["values_included"]
     else:
+        print("values_included not in query_params.keys()")
+        print(query_params.keys())
         include_values = []
 
     if (
