@@ -17,7 +17,6 @@ urlpatterns = [
     path("protein/", views.ProteinViewSet.as_view({"post": "post"}), name="protein_query"),
     path("cluster/", views.ClusterViewSet.as_view({"post": "post"}), name="cluster_query"),
     path("dataset/", views.DatasetViewSet.as_view({"post": "post"}), name="dataset_query"),
-    path("negation/", views.SetNegationViewSet.as_view({"post": "post"}), name="set_negation"),
     path(
         "difference/", views.SetDifferenceViewSet.as_view({"post": "post"}), name="set_difference"
     ),
@@ -95,7 +94,6 @@ urlpatterns = [
     path("datasetform/", DatasetQueryView.as_view(), name="dataset_query_form"),
     path("intersectionform/", SetIntersectionFormView.as_view(), name="intersection_form"),
     path("unionform/", SetUnionFormView.as_view(), name="union_form"),
-    path("negationform/", SetNegationFormView.as_view(), name="negation_form"),
     path("countform/", SetCountFormView.as_view(), name="count_form"),
     path("evaluationform/", EvaluationLandingFormView.as_view(), name="evaluation_form"),
     path("cellevaluationform/", CellSetEvaluationFormView.as_view(), name="cell_evaluation_form"),
@@ -128,7 +126,6 @@ urlpatterns = [
         name="query_set_intersection_list",
     ),
     path("unionlist/", QuerySetUnionListView.as_view(), name="query_set_union_list"),
-    path("negationlist/", QuerySetNegationListView.as_view(), name="query_set_negation_list"),
     path("querysetcountlist/", QuerySetCountListView.as_view(), name="query_set_count_list"),
     path(
         "openapi",

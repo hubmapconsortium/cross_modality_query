@@ -44,10 +44,8 @@ from .set_evaluators import (
 )
 from .set_operators import (
     qs_intersect,
-    qs_negate,
     qs_union,
     query_set_intersection,
-    query_set_negation,
     query_set_union,
 )
 from .tables import (
@@ -137,14 +135,6 @@ class SetUnionFormView(FormView):
 
     def form_valid(self, form):
         return query_set_union(self.request)
-
-
-class SetNegationFormView(FormView):
-    form_class = NegationForm
-    template_name = "negation_form.html"
-
-    def form_valid(self, form):
-        return query_set_negation(self.request)
 
 
 class SetCountFormView(FormView):
@@ -525,8 +515,6 @@ def query_set_list(request, request_type="query"):
         table = QuerySetTable(query_set_intersection(request.data.dict()))
     elif request_type == "union":
         table = QuerySetTable(query_set_union(request.data.dict()))
-    elif request_type == "negation":
-        table = QuerySetTable(query_set_negation(request.data.dict()))
     elif request_type == "query":
         output_type = request.data.dict()["set_type"]
         if output_type == "gene":
@@ -537,21 +525,6 @@ def query_set_list(request, request_type="query"):
             table = QuerySetTable(get_organs_list(request.data.dict()))
         elif output_type == "cluster":
             table = QuerySetTable(get_clusters_list(request.data.dict()))
-
-    RequestConfig(request).configure(table)
-
-    export_format = request.data.dict()["export_format"]
-
-    if TableExport.is_valid_format(export_format):
-        exporter = TableExport(export_format, table)
-        return exporter.response("table.{}".format(export_format))
-
-    return render(request, "query_set_list.html", {"table": table})
-
-
-@api_view(["POST"])
-def query_set_negation_list(request, request_type="query"):
-    table = QuerySetTable(qs_negate(request.data.dict()))
 
     RequestConfig(request).configure(table)
 

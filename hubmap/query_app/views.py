@@ -49,12 +49,7 @@ from .set_evaluators import (
     organ_evaluation_detail,
     query_set_count,
 )
-from .set_operators import (
-    query_set_difference,
-    query_set_intersection,
-    query_set_negation,
-    query_set_union,
-)
+from .set_operators import query_set_difference, query_set_intersection, query_set_union
 
 
 class PaginationClass(PageNumberPagination):
@@ -264,15 +259,6 @@ class SetUnionViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         return get_response(self, request, query_set_union)
-
-
-class SetNegationViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_negation)
 
 
 class SetDifferenceViewSet(viewsets.ModelViewSet):
