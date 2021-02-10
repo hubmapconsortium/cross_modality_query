@@ -145,6 +145,8 @@ def get_genes_list(query_params: Dict, input_set=None):
         elif query_params["input_type"] == "gene":
             query_set = Gene.objects.filter(filter)
 
+        query_set = query_set.distinct("gene_symbol")
+
         query_handle = make_pickle_and_hash(query_set, "gene")
         return QuerySet.objects.filter(query_handle=query_handle)
 
@@ -159,13 +161,15 @@ def get_cells_list(query_params: Dict, input_set=None):
     else:
         query_set = Cell.objects.filter(filter)
 
+    query_set = query_set.distinct("cell_id")
+
     query_handle = make_pickle_and_hash(query_set, "cell")
     return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def get_organs_list(query_params: Dict, input_set=None):
     if query_params.get("input_type") is None:
-        all_clusters = Cluster.objects.all()
+        all_clusters = Cluster.objects.all().distinct("grouping_name")
         query_handle = make_pickle_and_hash(all_clusters, "cluster")
         return QuerySet.objects.filter(query_handle=query_handle)
     else:
@@ -187,6 +191,8 @@ def get_organs_list(query_params: Dict, input_set=None):
             query_set = Organ.objects.filter(filter)
             ids = query_set.values_list("pk", flat=True)
             query_set = Organ.objects.filter(pk__in=list(ids))
+
+        query_set = query_set.distinct("grouping_name")
 
         query_handle = make_pickle_and_hash(query_set, "organ")
         return QuerySet.objects.filter(query_handle=query_handle)
@@ -211,6 +217,8 @@ def get_clusters_list(query_params: Dict, input_set=None):
     elif query_params["input_type"] in ["cluster", "dataset"]:
         query_set = Cluster.objects.filter(filter)
 
+    query_set = query_set.distinct("grouping_name")
+
     query_handle = make_pickle_and_hash(query_set, "cluster")
     return QuerySet.objects.filter(query_handle=query_handle)
 
@@ -220,7 +228,7 @@ def get_datasets_list(query_params: Dict, input_set=None):
     filter = get_dataset_filter(query_params)
 
     if query_params["input_type"] in ["cell", "cluster", "dataset"]:
-        query_set = Dataset.objects.filter(filter)
+        query_set = Dataset.objects.filter(filter).distinct("uuid")
         query_handle = make_pickle_and_hash(query_set, "dataset")
         return QuerySet.objects.filter(query_handle=query_handle)
 
@@ -228,7 +236,7 @@ def get_datasets_list(query_params: Dict, input_set=None):
 def get_proteins_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_protein_filter(query_params)
-    proteins = Protein.objects.filter(filter)
+    proteins = Protein.objects.filter(filter).distinct("protein_id")
     query_handle = make_pickle_and_hash(proteins, "protein")
     return QuerySet.objects.filter(query_handle=query_handle)
 
@@ -236,7 +244,7 @@ def get_proteins_list(query_params: Dict, input_set=None):
 def gene_query(self, request):
 
     if request.data == {}:
-        all_genes = Gene.objects.all()
+        all_genes = Gene.objects.all().distinct("gene_symbol")
         pickle_hash = make_pickle_and_hash(all_genes, "gene")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
@@ -259,7 +267,7 @@ def gene_query(self, request):
 
 def cell_query(self, request):
     if request.data == {}:
-        all_cells = Cell.objects.all()
+        all_cells = Cell.objects.all().distinct("cell_id")
         pickle_hash = make_pickle_and_hash(all_cells, "cell")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
@@ -282,7 +290,7 @@ def cell_query(self, request):
 
 def organ_query(self, request):
     if request.data == {}:
-        all_organs = Organ.objects.all()
+        all_organs = Organ.objects.all().distinct("grouping_name")
         pickle_hash = make_pickle_and_hash(all_organs, "organ")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
@@ -309,7 +317,7 @@ def organ_query(self, request):
 def cluster_query(self, request):
 
     if request.data == {}:
-        all_clusters = Cluster.objects.all()
+        all_clusters = Cluster.objects.all().distinct("grouping_name")
         pickle_hash = make_pickle_and_hash(all_clusters, "cluster")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
@@ -333,7 +341,7 @@ def cluster_query(self, request):
 
 def dataset_query(self, request):
     if request.data == {}:
-        all_datasets = Dataset.objects.all()
+        all_datasets = Dataset.objects.all().distinct("uuid")
         pickle_hash = make_pickle_and_hash(all_datasets, "dataset")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
@@ -356,7 +364,7 @@ def dataset_query(self, request):
 
 def protein_query(self, request):
     if request.data == {}:
-        all_proteins = Protein.objects.all()
+        all_proteins = Protein.objects.all().distinct("protein_id")
         pickle_hash = make_pickle_and_hash(all_proteins, "protein")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
