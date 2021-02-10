@@ -9,6 +9,7 @@ from .models import (
     CellAndValues,
     Cluster,
     ClusterAndValues,
+    CodexQuant,
     Gene,
     GeneAndValues,
     Organ,
@@ -92,7 +93,7 @@ def order_query_set(query_set, limit, values_dict, offset):
     return get_max_value_items(query_set, limit, vals_dict, offset)
 
 
-def get_values(query_set, set_type, values, values_type):
+def get_values(query_set, set_type, values, values_type, statistic="mean"):
 
     values_dict = {}
 
@@ -123,12 +124,19 @@ def get_values(query_set, set_type, values, values_type):
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
 
         elif values_type == "protein":
+            pks = query_set.values_list("pk", flat=True)
+            query_set = Cell.objects.filter(pk__in=pks)
+
             codex_cells = query_set.filter(modality__modality_name="codex").values_list(
                 "cell_id", flat=True
             )
-            codex_quants = RnaQuant.objects.filter(q_cell_id__in=codex_cells).filter(
-                q_var_id__in=values
+
+            codex_quants = (
+                CodexQuant.objects.filter(q_cell_id__in=codex_cells)
+                .filter(q_var_id__in=values)
+                .filter(statistic=statistic)
             )
+
             for cell in codex_cells:
                 cell_values = codex_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
                 values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}

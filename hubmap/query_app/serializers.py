@@ -86,7 +86,6 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             "modality",
             "dataset",
             "organ",
-            "organ",
             "values",
         ]
 

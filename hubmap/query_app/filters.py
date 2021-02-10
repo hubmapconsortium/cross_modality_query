@@ -95,6 +95,7 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
+    statistic = "mean" if "statistic" not in query_params.keys() else query_params["statistic"]
 
     groupings_dict = {"organ": "grouping_name", "cluster": "grouping_name", "dataset": "uuid"}
 
@@ -111,7 +112,7 @@ def get_cell_filter(query_params: Dict) -> Q:
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")
 
-        return q
+        return q & Q(statistic=statistic)
 
     elif input_type in groupings_dict:
 

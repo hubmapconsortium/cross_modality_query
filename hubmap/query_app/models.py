@@ -119,9 +119,11 @@ class AtacQuant(Quant):
 
 class CodexQuant(Quant):
     statistic = models.CharField(max_length=16, null=True)  # One of mean, total, covariance
-    region = models.CharField(
-        max_length=16, null=True
-    )  # One of nucleus, membrane, cytoplasm, cell
+
+
+#    region = models.CharField(
+#        max_length=16, null=True
+#    )  # One of nucleus, membrane, cytoplasm, cell
 
 
 class PVal(models.Model):

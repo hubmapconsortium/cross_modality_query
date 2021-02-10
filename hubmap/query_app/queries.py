@@ -92,6 +92,7 @@ def cells_from_quants(quant_set, var):
 def get_quant_queryset(query_params: Dict, filter):
     if query_params["input_type"] == "protein":
         query_set = CodexQuant.objects.filter(filter)
+        print(len(query_set))
     elif query_params["genomic_modality"] == "rna":
         query_set = RnaQuant.objects.filter(filter)
     elif query_params["genomic_modality"] == "atac":

@@ -30,6 +30,17 @@ from query_app.models import (
 )
 
 
+def set_up_cell_cluster_relationships(hdf_file):
+    if hdf_file.stem == "codex":
+        cell_df = pd.read_hdf(hdf_file, "cell")
+        for i in cell_df.index:
+            cell_id = cell_df["cell_id"][i]
+            cluster_ids = cell_df["clusters"][i]
+            cell = Cell.objects.filter(cell_id=cell_id).first()
+            clusters = Cluster.objects.filter(grouping_name__in=cluster_ids)
+            cell.clusters.add(clusters)
+
+
 def load_cache():
 
     ids_list = Cell.objects.filter(modality__modality_name__in=["rna", "atac"]).values_list(
@@ -64,13 +75,23 @@ def make_quants_csv(hdf_file):
 
     drop_quant_index(modality)
 
-    sql = (
-        "COPY query_app_"
-        + modality
-        + "quant(id, q_cell_id, q_var_id, value)  FROM '"
-        + fspath(csv_file)
-        + "' CSV HEADER;"
-    )
+    if modality == "codex":
+        sql = (
+            "COPY query_app_"
+            + modality
+            + "quant(id, q_cell_id, q_var_id, value)  FROM '"
+            + fspath(csv_file)
+            + "' CSV HEADER;"
+        )
+
+    else:
+        sql = (
+            "COPY query_app_"
+            + modality
+            + "quant(id, q_var_id, q_cell_id, statistic, value)  FROM '"
+            + fspath(csv_file)
+            + "' CSV HEADER;"
+        )
 
     with connection.cursor() as cursor:
         cursor.execute(sql)
@@ -105,6 +126,8 @@ def create_model(model_name: str, kwargs: dict):
         obj = Protein(**kwargs)
     elif model_name == "pvalue":
         obj = PVal(**kwargs)
+    elif model_name == "cluster":
+        obj = Cluster(**kwargs)
     else:
         obj = None
     return obj
@@ -113,9 +136,6 @@ def create_model(model_name: str, kwargs: dict):
 def sanitize_nans(kwargs: dict) -> dict:
     cell_fields = [
         "cell_id",
-        "protein_mean",
-        "protein_total",
-        "protein_covar",
         "dataset",
         "modality",
         "organ",
@@ -124,6 +144,10 @@ def sanitize_nans(kwargs: dict) -> dict:
     if "tissue_type" in kwargs.keys():
         kwargs["organ"] = kwargs["tissue_type"]
         kwargs.pop("tissue_type")
+
+    elif "organ_name" in kwargs.keys():
+        kwargs["organ"] = kwargs["organ_name"]
+        kwargs.pop("organ")
 
     kwargs = {key: kwargs[key] for key in kwargs.keys() if key in cell_fields}
 
@@ -136,21 +160,16 @@ def sanitize_nans(kwargs: dict) -> dict:
 
 @transaction.atomic
 def create_proteins(hdf_file):
-    cell_df = pd.read_hdf(hdf_file, "cell")
-    protein_set = set({})
-    for json_string in cell_df["protein_mean"].unique():
-        if isinstance(json_string, str):
-            json_dict = json.loads(json_string)
-            for key in json_dict.keys():
-                protein_set.add(key)
-        else:
-            print(json_string)
+    csv_file = hdf_file.parent / Path(hdf_file.stem + ".csv")
+    quant_df = pd.read_csv(csv_file)
+    protein_ids = [protein for protein in quant_df["q_var_id"].unique() if ":" not in protein]
 
     proteins = [
         Protein(protein_id=protein)
-        for protein in protein_set
+        for protein in protein_ids
         if Protein.objects.filter(protein_id__iexact=protein).first() is None
     ]
+
     Protein.objects.bulk_create(proteins)
 
 
@@ -278,6 +297,11 @@ def create_organs(hdf_file: Path):
     return
 
 
+def match_cells_to_clusters(hdf_file):
+    if hdf_file == "codex":
+        cell_df = pd.read_hdf(hdf_file, "cell")
+
+
 def create_pvals(hdf_file: Path):
     modality = hdf_file.stem
 
@@ -322,6 +346,30 @@ def create_clusters(hdf_file: Path):
                     ).values_list("pk", flat=True)
                     cluster.cells.add(*cluster_cell_pks)
 
+    elif hdf_file.stem == "codex":
+        cell_df = pd.read_hdf(hdf_file, "cell")
+        cluster_lists = cell_df["clusters"].tolist()
+        cluster_set = set([cluster for cluster_list in cluster_lists for cluster in cluster_list])
+        cluster_set_splits = [cluster.split("-") + [cluster] for cluster in cluster_set]
+        cluster_kwargs = [
+            {
+                "cluster_method": cluster_split[0],
+                "cluster_data": cluster_split[1],
+                "dataset": cluster_split[2],
+                "grouping_name": cluster_split[-1],
+            }
+            for cluster_split in cluster_set_splits
+        ]
+        for cluster_kwarg_set in cluster_kwargs:
+            cluster_kwarg_set["dataset"] = Dataset.objects.filter(
+                uuid=cluster_kwarg_set["dataset"]
+            ).first()
+
+        objs = [create_model("cluster", kwargs) for kwargs in cluster_kwargs]
+        Cluster.objects.bulk_create(objs)
+
+        return
+
 
 def create_modality_and_datasets(hdf_file: Path):
     modality_name = hdf_file.stem
@@ -351,6 +399,8 @@ def load_rna(hdf_file: Path):
     print("Clusters created")
     create_cells(hdf_file)
     print("Cells created")
+    set_up_cell_cluster_relationships(hdf_file)
+    print("Cell cluster relationships established")
     make_quants_csv(hdf_file)
     print("Quants created")
     create_genes(hdf_file)
@@ -397,6 +447,8 @@ def load_codex(hdf_file):
     print("Modality and datasets created")
     create_organs(hdf_file)
     print("Organs created")
+    create_clusters(hdf_file)
+    print("Clusters created")
     create_cells(hdf_file)
     print("Cells created")
     create_proteins(hdf_file)
