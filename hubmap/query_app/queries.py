@@ -10,6 +10,7 @@ from .filters import (
     get_dataset_filter,
     get_gene_filter,
     get_organ_filter,
+    get_protein_filter,
 )
 from .models import (
     AtacQuant,
@@ -34,6 +35,7 @@ from .validation import (
     validate_dataset_query_params,
     validate_gene_query_params,
     validate_organ_query_params,
+    validate_protein_query_params,
 )
 
 
@@ -222,20 +224,22 @@ def get_datasets_list(query_params: Dict, input_set=None):
         return QuerySet.objects.filter(query_handle=query_handle)
 
 
-def get_proteins_list(query_params: Dict):
-    all_proteins = Protein.objects.all()
-    query_handle = make_pickle_and_hash(all_proteins, "protein")
+def get_proteins_list(query_params: Dict, input_set=None):
+    query_params = process_query_parameters(query_params, input_set)
+    filter = get_protein_filter(query_params)
+    proteins = Protein.objects.filter(filter)
+    query_handle = make_pickle_and_hash(proteins, "protein")
     return QuerySet.objects.filter(query_handle=query_handle)
 
 
 def gene_query(self, request):
 
-    if request.method == "GET":
+    if request.data == {}:
         all_genes = Gene.objects.all()
         pickle_hash = make_pickle_and_hash(all_genes, "gene")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
-    if request.method == "POST":
+    else:
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_gene_query_params(query_params)
@@ -253,16 +257,16 @@ def gene_query(self, request):
 
 
 def cell_query(self, request):
-    if request.method == "POST":
+    if request.data == {}:
+        all_cells = Cell.objects.all()
+        pickle_hash = make_pickle_and_hash(all_cells, "cell")
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
+
+    else:
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
         query_set = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
-
-    if request.method == "GET":
-        all_cells = Cell.objects.all()
-        pickle_hash = make_pickle_and_hash(all_cells, "cell")
-        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -276,16 +280,16 @@ def cell_query(self, request):
 
 
 def organ_query(self, request):
-    if request.method == "POST":
+    if request.data == {}:
+        all_organs = Organ.objects.all()
+        pickle_hash = make_pickle_and_hash(all_organs, "organ")
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
+
+    else:
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_organ_query_params(query_params)
         query_set = get_organs_list(query_params, input_set=request.POST.getlist("input_set"))
-
-    if request.method == "GET":
-        all_organs = Organ.objects.all()
-        pickle_hash = make_pickle_and_hash(all_organs, "organ")
-        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -302,16 +306,18 @@ def organ_query(self, request):
 
 
 def cluster_query(self, request):
-    if request.method == "POST":
-        query_params = request.data.dict()
-        query_params["input_set"] = request.POST.getlist("input_set")
-        validate_cluster_query_params(query_params)
-        query_set = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))
 
-    if request.method == "GET":
+    if request.data == {}:
         all_clusters = Cluster.objects.all()
         pickle_hash = make_pickle_and_hash(all_clusters, "cluster")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
+
+    else:
+        query_params = request.data.dict()
+        print(query_params.keys())
+        query_params["input_set"] = request.POST.getlist("input_set")
+        validate_cluster_query_params(query_params)
+        query_set = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))
 
     self.queryset = query_set
     # Set context
@@ -325,16 +331,16 @@ def cluster_query(self, request):
 
 
 def dataset_query(self, request):
-    if request.method == "POST":
+    if request.data == {}:
+        all_datasets = Dataset.objects.all()
+        pickle_hash = make_pickle_and_hash(all_datasets, "dataset")
+        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
+
+    else:
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_dataset_query_params(query_params)
         query_set = get_datasets_list(query_params, input_set=request.POST.getlist("input_set"))
-
-    if request.method == "GET":
-        all_datasets = Dataset.objects.all()
-        pickle_hash = make_pickle_and_hash(all_datasets, "dataset")
-        query_set = QuerySet.objects.filter(query_handle=pickle_hash)
 
     self.queryset = query_set
     # Set context
@@ -348,14 +354,21 @@ def dataset_query(self, request):
 
 
 def protein_query(self, request):
-    if request.method == "GET":
+    if request.data == {}:
         all_proteins = Protein.objects.all()
         pickle_hash = make_pickle_and_hash(all_proteins, "protein")
         query_set = QuerySet.objects.filter(query_handle=pickle_hash)
-        self.queryset = query_set
-        # Set context
-        context = {
-            "request": request,
-        }
-        response = QuerySetSerializer(query_set, many=True, context=context).data
-        return response
+
+    else:
+        query_params = request.data.dict()
+        query_params["input_set"] = request.POST.getlist("input_set")
+        validate_protein_query_params(query_params)
+        query_set = get_proteins_list(query_params, input_set=request.POST.getlist("input_set"))
+
+    self.queryset = query_set
+    # Set context
+    context = {
+        "request": request,
+    }
+    response = QuerySetSerializer(query_set, many=True, context=context).data
+    return response

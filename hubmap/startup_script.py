@@ -387,10 +387,10 @@ def load_atac(hdf_file):
 
 
 def load_codex(hdf_file):
-    #    Cell.objects.filter(modality__modality_name__icontains='codex').delete()
-    #    Dataset.objects.filter(modality__modality_name__icontains='codex').delete()
-    #    Modality.objects.filter(modality_name__icontains='codex').delete()
-    #    Protein.objects.all().delete()
+    Cell.objects.filter(modality__modality_name__icontains="codex").delete()
+    Dataset.objects.filter(modality__modality_name__icontains="codex").delete()
+    Modality.objects.filter(modality_name__icontains="codex").delete()
+    Protein.objects.all().delete()
 
     print("Old data deleted")
     create_modality_and_datasets(hdf_file)
@@ -401,6 +401,8 @@ def load_codex(hdf_file):
     print("Cells created")
     create_proteins(hdf_file)
     print("Proteins created")
+    make_quants_csv(hdf_file)
+    print("Quants created")
 
     return
 

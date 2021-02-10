@@ -31,7 +31,11 @@ from .serializers import (
     QuerySetCountSerializer,
 )
 from .utils import unpickle_query_set
-from .validation import process_evaluation_args
+from .validation import (
+    process_evaluation_args,
+    validate_detail_evaluation_args,
+    validate_list_evaluation_args,
+)
 
 
 def get_max_value_items(query_set, limit, values_dict, offset):
@@ -89,8 +93,6 @@ def order_query_set(query_set, limit, values_dict, offset):
 
 
 def get_values(query_set, set_type, values, values_type):
-    print("Values param")
-    print(values)
 
     values_dict = {}
 
@@ -166,10 +168,6 @@ def get_values(query_set, set_type, values, values_type):
 
     elif set_type == "organ":
         # values must be genes
-        print("Organs")
-        print(query_set.values_list("pk", flat=True))
-        print("Genes")
-        print(values)
         pvals = PVal.objects.filter(p_organ__in=query_set.values_list("pk", flat=True)).filter(
             p_gene__gene_symbol__in=values
         )
@@ -234,15 +232,12 @@ def make_cell_and_values(query_params):
 
     offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
-    values_type = query_params["values_type"]
+    if len(include_values) > 0 or "sort_by" in query_params.keys():
+        values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
     sort_by = query_params["sort_by"]
-
-    CellAndValues.objects.all().delete()
-
-    print("Making cells and values")
 
     if query_params["sort_by"] is None:
         query_set = query_set[offset:limit]
@@ -264,6 +259,8 @@ def make_cell_and_values(query_params):
         else get_values(query_set, "cell", include_values, values_type)
     )
 
+    cavs = []
+
     for cell in query_set:
         values = {} if cell.cell_id not in values_dict else values_dict[cell.cell_id]
 
@@ -279,6 +276,8 @@ def make_cell_and_values(query_params):
 
         cav.save()
 
+        cavs.append(cav)
+
         kwargs = {
             "cell_id": cell.cell_id,
             "dataset": cell.dataset,
@@ -290,9 +289,7 @@ def make_cell_and_values(query_params):
         cav = CellAndValues(**kwargs)
         cav.save()
 
-    print("Values gotten")
-
-    qs = CellAndValues.objects.all().distinct("cell_id")
+    qs = CellAndValues.objects.filter(pk__in=cavs)
 
     return qs
 
@@ -307,12 +304,12 @@ def make_gene_and_values(query_params):
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
 
-    GeneAndValues.objects.all().delete()
     # Filter on timestamp
 
     if sort_by is None:
@@ -335,19 +332,21 @@ def make_gene_and_values(query_params):
         else get_values(query_set, "gene", include_values, values_type)
     )
 
+    gavs = []
+
     for gene in query_set:
         values = {} if gene.gene_symbol not in values_dict else values_dict[gene.gene_symbol]
         kwargs = {"gene_symbol": gene.gene_symbol, "values": values}
 
         gav = GeneAndValues(**kwargs)
         gav.save()
+        gavs.append(gav)
 
     # Filter on query hash
-    return GeneAndValues.objects.all()
+    return GeneAndValues.objects.filter(pk__in=gavs)
 
 
 def make_organ_and_values(query_params):
-    OrganAndValues.objects.all().delete()
 
     query_params = process_evaluation_args(query_params)
 
@@ -358,7 +357,8 @@ def make_organ_and_values(query_params):
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
@@ -377,22 +377,24 @@ def make_organ_and_values(query_params):
 
         query_set = order_query_set(query_set, limit, sort_by_dict, offset)
 
-    print("Executing")
-    print(include_values)
     values_dict = (
         {}
         if len(include_values) == 0
         else get_values(query_set, "organ", include_values, values_type)
     )
+
+    oavs = []
+
     for organ in query_set:
         values = {} if organ.grouping_name not in values_dict else values_dict[organ.grouping_name]
 
         kwargs = {"grouping_name": organ.grouping_name, "values": values}
         oav = OrganAndValues(**kwargs)
         oav.save()
+        oavs.append(oav)
 
     # Filter on query hash
-    return OrganAndValues.objects.all()
+    return OrganAndValues.objects.filter(pk__in=oavs)
 
 
 def make_cluster_and_values(query_params):
@@ -403,14 +405,13 @@ def make_cluster_and_values(query_params):
         "include_values"
     ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
-    values_type = query_params["values_type"]
+    if len(include_values) > 0:
+        values_type = query_params["values_type"]
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
     query_set = unpickle_query_set(pickle_hash, set_type)
-
-    ClusterAndValues.objects.all().delete()
 
     if sort_by is None:
         query_set = query_set[offset:limit]
@@ -431,6 +432,9 @@ def make_cluster_and_values(query_params):
         if len(include_values) == 0
         else get_values(query_set, "cluster", include_values, values_type)
     )
+
+    clavs = []
+
     for cluster in query_set[:limit]:
         values = (
             {} if cluster.grouping_name not in values_dict else values_dict[cluster.grouping_name]
@@ -443,14 +447,18 @@ def make_cluster_and_values(query_params):
         }
         clav = ClusterAndValues(**kwargs)
         clav.save()
+        clavs.append(clav)
 
     # Filter on query hash
-    return ClusterAndValues.objects.all()
+    return ClusterAndValues.objects.filter(pk__in=clavs)
 
 
 def cell_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_cell_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -469,6 +477,9 @@ def cell_evaluation_detail(self, request):
 def gene_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_gene_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -487,6 +498,9 @@ def gene_evaluation_detail(self, request):
 def organ_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_organ_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -505,6 +519,9 @@ def organ_evaluation_detail(self, request):
 def cluster_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
+        validate_detail_evaluation_args(query_params)
         evaluated_set = make_cluster_and_values(query_params)
         self.queryset = evaluated_set
         # Set context
@@ -533,6 +550,7 @@ def evaluate_qs(query_params):
 def evaluation_list(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
+        validate_list_evaluation_args(query_params)
         query_params = process_evaluation_args(query_params)
         set_type = query_params["set_type"]
         eval_qs = evaluate_qs(query_params)

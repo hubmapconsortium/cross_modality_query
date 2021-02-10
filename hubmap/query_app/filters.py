@@ -241,3 +241,11 @@ def get_dataset_filter(query_params: dict):
         q = Q(pk__in=dataset_pks)
 
         return q
+
+
+def get_protein_filter(query_params: dict):
+    input_type = query_params["input_type"]
+    input_set = query_params["input_set"]
+
+    if input_type == "protein":
+        return Q(protein_id__in=input_set)

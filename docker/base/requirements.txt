@@ -1,5 +1,6 @@
 Django
 django-bootstrap4
+django-cors-headers
 django-tables2
 djangorestframework
 numpy

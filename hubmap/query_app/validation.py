@@ -4,6 +4,7 @@ from .utils import unpickle_query_set
 
 
 def check_input_type(input_type, permitted_input_types):
+    permitted_input_types.sort()
     if input_type not in permitted_input_types:
         raise ValueError(f"{input_type} not in {permitted_input_types}")
 
@@ -16,6 +17,7 @@ def check_parameter_types_and_values(query_params):
     genomic_modalities = ["rna", "atac"]  # Used for quantitative gene->cell queries
     if "genomic_modality" in query_params.keys():
         if query_params["genomic_modality"] not in genomic_modalities:
+            genomic_modalities.sort()
             raise ValueError(f"{query_params['genomic_modality']} not in {genomic_modalities}")
 
     if "p_value" in query_params.keys():
@@ -26,10 +28,12 @@ def check_parameter_types_and_values(query_params):
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
     param_fields = set(query_params.keys())
-    missing_fields = required_fields - param_fields
+    missing_fields = list(required_fields - param_fields)
+    missing_fields.sort()
     if len(missing_fields) > 0:
         raise ValueError(f"Missing parameters: {missing_fields}")
-    extra_fields = param_fields - permitted_fields
+    extra_fields = list(param_fields - permitted_fields)
+    extra_fields.sort()
     if len(extra_fields) > 0:
         raise ValueError(f"Invalid parameters: {extra_fields}")
 
@@ -92,6 +96,18 @@ def validate_cluster_query_params(query_params):
 
 def validate_dataset_query_params(query_params):
     permitted_input_types = ["cell", "cluster"]
+    input_type = query_params["input_type"]
+    check_input_type(input_type, permitted_input_types)
+
+    required_fields = {"input_type", "input_set"}
+    permitted_fields = required_fields | {"input_set_token"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    check_parameter_types_and_values(query_params)
+
+
+def validate_protein_query_params(query_params):
+    permitted_input_types = ["protein"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -218,6 +234,40 @@ def split_at_comparator(item: str) -> List:
     return []
 
 
+def validate_list_evaluation_args(query_params):
+
+    required_fields = {"key", "set_type", "limit"}
+    permitted_fields = required_fields | {"offset"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+
+def validate_detail_evaluation_args(query_params):
+
+    required_fields = {"key", "set_type", "limit"}
+    permitted_fields = required_fields | {"offset", "sort_by", "values_included", "values_type"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    if "values_included" in query_params.keys() and "values_type" not in query_params.keys():
+        raise ValueError("values_type must be provided with values_included")
+
+    set_type = query_params["set_type"]
+    type_map = {
+        "cell": ["gene", "protein"],
+        "gene": ["organ", "cluster"],
+        "cluster": ["gene"],
+        "organ": ["gene"],
+    }
+    allowed_types = type_map[set_type]
+    allowed_types.sort()
+
+    if "values_type" in query_params.keys():
+        values_type = query_params["values_type"]
+        if query_params["values_type"] not in allowed_types:
+            raise ValueError(
+                f'For "{set_type}", only {allowed_types} allowed, not "{values_type}"'
+            )
+
+
 def process_evaluation_args(query_params):
     if "sort_by" in query_params.keys() and query_params["sort_by"] != "":
         sort_by = query_params["sort_by"]  # Must be empty or an element of include values
@@ -231,6 +281,8 @@ def process_evaluation_args(query_params):
         else:
             include_values = query_params["values_included"]
     else:
+        print("values_included not in query_params.keys()")
+        print(query_params.keys())
         include_values = []
 
     if (

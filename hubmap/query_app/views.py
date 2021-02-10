@@ -49,12 +49,7 @@ from .set_evaluators import (
     organ_evaluation_detail,
     query_set_count,
 )
-from .set_operators import (
-    query_set_difference,
-    query_set_intersection,
-    query_set_negation,
-    query_set_union,
-)
+from .set_operators import query_set_difference, query_set_intersection, query_set_union
 
 
 class PaginationClass(PageNumberPagination):
@@ -68,9 +63,9 @@ def get_response(self, request, callable: Callable):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
-    except:
+    except Exception as e:
         tb = traceback.format_exc()
-        json_error_response = json.dumps({"error": {"stack_trace": tb}})
+        json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
         print(json_error_response)
         return HttpResponse(json_error_response)
 
@@ -120,6 +115,9 @@ class ProteinViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def get(self, request, format=None):
+        return get_response(self, request, protein_query)
+
+    def post(self, request, format=None):
         return get_response(self, request, protein_query)
 
 
@@ -261,15 +259,6 @@ class SetUnionViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         return get_response(self, request, query_set_union)
-
-
-class SetNegationViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_negation)
 
 
 class SetDifferenceViewSet(viewsets.ModelViewSet):
