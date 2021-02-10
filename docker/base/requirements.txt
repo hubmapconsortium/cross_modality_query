@@ -1,3 +1,4 @@
+celery
 Django
 django-bootstrap4
 django-cors-headers
@@ -8,6 +9,7 @@ pandas
 psycopg2-binary>=2.8.6
 pylibmc
 pyyaml
+redis
 scikit-learn
 tables
 tablib

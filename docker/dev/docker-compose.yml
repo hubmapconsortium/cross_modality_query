@@ -11,6 +11,12 @@ services:
       - ../../data/postgres:/var/lib/postgresql/data
   memcached:
     image: memcached:latest
+  redis:
+    image: redis:latest
+    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+    stop_grace_period: "${DOCKER_STOP_GRACE_PERIOD:-3s}"
+    volumes:
+      - ../../data/redis:/data
   web:
     image: "hubmap/cross-modality-query-dev:latest"
     command: /code/wait-for-it.sh --timeout=0 db:5432 -- python3 /code/manage.py runserver 0.0.0.0:8000
@@ -20,3 +26,11 @@ services:
       - "8000:8000"
     depends_on:
       - db
+  worker:
+    image: "hubmap/cross-modality-query-dev:latest"
+    command: /code/wait-for-it.sh --timeout=0 db:5432 -- celery -A hubmap_query worker
+    volumes:
+      - ../../hubmap:/code
+    depends_on:
+      - db
+      - redis
