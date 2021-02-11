@@ -1,5 +1,6 @@
 from functools import reduce
 from operator import or_
+from typing import List
 
 from django.db.models import Q
 
@@ -13,6 +14,7 @@ from .models import (
     GeneAndValues,
     Organ,
     OrganAndValues,
+    Protein,
     PVal,
     QuerySet,
     RnaQuant,
@@ -35,7 +37,24 @@ from .validation import (
     process_evaluation_args,
     validate_detail_evaluation_args,
     validate_list_evaluation_args,
+    validate_values_types,
 )
+
+
+def infer_values_type(values: List) -> str:
+    """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
+    if Gene.objects.filter(gene_symbol__in=values).count() > 0:
+        return "gene"
+    if Protein.objects.filter(protein_id__in=values).count() > 0:
+        return "protein"
+    if Cluster.objects.filter(grouping_name__in=values).count() > 0:
+        return "cluster"
+    if Organ.objects.filter(grouping_name__in=values).count() > 0:
+        return "organ"
+    values.sort()
+    raise ValueError(
+        f"Value type could not be inferred. None of {values} recognized as gene, protein, cluster, or organ"
+    )
 
 
 def get_max_value_items(query_set, limit, values_dict, offset):
@@ -146,10 +165,9 @@ def get_values(query_set, set_type, values, values_type):
                 values_dict[gene.gene_symbol] = {gp[0]: gp[1] for gp in gene_pvals}
 
         elif values_type == "cluster":
-            cluster_split = [(value.split("-")[0], value.split("-")[1]) for value in values]
-            qs = [Q(dataset__uuid=cs[0]) & Q(grouping_name=cs[1]) for cs in cluster_split]
-            q = reduce(or_, qs)
-            clusters = Cluster.objects.filter(q).values_list("pk", flat=True)
+            clusters = Cluster.objects.filter(grouping_name__in=values).values_list(
+                "pk", flat=True
+            )
             pvals = PVal.objects.filter(p_cluster__in=clusters).filter(
                 p_gene__gene_symbol__in=gene_ids
             )
@@ -221,16 +239,20 @@ def make_cell_and_values(query_params):
     query_params = process_evaluation_args(query_params)
 
     pickle_hash = query_params["key"]
+
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    set_type = qs.set_type
+
     include_values = query_params[
         "include_values"
     ]  # A list of genes, proteins, organs, etc. for which to include values, optional
 
     offset = query_params["offset"]
     limit = query_params["limit"]  # The maximum number of results to return
-    if len(include_values) > 0 or "sort_by" in query_params.keys():
-        values_type = query_params["values_type"]
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
-    set_type = qs.set_type
+    if len(include_values) > 0:
+        values_type = infer_values_type(include_values)
+        validate_values_types(set_type, values_type)
+
     query_set = unpickle_query_set(pickle_hash, set_type)
     sort_by = query_params["sort_by"]
 
@@ -293,16 +315,20 @@ def make_gene_and_values(query_params):
     query_params = process_evaluation_args(query_params)
 
     pickle_hash = query_params["key"]
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    set_type = qs.set_type
+
     include_values = query_params[
         "include_values"
     ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
+
     if len(include_values) > 0:
-        values_type = query_params["values_type"]
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
-    set_type = qs.set_type
+        values_type = infer_values_type(include_values)
+        validate_values_types(set_type, values_type)
+
     query_set = unpickle_query_set(pickle_hash, set_type)
 
     # Filter on timestamp
@@ -346,16 +372,20 @@ def make_organ_and_values(query_params):
     query_params = process_evaluation_args(query_params)
 
     pickle_hash = query_params["key"]
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    set_type = qs.set_type
+
     include_values = query_params[
         "include_values"
     ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
+
     if len(include_values) > 0:
-        values_type = query_params["values_type"]
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
-    set_type = qs.set_type
+        values_type = infer_values_type(include_values)
+        validate_values_types(set_type, values_type)
+
     query_set = unpickle_query_set(pickle_hash, set_type)
 
     if sort_by is None:
@@ -396,16 +426,21 @@ def make_cluster_and_values(query_params):
     query_params = process_evaluation_args(query_params)
 
     pickle_hash = query_params["key"]
+    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    set_type = qs.set_type
+
     include_values = query_params[
         "include_values"
     ]  # A list of genes, proteins, organs, etc. for which to include values, optional
     sort_by = query_params["sort_by"]  # Must be empty or an element of include values
+
     if len(include_values) > 0:
-        values_type = query_params["values_type"]
+        values_type = infer_values_type(include_values)
+        validate_values_types(set_type, values_type)
+
     limit = query_params["limit"]  # The maximum number of results to return
     offset = query_params["offset"]
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
-    set_type = qs.set_type
+
     query_set = unpickle_query_set(pickle_hash, set_type)
 
     if sort_by is None:

@@ -244,13 +244,11 @@ def validate_list_evaluation_args(query_params):
 def validate_detail_evaluation_args(query_params):
 
     required_fields = {"key", "set_type", "limit"}
-    permitted_fields = required_fields | {"offset", "sort_by", "values_included", "values_type"}
+    permitted_fields = required_fields | {"offset", "sort_by", "values_included"}
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
-    if "values_included" in query_params.keys() and "values_type" not in query_params.keys():
-        raise ValueError("values_type must be provided with values_included")
 
-    set_type = query_params["set_type"]
+def validate_values_types(set_type, values_type):
     type_map = {
         "cell": ["gene", "protein"],
         "gene": ["organ", "cluster"],
@@ -260,12 +258,8 @@ def validate_detail_evaluation_args(query_params):
     allowed_types = type_map[set_type]
     allowed_types.sort()
 
-    if "values_type" in query_params.keys():
-        values_type = query_params["values_type"]
-        if query_params["values_type"] not in allowed_types:
-            raise ValueError(
-                f'For "{set_type}", only {allowed_types} allowed, not "{values_type}"'
-            )
+    if values_type not in allowed_types:
+        raise ValueError(f'For "{set_type}", only {allowed_types} allowed, not "{values_type}"')
 
 
 def process_evaluation_args(query_params):
@@ -284,6 +278,9 @@ def process_evaluation_args(query_params):
         print("values_included not in query_params.keys()")
         print(query_params.keys())
         include_values = []
+
+    if sort_by is not None and sort_by not in include_values:
+        include_values.append(sort_by)
 
     if (
         "offset" not in query_params.keys()
