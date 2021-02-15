@@ -53,8 +53,8 @@ from .set_operators import query_set_difference, query_set_intersection, query_s
 
 
 class PaginationClass(PageNumberPagination):
-    page_size = 10
-    max_page_size = 10
+    page_size = 100
+    max_page_size = 100
 
 
 def get_response(self, request, callable: Callable):

@@ -105,6 +105,11 @@ def get_quant_queryset(query_params: Dict, filter):
 
     query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
 
+    print(query_params.keys())
+    print("logical_operator" in query_params.keys())
+    if "logical_operator" in query_params.keys():
+        print(query_params["logical_operator"])
+
     if len(query_sets) == 0:
         query_set = Cell.objects.filter(pk__in=[])
     elif len(query_sets) == 1:

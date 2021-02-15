@@ -187,9 +187,9 @@ def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
     if (
         "limit" not in query_params.keys()
         or not query_params["limit"].isnumeric()
-        or int(query_params["limit"]) > 1000
+        or int(query_params["limit"]) > 100
     ):
-        query_params["limit"] = 1000
+        query_params["limit"] = 100
     if (
         "p_value" not in query_params.keys()
         or query_params["p_value"] == ""

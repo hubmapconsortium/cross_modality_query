@@ -112,7 +112,10 @@ def get_cell_filter(query_params: Dict) -> Q:
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")
 
-        return q & Q(statistic=statistic)
+        if input_type == "protein":
+            return q & Q(statistic=statistic)
+        else:
+            return q
 
     elif input_type in groupings_dict:
 
