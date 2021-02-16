@@ -75,7 +75,7 @@ def make_quants_csv(hdf_file):
 
     drop_quant_index(modality)
 
-    if modality == "codex":
+    if modality in ["atac", "rna"]:
         sql = (
             "COPY query_app_"
             + modality
@@ -141,14 +141,6 @@ def sanitize_nans(kwargs: dict) -> dict:
         "organ",
     ]
 
-    if "tissue_type" in kwargs.keys():
-        kwargs["organ"] = kwargs["tissue_type"]
-        kwargs.pop("tissue_type")
-
-    elif "organ_name" in kwargs.keys():
-        kwargs["organ"] = kwargs["organ_name"]
-        kwargs.pop("organ")
-
     kwargs = {key: kwargs[key] for key in kwargs.keys() if key in cell_fields}
 
     for key in kwargs.keys():
@@ -177,10 +169,6 @@ def create_proteins(hdf_file):
 def save_genes(gene_set: List[str]):
     genes = [Gene(gene_symbol=gene) for gene in gene_set]
     Gene.objects.bulk_create(genes)
-
-
-def get_clusters(cell_df: pd.DataFrame):
-    return cell_df[["cell_id", "leiden"]].to_dict("records")
 
 
 def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
@@ -284,10 +272,7 @@ def create_genes(hdf_file: Path):
 
 def create_organs(hdf_file: Path):
     cell_df = pd.read_hdf(hdf_file, "cell")
-    if "tissue_type" in cell_df.columns:
-        organs = list(cell_df["tissue_type"].unique())
-    elif "organ_name" in cell_df.columns:
-        organs = list(cell_df["organ_name"].unique())
+    organs = list(cell_df["organ"].unique())
 
     for organ_name in organs:
         if Organ.objects.filter(grouping_name__icontains=organ_name).first() is None:
@@ -320,31 +305,15 @@ def create_clusters(hdf_file: Path):
         with pd.HDFStore(hdf_file) as store:
 
             cluster_df = store.get("cluster")
-            cell_df = store.get("cell")
-            print(len(cluster_df["dataset"].unique()))
-            for dataset in cluster_df["dataset"].unique():
-                dataset_df = cluster_df[cluster_df["dataset"] == dataset]
-                print(len(dataset_df["cluster"].unique()))
-                print(dataset)
+            for cluster in cluster_df["grouping_name"].unique():
+                dataset = cluster.split("-")[-2]
                 dset = Dataset.objects.filter(uuid__iexact=dataset).first()
-                for cluster_name in dataset_df["cluster"].unique():
-                    if len(cluster_name.split("-")) > 2:
-                        cluster_name = "-".join(cluster_name.split("-")[1:])
-                    cluster = Cluster(
-                        grouping_name=cluster_name,
-                        cluster_method=cluster_method,
-                        cluster_data=cluster_data,
-                        dataset=dset,
-                    )
-                    cluster.save()
-                    cluster_cell_df = cell_df[
-                        (cell_df["leiden"] == cluster_name) & (cell_df["dataset"] == dataset)
-                    ]
-                    cluster_cell_ids = list(cluster_cell_df["cell_id"].unique())
-                    cluster_cell_pks = Cell.objects.filter(
-                        cell_id__in=cluster_cell_ids
-                    ).values_list("pk", flat=True)
-                    cluster.cells.add(*cluster_cell_pks)
+                cluster = Cluster(
+                    grouping_name=cluster,
+                    cluster_method=cluster_method,
+                    cluster_data=cluster_data,
+                    dataset=dset,
+                )
 
     elif hdf_file.stem == "codex":
         cell_df = pd.read_hdf(hdf_file, "cell")
