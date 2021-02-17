@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 import sys
+from datetime import timedelta
 from os import fspath
 from pathlib import Path
 
@@ -25,6 +26,13 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 # /!!! for development, overridden in `production_settings.py` by Docker container build
+
+CELERY_BROKER_URL = "redis://redis:6379"
+CELERY_TIMEZONE = "America/New_York"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+
+QUERY_TOKEN_EXPIRATION = timedelta(days=1)
 
 # database is local to each web app instance, not worth overriding
 # credentials for production deployment at the moment

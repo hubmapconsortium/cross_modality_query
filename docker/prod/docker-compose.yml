@@ -21,3 +21,17 @@ services:
       - 5000
     volumes:
       - /opt/secret:/opt/secret
+  redis:
+    image: redis:latest
+    restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"
+    stop_grace_period: "${DOCKER_STOP_GRACE_PERIOD:-3s}"
+    volumes:
+      - ../../data/redis:/data
+  worker:
+    image: "hubmap/cross-modality-query-dev:latest"
+    command: /code/wait-for-it.sh --timeout=0 db:5432 -- celery -A hubmap_query worker
+    volumes:
+      - ../../hubmap:/code
+    depends_on:
+      - db
+      - redis
