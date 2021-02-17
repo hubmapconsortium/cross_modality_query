@@ -174,22 +174,29 @@ class GeneTestCase(TestCase):
             self.assertEqual(genes_from_organs_count, params_dict[modality])
 
     def test_genes_from_clusters(self):
-        # @TODO: RNA clusters, values for both
         input_sets = {
-            "rna": [],
+            "rna": ["leiden-UMAP-allrna-27", "leiden-UMAP-allrna-25"],
             "atac": [
                 "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
                 "leiden-UMAP-d4493657cde29702c5ed73932da5317c-10",
             ],
         }
-        params_dict = {"rna": 0, "atac": 0}
+        params_dict = {"rna": {"527": 0, "or": 852}, "atac": {"and": 962, "or": 571}}
         for modality in params_dict:
             input_set = input_sets[modality]
-            genes_from_clusters = hubmap_query(
-                "cluster", "gene", input_set, genomic_modality=modality, p_value=0.05
-            )
-            genes_from_clusters_count = set_count(genes_from_clusters, "gene")
-            self.assertEqual(genes_from_clusters_count, params_dict[modality])
+            for logical_operator in ["and", "or"]:
+                genes_from_clusters = hubmap_query(
+                    "cluster",
+                    "gene",
+                    input_set,
+                    genomic_modality=modality,
+                    p_value=0.05,
+                    logical_operator=logical_operator,
+                )
+                genes_from_clusters_count = set_count(genes_from_clusters, "gene")
+                self.assertEqual(
+                    genes_from_clusters_count, params_dict[modality][logical_operator]
+                )
 
     def test_genes_from_genes(self):
         input_set = ["VIM", "AASS"]

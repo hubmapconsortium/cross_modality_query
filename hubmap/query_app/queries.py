@@ -144,7 +144,9 @@ def get_genes_list(query_params: Dict, input_set=None):
             ]
             if len(query_sets) == 0:
                 query_set = Gene.objects.filter(pk__in=[])
-            else:
+            elif query_params["logical_operator"] == "and":
+                query_set = reduce(and_, query_sets)
+            elif query_params["logical_operator"] == "or":
                 query_set = reduce(or_, query_sets)
 
         elif query_params["input_type"] == "gene":
@@ -189,7 +191,9 @@ def get_organs_list(query_params: Dict, input_set=None):
             ]
             if len(query_sets) == 0:
                 query_set = Organ.objects.filter(pk__in=[])
-            else:
+            elif query_params["logical_operator"] == "and":
+                query_set = reduce(and_, query_sets)
+            elif query_params["logical_operator"] == "or":
                 query_set = reduce(or_, query_sets)
 
         else:
@@ -216,7 +220,9 @@ def get_clusters_list(query_params: Dict, input_set=None):
         ]
         if len(query_sets) == 0:
             query_set = Cluster.objects.filter(pk__in=[])
-        else:
+        elif query_params["logical_operator"] == "and":
+            query_set = reduce(and_, query_sets)
+        elif query_params["logical_operator"] == "or":
             query_set = reduce(or_, query_sets)
 
     elif query_params["input_type"] in ["cluster", "dataset"]:
