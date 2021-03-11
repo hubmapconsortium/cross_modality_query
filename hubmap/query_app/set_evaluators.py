@@ -1,5 +1,3 @@
-from functools import reduce
-from operator import or_
 from typing import List
 
 from django.db.models import Q
@@ -85,9 +83,7 @@ def get_max_value_items(query_set, limit, values_dict, offset):
         q = Q(grouping_name__in=identifiers)
 
     elif isinstance(query_set.first(), Cluster):
-        id_split = [identifier.split("-") for identifier in identifiers]
-        qs = [Q(dataset__uuid=ids[0]) & Q(grouping_name=ids[1]) for ids in id_split]
-        q = reduce(or_, qs)
+        q = Q(grouping_name__in=identifiers)
 
     return query_set.filter(q)
 
@@ -102,7 +98,7 @@ def order_query_set(query_set, limit, values_dict, offset):
         elif isinstance(item, Organ):
             identifier = item.grouping_name
         elif isinstance(item, Cluster):
-            identifier = item.dataset.uuid + "-" + item.grouping_name
+            identifier = item.grouping_name
 
         if identifier in values_dict.keys():
             vals_dict[identifier] = values_dict[identifier]
@@ -110,6 +106,20 @@ def order_query_set(query_set, limit, values_dict, offset):
             vals_dict[identifier] = 0.0
 
     return get_max_value_items(query_set, limit, vals_dict, offset)
+
+
+def get_ordered_query_set(query_set, set_type, sort_by, values_type, limit, offset):
+    sort_by_values = get_values(query_set, set_type, [sort_by], values_type)
+    sort_by_dict = {}
+    for key in sort_by_values:
+        if sort_by in sort_by_values[key].keys():
+            sort_by_dict[key] = sort_by_values[key][sort_by]
+        else:
+            sort_by_dict[key] = 0.0
+
+    query_set = order_query_set(query_set, limit, sort_by_dict, offset)
+
+    return query_set
 
 
 def get_values(query_set, set_type, values, values_type, statistic="mean"):
@@ -239,9 +249,6 @@ def query_set_count(self, request):
     context = {
         "request": request,
     }
-    #    print(groups)
-    #    print(CellGroupingSerializer(groups, many=True, context=context))
-    # Get serializers lists
 
     response = QuerySetCountSerializer(qs_count, many=True, context=context).data
 
@@ -249,39 +256,22 @@ def query_set_count(self, request):
 
 
 def make_cell_and_values(query_params):
-    query_params = process_evaluation_args(query_params)
-
-    pickle_hash = query_params["key"]
+    pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
 
-    include_values = query_params[
-        "include_values"
-    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
-
-    offset = query_params["offset"]
-    limit = query_params["limit"]  # The maximum number of results to return
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
 
     query_set = unpickle_query_set(pickle_hash, set_type)
-    sort_by = query_params["sort_by"]
 
-    if query_params["sort_by"] is None:
-        query_set = query_set[offset:limit]
-
-    else:
-        sort_by_values = get_values(query_set, "cell", [sort_by], values_type)
-        sort_by_dict = {}
-        for key in sort_by_values:
-            if "sort_by" in sort_by_values[key].keys():
-                sort_by_dict[key] = sort_by_values[key][sort_by]
-            else:
-                sort_by_dict[key] = 0.0
-
-        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
+    query_set = (
+        query_set[offset:limit]
+        if sort_by is None
+        else get_ordered_query_set(query_set, "cell", sort_by, values_type, limit, offset)
+    )
 
     values_dict = (
         {}
@@ -325,18 +315,10 @@ def make_cell_and_values(query_params):
 
 
 def make_gene_and_values(query_params):
-    query_params = process_evaluation_args(query_params)
+    pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    pickle_hash = query_params["key"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
-
-    include_values = query_params[
-        "include_values"
-    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
-    sort_by = query_params["sort_by"]  # Must be empty or an element of include values
-    limit = query_params["limit"]  # The maximum number of results to return
-    offset = query_params["offset"]
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
@@ -346,19 +328,11 @@ def make_gene_and_values(query_params):
 
     # Filter on timestamp
 
-    if sort_by is None:
-        query_set = query_set[offset:limit]
-
-    else:
-        sort_by_values = get_values(query_set, "gene", [sort_by], values_type)
-        sort_by_dict = {}
-        for key in sort_by_values:
-            if sort_by in sort_by_values[key].keys():
-                sort_by_dict[key] = sort_by_values[key][sort_by]
-            else:
-                sort_by_dict[key] = 0.0
-
-        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
+    query_set = (
+        query_set[offset:limit]
+        if sort_by is None
+        else get_ordered_query_set(query_set, "gene", sort_by, values_type, limit, offset)
+    )
 
     values_dict = (
         {}
@@ -382,18 +356,10 @@ def make_gene_and_values(query_params):
 
 def make_organ_and_values(query_params):
 
-    query_params = process_evaluation_args(query_params)
+    pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    pickle_hash = query_params["key"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
-
-    include_values = query_params[
-        "include_values"
-    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
-    sort_by = query_params["sort_by"]  # Must be empty or an element of include values
-    limit = query_params["limit"]  # The maximum number of results to return
-    offset = query_params["offset"]
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
@@ -401,19 +367,11 @@ def make_organ_and_values(query_params):
 
     query_set = unpickle_query_set(pickle_hash, set_type)
 
-    if sort_by is None:
-        query_set = query_set[offset:limit]
-
-    else:
-        sort_by_values = get_values(query_set, "organ", [sort_by], values_type)
-        sort_by_dict = {}
-        for key in sort_by_values:
-            if sort_by in sort_by_values[key].keys():
-                sort_by_dict[key] = sort_by_values[key][sort_by]
-            else:
-                sort_by_dict[key] = 0.0
-
-        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
+    query_set = (
+        query_set[offset:limit]
+        if sort_by is None
+        else get_ordered_query_set(query_set, "organ", sort_by, values_type, limit, offset)
+    )
 
     values_dict = (
         {}
@@ -436,39 +394,22 @@ def make_organ_and_values(query_params):
 
 
 def make_cluster_and_values(query_params):
-    query_params = process_evaluation_args(query_params)
+    pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    pickle_hash = query_params["key"]
     qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
     set_type = qs.set_type
-
-    include_values = query_params[
-        "include_values"
-    ]  # A list of genes, proteins, organs, etc. for which to include values, optional
-    sort_by = query_params["sort_by"]  # Must be empty or an element of include values
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
 
-    limit = query_params["limit"]  # The maximum number of results to return
-    offset = query_params["offset"]
-
     query_set = unpickle_query_set(pickle_hash, set_type)
 
-    if sort_by is None:
-        query_set = query_set[offset:limit]
-
-    else:
-        sort_by_values = get_values(query_set, "cluster", [sort_by], values_type)
-        sort_by_dict = {}
-        for key in sort_by_values:
-            if sort_by in sort_by_values[key].keys():
-                sort_by_dict[key] = sort_by_values[key][sort_by]
-            else:
-                sort_by_dict[key] = 0.0
-
-        query_set = order_query_set(query_set, limit, sort_by_dict, offset)
+    query_set = (
+        query_set[offset:limit]
+        if sort_by is None
+        else get_ordered_query_set(query_set, "cluster", sort_by, values_type, limit, offset)
+    )
 
     values_dict = (
         {}
@@ -508,9 +449,6 @@ def cell_evaluation_detail(self, request):
         context = {
             "request": request,
         }
-        #    print(groups)
-        #    print(CellGroupingSerializer(groups, many=True, context=context))
-        # Get serializers lists
 
         response = CellAndValuesSerializer(evaluated_set, many=True, context=context).data
 
@@ -529,9 +467,6 @@ def gene_evaluation_detail(self, request):
         context = {
             "request": request,
         }
-        #    print(groups)
-        #    print(CellGroupingSerializer(groups, many=True, context=context))
-        # Get serializers lists
 
         response = GeneAndValuesSerializer(evaluated_set, many=True, context=context).data
 
@@ -550,9 +485,6 @@ def organ_evaluation_detail(self, request):
         context = {
             "request": request,
         }
-        #    print(groups)
-        #    print(CellGroupingSerializer(groups, many=True, context=context))
-        # Get serializers lists
 
         response = OrganAndValuesSerializer(evaluated_set, many=True, context=context).data
 
@@ -571,9 +503,6 @@ def cluster_evaluation_detail(self, request):
         context = {
             "request": request,
         }
-        #    print(groups)
-        #    print(CellGroupingSerializer(groups, many=True, context=context))
-        # Get serializers lists
 
         response = ClusterAndValuesSerializer(evaluated_set, many=True, context=context).data
 
@@ -602,9 +531,6 @@ def evaluation_list(self, request):
         context = {
             "request": request,
         }
-        #    print(groups)
-        #    print(CellGroupingSerializer(groups, many=True, context=context))
-        # Get serializers lists
 
         if set_type == "cell":
             response = CellSerializer(eval_qs, many=True, context=context).data

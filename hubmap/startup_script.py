@@ -40,32 +40,17 @@ def set_up_cell_cluster_relationships(hdf_file):
             clusters = Cluster.objects.filter(grouping_name__in=cluster_ids)
             cell.clusters.add(clusters)
 
-
-def load_cache():
-
-    ids_list = Cell.objects.filter(modality__modality_name__in=["rna", "atac"]).values_list(
-        "id", "cell_id"
-    )
-    print(len(ids_list))
-    ids_dict = {id[1]: id[0] for id in ids_list}
-    print(len(ids_dict))
-    cache.set_many(ids_dict, None)
-
-    # Load non-zero RNA quants
-
-
-#    rna_dict = {}
-#    for gene in RnaQuant.objects.all().distinct('q_gene_id').values_list('q_gene_id', flat=True):
-#        cell_pks = RnaQuant.objects.filter(q_gene_id=gene).distinct('q_cell_id').values_list('q_cell_id', flat=True)
-#        rna_dict['rna' + gene] = cell_pks
-#    cache.set_many(rna_dict, None)
-
-# Load non-zero RNA quants
-#    atac_dict = {}
-#    for gene in AtacQuant.objects.all().distinct('q_gene_id').values_list('q_gene_id', flat=True):
-#        cell_pks = AtacQuant.objects.filter(q_gene_id=gene).distinct('q_cell_id').values_list('q_cell_id', flat=True)
-#        atac_dict['atac' + gene] = cell_pks
-#    cache.set_many(atac_dict, None)
+    elif hdf_file.stem in ["atac", "rna"]:
+        all_clusters = pd.read_hdf(hdf_file, "cluster")["grouping_name"].unique()
+        cell_df = pd.read_hdf(hdf_file, "cell")
+        for cluster in all_clusters:
+            cell_ids = [
+                cell_df["cell_id"][i]
+                for i in cell_df.index
+                if cluster in cell_df["clusters"][i].split(",")
+            ]
+            cell_pks = Cell.objects.filter(cell_id__in=cell_ids).values_list("pk", flat=True)
+            cluster.cells.add(*cell_pks)
 
 
 def make_quants_csv(hdf_file):
@@ -133,23 +118,6 @@ def create_model(model_name: str, kwargs: dict):
     return obj
 
 
-def sanitize_nans(kwargs: dict) -> dict:
-    cell_fields = [
-        "cell_id",
-        "dataset",
-        "modality",
-        "organ",
-    ]
-
-    kwargs = {key: kwargs[key] for key in kwargs.keys() if key in cell_fields}
-
-    for key in kwargs.keys():
-        if type(kwargs[key]) == float and np.isnan(kwargs[key]):
-            kwargs[key] = {}
-
-    return kwargs
-
-
 @transaction.atomic
 def create_proteins(hdf_file):
     csv_file = hdf_file.parent / Path(hdf_file.stem + ".csv")
@@ -176,7 +144,17 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
         cell_df["cell_id"] = cell_df.index
 
     records = cell_df.to_dict("records")
-    sanitized_records = [sanitize_nans(record) for record in records]
+    cell_fields = [
+        "cell_id",
+        "dataset",
+        "modality",
+        "organ",
+    ]
+
+    sanitized_records = [
+        {field: record[field] for field in record if field in cell_fields} for record in records
+    ]
+
     for record in sanitized_records:
         if None in record.values():
             print(record)
@@ -191,47 +169,33 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
             record["modality"] = record["dataset"].modality
         record["organ"] = Organ.objects.filter(grouping_name__icontains=record["organ"]).first()
 
-        for key in record.keys():
-            if "protein" in key and isinstance(record[key], str):
-                record[key] = json.loads(record[key])
-            if isinstance(record[key], dict):
-                for protein_key in record[key].keys():
-                    record[key][protein_key] = float(record[key][protein_key])
-
     return sanitized_records
 
 
-def process_pval_args(kwargs: dict, modality: str):
+def process_pval_args(kwargs: dict, modality: str, grouping_type: str):
     kwargs["p_gene"] = Gene.objects.filter(
         gene_symbol__iexact=sanitize_string(kwargs["gene_id"])[:64]
     ).first()
     kwargs.pop("gene_id")
 
-    if "organ_name" in kwargs:
+    if grouping_type == "organ":
         kwargs["p_organ"] = Organ.objects.filter(
-            grouping_name__iexact=kwargs["organ_name"]
+            grouping_name__iexact=kwargs["grouping_type"]
         ).first()
-        kwargs.pop("organ_name")
-    elif "cluster" in kwargs:
-        if len(kwargs["cluster"].split("-")) > 2:
-            cluster_name = "-".join(kwargs["cluster"].split("-")[1:])
-        else:
-            cluster_name = kwargs["cluster"]
-        kwargs["p_cluster"] = Cluster.objects.filter(grouping_name__iexact=cluster_name).first()
-        kwargs.pop("cluster")
 
-    if "leiden" in kwargs:
-        kwargs.pop("leiden")
+    elif grouping_type == "cluster":
+        kwargs["p_cluster"] = Cluster.objects.filter(
+            grouping_name__iexact=kwargs["grouping_type"]
+        ).first()
 
-    if "dataset" in kwargs:
-        kwargs.pop("dataset")
+    kwargs.pop("grouping_type")
 
     kwargs["modality"] = Modality.objects.filter(modality_name__icontains=modality).first()
     return kwargs
 
 
 @transaction.atomic
-def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
+def df_to_db(df: pd.DataFrame, model_name: str, modality=None, grouping_type: str = None):
     if model_name == "cell":
 
         kwargs_list = process_cell_records(df)
@@ -246,7 +210,9 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None):
 
     elif model_name == "pvalue":
         kwargs_list = df.to_dict("records")
-        processed_kwargs_list = [process_pval_args(kwargs, modality) for kwargs in kwargs_list]
+        processed_kwargs_list = [
+            process_pval_args(kwargs, modality, grouping_type) for kwargs in kwargs_list
+        ]
         objs = [create_model("pvalue", kwargs) for kwargs in processed_kwargs_list]
         PVal.objects.bulk_create(objs)
 
@@ -282,18 +248,13 @@ def create_organs(hdf_file: Path):
     return
 
 
-def match_cells_to_clusters(hdf_file):
-    if hdf_file == "codex":
-        cell_df = pd.read_hdf(hdf_file, "cell")
-
-
 def create_pvals(hdf_file: Path):
     modality = hdf_file.stem
 
     for grouping_type in ["organ", "cluster"]:
         with pd.HDFStore(hdf_file) as store:
             pval_df = store.get(grouping_type)
-            df_to_db(pval_df, "pvalue", modality)
+            df_to_db(pval_df, "pvalue", modality, grouping_type)
 
 
 def create_clusters(hdf_file: Path):
@@ -353,11 +314,27 @@ def create_modality_and_datasets(hdf_file: Path):
             dataset.save()
 
 
-def load_rna(hdf_file: Path):
-    Cell.objects.filter(modality__modality_name__icontains="rna").delete()
-    RnaQuant.objects.all().delete()
+def delete_old_data(modality: str):
+    Cell.objects.filter(modality__modality_name__icontains=modality).delete()
+    modality_datasets = Dataset.objects.filter(
+        modality__modality_name__icontains=modality
+    ).values_list("pk", flat=True)
     Dataset.objects.filter(modality__modality_name__icontains="rna").delete()
-    Modality.objects.filter(modality_name__icontains="rna").delete()
+    Cluster.objects.filter(dataset__in=modality_datasets).delete()
+    Modality.objects.filter(modality_name__icontains=modality).delete()
+
+    if modality in ["atac", "rna"]:
+        PVal.objects.filter(modality__modality_name__icontains=modality).delete()
+        if modality == "atac":
+            AtacQuant.objects.all().delete()
+        elif modality == "rna":
+            RnaQuant.objects.all().delete()
+    elif modality in ["codex"]:
+        Protein.objects.all().delete()
+
+
+def load_data(hdf_file: Path):
+    delete_old_data(hdf_file.stem)
 
     print("Old data deleted")
     create_modality_and_datasets(hdf_file)
@@ -372,76 +349,22 @@ def load_rna(hdf_file: Path):
     print("Cell cluster relationships established")
     make_quants_csv(hdf_file)
     print("Quants created")
-    create_genes(hdf_file)
-    print("Genes created")
-    create_pvals(hdf_file)
-    print("Pvals created")
-
-    return
-
-
-def load_atac(hdf_file):
-    Cell.objects.filter(modality__modality_name__icontains="atac").delete()
-    AtacQuant.objects.all().delete()
-    Dataset.objects.filter(modality__modality_name__icontains="atac").delete()
-    Modality.objects.filter(modality_name__icontains="atac").delete()
-
-    print("Old data deleted")
-    create_modality_and_datasets(hdf_file)
-    print("Modality and datasets created")
-    create_organs(hdf_file)
-    print("Organs created")
-    create_clusters(hdf_file)
-    print("Clusters created")
-    create_cells(hdf_file)
-    print("Cells created")
-    make_quants_csv(hdf_file)
-    print("Quants created")
-    create_genes(hdf_file)
-    print("Genes created")
-    create_pvals(hdf_file)
-    print("Pvals created")
-
-    return
-
-
-def load_codex(hdf_file):
-    Cell.objects.filter(modality__modality_name__icontains="codex").delete()
-    Dataset.objects.filter(modality__modality_name__icontains="codex").delete()
-    Modality.objects.filter(modality_name__icontains="codex").delete()
-    Protein.objects.all().delete()
-
-    print("Old data deleted")
-    create_modality_and_datasets(hdf_file)
-    print("Modality and datasets created")
-    create_organs(hdf_file)
-    print("Organs created")
-    create_clusters(hdf_file)
-    print("Clusters created")
-    create_cells(hdf_file)
-    print("Cells created")
-    create_proteins(hdf_file)
-    print("Proteins created")
-    make_quants_csv(hdf_file)
-    print("Quants created")
-
+    if hdf_file.stem in ["atac", "rna"]:
+        create_genes(hdf_file)
+        print("Genes created")
+        create_pvals(hdf_file)
+        print("Pvals created")
+    elif hdf_file.stem in ["codex"]:
+        create_proteins(hdf_file)
+        print("Proteins created")
     return
 
 
 def main(hdf_files: List[Path]):
     for file in hdf_files:
-        if "rna" in file.stem:
-            load_rna(file)
-            print("RNA loaded")
-        elif "atac" in file.stem:
-            load_atac(file)
-            print("ATAC loaded")
-        elif "codex" in file.stem:
-            load_codex(file)
-            print("CODEX loaded")
-
-
-#    load_cache()
+        if file.stem in ["rna", "atac", "codex"]:
+            load_data(file)
+            print(f"{file.stem} loaded")
 
 
 if __name__ == "__main__":

@@ -277,8 +277,6 @@ def process_evaluation_args(query_params):
         else:
             include_values = query_params["values_included"]
     else:
-        print("values_included not in query_params.keys()")
-        print(query_params.keys())
         include_values = []
 
     if sort_by is not None and sort_by not in include_values:
@@ -289,9 +287,9 @@ def process_evaluation_args(query_params):
         or not query_params["offset"].isdigit()
         or int(query_params["offset"]) < 0
     ):
-        query_params["offset"] = 0
+        offset = 0
     else:
-        query_params["offset"] = int(query_params["offset"])
+        offset = int(query_params["offset"])
 
     if (
         "limit" not in query_params.keys()
@@ -302,9 +300,8 @@ def process_evaluation_args(query_params):
     else:
         query_params["limit"] = int(query_params["limit"])
 
-    query_params["limit"] = query_params["limit"] + query_params["offset"]
+    limit = query_params["limit"] + offset
 
-    query_params["sort_by"] = sort_by
-    query_params["include_values"] = include_values
+    key = query_params["key"]
 
-    return query_params
+    return key, include_values, sort_by, limit, offset

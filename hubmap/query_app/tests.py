@@ -98,7 +98,7 @@ def set_detail_evaluation(
 
 class CellTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_all_cells(self):
@@ -154,7 +154,7 @@ class CellTestCase(TestCase):
 
 class GeneTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_all_genes(self):
@@ -207,7 +207,7 @@ class GeneTestCase(TestCase):
 
 class OrganTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_all_organs(self):
@@ -243,7 +243,7 @@ class OrganTestCase(TestCase):
 
 class DatasetTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_all_datasets(self):
@@ -278,7 +278,7 @@ class DatasetTestCase(TestCase):
 
 class ClusterTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_all_clusters(self):
@@ -314,7 +314,7 @@ class ClusterTestCase(TestCase):
 
 class ProteinTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_all_proteins(self):
@@ -331,7 +331,7 @@ class ProteinTestCase(TestCase):
 
 class OperationsTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_intersection(self):
@@ -364,7 +364,7 @@ class OperationsTestCase(TestCase):
 
 class ListEvaluationTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_cells(self):
@@ -419,7 +419,7 @@ class ListEvaluationTestCase(TestCase):
 
 class DetailEvaluationTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/dump.json",
+        "/query_app/fixtures/minimal_dataset.json",
     ]
 
     def test_cells(self):
