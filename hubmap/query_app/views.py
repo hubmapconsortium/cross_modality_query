@@ -8,6 +8,7 @@ from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
 from .analysis import calculate_statistics, get_bounds
+from .data_loading import create_model, delete_old_data, set_up_cluster_relationships
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet, StatReport
 from .queries import (
     cell_query,
@@ -344,3 +345,30 @@ class ValueBoundsViewSet(viewsets.GenericViewSet):
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
             print(json_error_response)
             return HttpResponse(json_error_response)
+
+
+class DeleteModalityDataView(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, delete_old_data)
+
+
+class SetUpClusterRelationshipsView(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, set_up_cluster_relationships)
+
+
+class CreateModelView(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, create_model)

@@ -107,4 +107,15 @@ urlpatterns = [
         ),
         name="openapi-schema",
     ),
+    path(
+        "delete/",
+        views.DeleteModalityDataView.as_view({"post": "post"}),
+        name="delete_modality_data_view",
+    ),
+    path("insert/", views.CreateModelView.as_view({"post": "post"}), name="create_model_view"),
+    path(
+        "setuprelationships/",
+        views.SetUpClusterRelationshipsView.as_view({"post": "post"}),
+        name="set_up_relationships_view",
+    ),
 ]
