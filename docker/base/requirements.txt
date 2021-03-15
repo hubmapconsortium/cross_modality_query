@@ -7,6 +7,5 @@ djangorestframework
 psycopg2-binary>=2.8.6
 pylibmc
 redis
-scikit-learn
 tablib
 uritemplate

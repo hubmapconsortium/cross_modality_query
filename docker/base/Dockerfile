@@ -8,7 +8,6 @@ RUN apt-get update \
     python3 \
     python3-dev \
     python3-pip \
-    python-is-python3 \
  && rm -rf /var/cache/apt/*
 
 ## Python packages
