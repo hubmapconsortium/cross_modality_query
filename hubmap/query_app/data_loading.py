@@ -1,16 +1,5 @@
 #!/usr/bin/env python
 
-import json
-from argparse import ArgumentParser
-from os import fspath
-from pathlib import Path
-from typing import List
-
-import numpy as np
-import pandas as pd
-from django.core.cache import cache
-from django.db import connection, transaction
-
 from query_app.models import (
     AtacQuant,
     Cell,

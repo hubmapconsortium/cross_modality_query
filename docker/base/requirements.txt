@@ -4,13 +4,9 @@ django-bootstrap4
 django-cors-headers
 django-tables2
 djangorestframework
-numpy
-pandas
 psycopg2-binary>=2.8.6
 pylibmc
-pyyaml
 redis
 scikit-learn
-tables
 tablib
 uritemplate
