@@ -127,6 +127,13 @@ urlpatterns = [
     ),
     path("unionlist/", QuerySetUnionListView.as_view(), name="query_set_union_list"),
     path("querysetcountlist/", QuerySetCountListView.as_view(), name="query_set_count_list"),
+    path("delete/", DeleteModalityDataView.as_view(), name="delete_modality_data_view"),
+    path("insert/", CreateModelView.as_view(), name="create_model_view"),
+    path(
+        "setuprelationships/",
+        SetUpCellClusterRelationshipsView.as_view(),
+        name="set_up_relationships_view",
+    ),
     path(
         "openapi",
         get_schema_view(
