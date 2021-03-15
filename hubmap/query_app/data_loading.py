@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from time import perf_counter
+
 from query_app.models import (
     AtacQuant,
     Cell,
@@ -16,6 +18,9 @@ from query_app.models import (
 
 
 def delete_old_data(request):
+
+    start_time = perf_counter()
+
     modality = request.data.dict()["modality"]
     Cell.objects.filter(modality__modality_name__icontains=modality).delete()
     modality_datasets = Dataset.objects.filter(
@@ -35,14 +40,24 @@ def delete_old_data(request):
         Protein.objects.all().delete()
         CodexQuant.objects.all().delete()
 
+    stop_time = perf_counter()
+
+    return {"message": f"Records deleted for modality {modality}", "time": stop_time - start_time}
+
 
 def set_up_cluster_relationships(request):
+
+    start_time = perf_counter()
+
     cluster_cells_dict = request.data.dict()
     cluster_id = cluster_cells_dict["cluster"]
     cells_ids = cluster_cells_dict["cells"]
     cluster = Cluster.objects.filter(grouping_name=cluster_id).first()
     cells = Cell.objects.filter(cell_id__in=cells_ids).values_list("pk", flat=True)
     cluster.cells.add(*cells)
+
+    stop_time = perf_counter()
+    return {"message": "Relationships set up", "time": stop_time - start_time}
 
 
 def get_foreign_keys(kwargs, model_name):
@@ -68,6 +83,9 @@ def get_foreign_keys(kwargs, model_name):
 
 
 def create_model(request):
+
+    start_time = perf_counter()
+
     request_dict = request.data.dict()
     model_name = request_dict["model_name"]
     kwargs_list = request_dict["kwargs_list"]
@@ -77,10 +95,18 @@ def create_model(request):
         objs = [Cell(**kwargs) for kwargs in kwargs_list]
         Cell.objects.bulk_create(objs)
     elif model_name == "gene":
-        objs = [Gene(**kwargs) for kwargs in kwargs_list]
+        existing_genes = Gene.objects.all().values_list("gene_symbol", flat=True)
+        objs = [
+            Gene(**kwargs) for kwargs in kwargs_list if kwargs["gene_symbol"] not in existing_genes
+        ]
         Gene.objects.bulk_create(objs)
     elif model_name == "organ":
-        objs = [Organ(**kwargs) for kwargs in kwargs_list]
+        existing_organs = Organ.objects.all().values_list("grouping_name", flat=True)
+        objs = [
+            Organ(**kwargs)
+            for kwargs in kwargs_list
+            if kwargs["grouping_name"] not in existing_organs
+        ]
         Organ.objects.bulk_create(objs)
     elif model_name == "protein":
         objs = [Protein(**kwargs) for kwargs in kwargs_list]
@@ -111,4 +137,7 @@ def create_model(request):
         Modality.objects.bulk_create(objs)
     else:
         obj = None
-    return obj
+
+    stop_time = perf_counter()
+
+    return {"message": f"{len(objs)} {model_name}s created", "time": stop_time - start_time}

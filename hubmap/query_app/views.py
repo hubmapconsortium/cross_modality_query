@@ -5,6 +5,7 @@ from typing import Callable
 from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
 
 from .data_loading import create_model, delete_old_data, set_up_cluster_relationships
 from .models import (
@@ -280,28 +281,16 @@ class SetCountViewSet(viewsets.ModelViewSet):
         return get_response(self, request, query_set_count)
 
 
-class DeleteModalityDataView(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
-    pagination_class = PaginationClass
-
+class DeleteModalityDataView(APIView):
     def post(self, request, format=None):
         return get_response(self, request, delete_old_data)
 
 
-class SetUpClusterRelationshipsView(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
-    pagination_class = PaginationClass
-
+class SetUpClusterRelationshipsView(APIView):
     def post(self, request, format=None):
         return get_response(self, request, set_up_cluster_relationships)
 
 
-class CreateModelView(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
-    pagination_class = PaginationClass
-
+class CreateModelView(APIView):
     def post(self, request, format=None):
         return get_response(self, request, create_model)
