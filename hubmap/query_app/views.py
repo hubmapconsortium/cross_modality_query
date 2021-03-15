@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
+from .data_loading import create_model, delete_old_data, set_up_cluster_relationships
 from .models import (
     Cell,
     CellAndValues,
@@ -277,3 +278,30 @@ class SetCountViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         return get_response(self, request, query_set_count)
+
+
+class DeleteModalityDataView(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, delete_old_data)
+
+
+class SetUpClusterRelationshipsView(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, set_up_cluster_relationships)
+
+
+class CreateModelView(viewsets.ModelViewSet):
+    queryset = QuerySet.objects.all()
+    serializer_class = QuerySetCountSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, create_model)
