@@ -79,9 +79,15 @@ class Cell(models.Model):
         return json.dumps(cell_dict)
 
 
-class Gene(models.Model):
-    gene_symbol = models.CharField(db_index=True, max_length=64)
+class Var(models.Model):
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
+class Gene(Var):
+    gene_symbol = models.CharField(db_index=True, max_length=64)
 
     def __repr__(self):
         return self.gene_symbol
@@ -90,17 +96,17 @@ class Gene(models.Model):
         return "%s" % self.gene_symbol
 
 
-class Protein(models.Model):
+class Protein(Var):
     protein_id = models.CharField(db_index=True, max_length=32)
-    go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
 
     def __repr__(self):
         return self.protein_id
 
 
 class Quant(models.Model):
-    q_cell_id = models.CharField(max_length=128, null=True, db_index=True)
-    q_var_id = models.CharField(max_length=64, null=True, db_index=True)
+    q_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, related_name="quants")
+    q_gene = models.CharField(to=Gene, on_delete=models.CASCADE, related_name="quants")
+    q_protein = models.CharField(to=Protein, on_delete=models.CASCADE, related_name="quants")
     value = models.FloatField()
 
     class Meta:

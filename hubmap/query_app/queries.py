@@ -68,12 +68,12 @@ def clusters_from_pvals(pval_set):
 
 def cells_from_quants(quant_set, var):
 
-    cell_ids = quant_set.distinct("q_cell_id").values_list("q_cell_id", flat=True)
+    cell_ids = quant_set.distinct("q_cell").values_list("q_cell", flat=True)
 
     if len(cell_ids) > 0:
         print(cell_ids[0])
 
-    cells = Cell.objects.filter(cell_id__in=cell_ids)
+    cells = Cell.objects.filter(pk__in=cell_ids)
 
     if "<" in var:
         if isinstance(quant_set.first(), RnaQuant):
@@ -90,25 +90,28 @@ def cells_from_quants(quant_set, var):
 
 
 def get_quant_queryset(query_params: Dict, filter):
-    if query_params["input_type"] == "protein":
-        query_set = CodexQuant.objects.filter(filter)
-        print(len(query_set))
-    elif query_params["genomic_modality"] == "rna":
-        query_set = RnaQuant.objects.filter(filter)
-    elif query_params["genomic_modality"] == "atac":
-        query_set = AtacQuant.objects.filter(filter)
-
     var_ids = [
         split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
         for item in query_params["input_set"]
     ]
 
-    query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
+    if query_params["input_type"] == "protein":
+        query_set = CodexQuant.objects.filter(filter)
+        query_sets = [
+            cells_from_quants(query_set.filter(q_protein__protein_id=var), var) for var in var_ids
+        ]
 
-    print(query_params.keys())
-    print("logical_operator" in query_params.keys())
-    if "logical_operator" in query_params.keys():
-        print(query_params["logical_operator"])
+    elif query_params["genomic_modality"] == "rna":
+        query_set = RnaQuant.objects.filter(filter)
+        query_sets = [
+            cells_from_quants(query_set.filter(q_gene__gene_symbol=var), var) for var in var_ids
+        ]
+
+    elif query_params["genomic_modality"] == "atac":
+        query_set = AtacQuant.objects.filter(filter)
+        query_sets = [
+            cells_from_quants(query_set.filter(q_gene__gene_symbol=var), var) for var in var_ids
+        ]
 
     if len(query_sets) == 0:
         query_set = Cell.objects.filter(pk__in=[])

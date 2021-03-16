@@ -31,7 +31,10 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
 
     var_id = split_condition[0].strip()
 
-    q = Q(q_var_id__iexact=var_id)
+    if input_type == "protein":
+        q = Q(q_protein__protein_id=var_id)
+    elif input_type == "gene":
+        q = Q(q_gene__gene_symbol=var_id)
 
     if comparator == ">":
         q = q & Q(value__gt=value)

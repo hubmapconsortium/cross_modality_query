@@ -79,6 +79,16 @@ def get_foreign_keys(kwargs, model_name):
             kwargs["p_cluster"] = Cluster.objects.filter(
                 grouping_name=kwargs["grouping_name"]
             ).first()
+        kwargs.pop("grouping_name")
+    if "quant" in model_name:
+        kwargs["q_cell"] = Cell.objects.filter(cell_id=kwargs["q_cell_id"])
+        kwargs.pop("q_cell_id")
+        q_protein = Protein.objects.filter(protein_id=kwargs["q_var_id"]).first()
+        if q_protein is not None:
+            kwargs["q_protein"] = q_protein
+        else:
+            kwargs["q_gene"] = Gene.objects.filter(gene_symbol=kwargs["q_var_id"]).first()
+        kwargs.pop("q_var_id")
     return kwargs
 
 
@@ -124,19 +134,22 @@ def create_model(request):
         objs = [Dataset(**kwargs) for kwargs in kwargs_list]
         Dataset.objects.bulk_create(objs)
     elif model_name == "atacquant":
+        kwargs_list = [get_foreign_keys(kwargs, model_name) for kwargs in kwargs_list]
         objs = [AtacQuant(**kwargs) for kwargs in kwargs_list]
         AtacQuant.objects.bulk_create(objs)
     elif model_name == "codexquant":
+        kwargs_list = [get_foreign_keys(kwargs, model_name) for kwargs in kwargs_list]
         objs = [CodexQuant(**kwargs) for kwargs in kwargs_list]
         CodexQuant.objects.bulk_create(objs)
     elif model_name == "rnaquant":
+        kwargs_list = [get_foreign_keys(kwargs, model_name) for kwargs in kwargs_list]
         objs = [RnaQuant(**kwargs) for kwargs in kwargs_list]
         RnaQuant.objects.bulk_create(objs)
     elif model_name == "modality":
         objs = [Modality(**kwargs) for kwargs in kwargs_list]
         Modality.objects.bulk_create(objs)
     else:
-        obj = None
+        objs = []
 
     stop_time = perf_counter()
 
