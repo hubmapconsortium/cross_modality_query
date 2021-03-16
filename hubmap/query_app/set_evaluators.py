@@ -132,7 +132,18 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
         query_set = Cell.objects.filter(pk__in=pks).prefetch_related()
 
         for cell in query_set:
-            values_dict[cell] = {q.var_id: q.value for q in cell.quants if q.var_id in values}
+            if values_type == "protein":
+                values_dict[cell] = {
+                    q.q_protein.protein_id: q.value
+                    for q in cell.quants
+                    if q.q_protein.protein_id in values
+                }
+            elif values_type == "gene":
+                values_dict[cell] = {
+                    q.q_gene.gene_symbol: q.value
+                    for q in cell.quants
+                    if q.q_gene.gene_symbol in values
+                }
             for value in values:
                 if value not in values_dict[cell].keys():
                     values_dict[cell][value] = 0.0
