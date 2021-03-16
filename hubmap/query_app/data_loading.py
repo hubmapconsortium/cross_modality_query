@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import re
 from time import perf_counter
+
+from django.conf import settings
 
 from query_app.models import (
     AtacQuant,
@@ -17,7 +20,17 @@ from query_app.models import (
 )
 
 
+def authenticate_ip(request):
+    user_ip = request.META["REMOTE_ADDR"]
+    allowed_ips = settings.ALLOWED_IPS
+    authenticated_by_ip = any([re.compile(ip).match(user_ip) for ip in allowed_ips])
+    if not authenticated_by_ip:
+        raise ValueError(f"Invalid IP address: {user_ip}")
+
+
 def delete_old_data(request):
+
+    authenticate_ip(request)
 
     start_time = perf_counter()
 
@@ -46,6 +59,8 @@ def delete_old_data(request):
 
 
 def set_up_cluster_relationships(request):
+
+    authenticate_ip(request)
 
     start_time = perf_counter()
 
@@ -93,6 +108,8 @@ def get_foreign_keys(kwargs, model_name):
 
 
 def create_model(request):
+
+    authenticate_ip(request)
 
     start_time = perf_counter()
 
