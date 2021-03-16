@@ -127,50 +127,15 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
     values_dict = {}
 
     if set_type == "cell":
-        # values must be genes
-        if values_type == "gene":
-            pks = query_set.values_list("pk", flat=True)
-            query_set = Cell.objects.filter(pk__in=pks)
-            atac_cells = query_set.filter(modality__modality_name="atac").values_list(
-                "cell_id", flat=True
-            )
-            rna_cells = query_set.filter(modality__modality_name="rna").values_list(
-                "cell_id", flat=True
-            )
 
-            atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
-                q_var_id__in=values
-            )
-            rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
-                q_var_id__in=values
-            )
+        pks = query_set.values_list("pk", flat=True)
+        query_set = Cell.objects.filter(pk__in=pks).prefetch_related()
 
-            for cell in atac_cells:
-                cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
-            for cell in rna_cells:
-                cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
-
-        elif values_type == "protein":
-            pks = query_set.values_list("pk", flat=True)
-            query_set = Cell.objects.filter(pk__in=pks)
-
-            codex_cells = query_set.filter(modality__modality_name="codex").values_list(
-                "cell_id", flat=True
-            )
-
-            codex_quants = (
-                CodexQuant.objects.filter(q_cell_id__in=codex_cells)
-                .filter(q_var_id__in=values)
-                .filter(statistic=statistic)
-            )
-
-            for cell in codex_cells:
-                cell_values = codex_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
-
-        return values_dict
+        for cell in query_set:
+            values_dict[cell] = {q.var_id: q.value for q in cell.quants if q.var_id in values}
+            for value in values:
+                if value not in values_dict[cell].keys():
+                    values_dict[cell][value] = 0.0
 
     elif set_type == "gene":
         # values must be organs or clusters

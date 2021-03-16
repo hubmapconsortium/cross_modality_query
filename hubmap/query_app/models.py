@@ -105,9 +105,9 @@ class Protein(Var):
 
 class Quant(models.Model):
     q_cell = models.ForeignKey(to=Cell, on_delete=models.CASCADE, related_name="quants")
-    q_gene = models.CharField(to=Gene, on_delete=models.CASCADE, related_name="quants")
-    q_protein = models.CharField(to=Protein, on_delete=models.CASCADE, related_name="quants")
-    value = models.FloatField()
+    q_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, related_name="quants")
+    q_protein = models.ForeignKey(to=Protein, on_delete=models.CASCADE, related_name="quants")
+    value = models.FloatField(db_index=True)
 
     class Meta:
         abstract = True
