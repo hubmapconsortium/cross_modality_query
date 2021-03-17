@@ -126,8 +126,7 @@ def get_cell_filter(query_params: Dict) -> Q:
             return Q(organ__grouping_name__in=input_set)
 
         elif input_type == "cluster":
-            for cluster in Cluster.objects.filter(grouping_name__in=input_set):
-                cell_pks.extend(cluster.cells.all().values_list("pk", flat=True))
+            return Q(clusters__grouping_name__in=input_set)
 
         elif input_type == "dataset":
             return Q(dataset__uuid__in=input_set)
