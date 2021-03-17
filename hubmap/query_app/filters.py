@@ -120,22 +120,19 @@ def get_cell_filter(query_params: Dict) -> Q:
     elif input_type in groupings_dict:
 
         # Query groupings and then union their cells fields
-        cell_ids = []
+        cell_pks = []
 
         if input_type == "organ":
-            for organ in Organ.objects.filter(grouping_name__in=input_set):
-                cell_ids.extend([cell.cell_id for cell in organ.cells.all()])
+            return Q(organ__grouping_name__in=input_set)
 
         elif input_type == "cluster":
             for cluster in Cluster.objects.filter(grouping_name__in=input_set):
-                cell_ids.extend([cell.cell_id for cell in cluster.cells.all()])
+                cell_pks.extend(cluster.cells.all().values_list("pk", flat=True))
 
         elif input_type == "dataset":
-            print(Dataset.objects.filter(uuid__in=input_set).count())
-            for dataset in Dataset.objects.filter(uuid__in=input_set):
-                cell_ids.extend([cell.cell_id for cell in dataset.cells.all()])
+            return Q(dataset__uuid__in=input_set)
 
-        return Q(cell_id__in=cell_ids)
+        return Q(pk__in=cell_pks)
 
 
 def get_organ_filter(query_params: Dict) -> Q:

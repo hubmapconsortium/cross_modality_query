@@ -144,6 +144,8 @@ def get_genes_list(query_params: Dict, input_set=None):
             ]
             if len(query_sets) == 0:
                 query_set = Gene.objects.filter(pk__in=[])
+            elif len(query_sets) == 1:
+                query_set = query_sets[0]
             elif query_params["logical_operator"] == "and":
                 query_set = reduce(and_, query_sets)
             elif query_params["logical_operator"] == "or":
@@ -169,6 +171,7 @@ def get_cells_list(query_params: Dict, input_set=None):
         query_set = Cell.objects.filter(filter)
 
     query_set = query_set.distinct("cell_id")
+    print("Query set found")
 
     query_handle = make_pickle_and_hash(query_set, "cell")
     return QuerySet.objects.filter(query_handle=query_handle)
@@ -191,6 +194,8 @@ def get_organs_list(query_params: Dict, input_set=None):
             ]
             if len(query_sets) == 0:
                 query_set = Organ.objects.filter(pk__in=[])
+            elif len(query_sets) == 1:
+                query_set = query_sets[0]
             elif query_params["logical_operator"] == "and":
                 query_set = reduce(and_, query_sets)
             elif query_params["logical_operator"] == "or":
@@ -220,6 +225,8 @@ def get_clusters_list(query_params: Dict, input_set=None):
         ]
         if len(query_sets) == 0:
             query_set = Cluster.objects.filter(pk__in=[])
+        elif len(query_sets) == 1:
+            query_set = query_sets[0]
         elif query_params["logical_operator"] == "and":
             query_set = reduce(and_, query_sets)
         elif query_params["logical_operator"] == "or":

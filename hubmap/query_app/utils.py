@@ -21,7 +21,6 @@ def make_pickle_and_hash(qs, set_type):
             query_pickle=query_pickle, query_handle=query_handle, set_type=set_type
         )
         query_set.save()
-
     return query_handle
 
 

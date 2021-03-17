@@ -230,7 +230,7 @@ def get_qs_count(query_params):
     set_type = query_params["set_type"]
 
     qs = unpickle_query_set(pickle_hash, set_type)
-    query_set = QuerySet.objects.get(query_handle=pickle_hash)
+    query_set = QuerySet.objects.filter(query_handle=pickle_hash).first()
     query_set.count = qs.count()
     query_set.save()
 
@@ -258,7 +258,7 @@ def query_set_count(self, request):
 def make_cell_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
     set_type = qs.set_type
 
     if len(include_values) > 0:
@@ -317,7 +317,7 @@ def make_cell_and_values(query_params):
 def make_gene_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
     set_type = qs.set_type
 
     if len(include_values) > 0:
@@ -358,7 +358,7 @@ def make_organ_and_values(query_params):
 
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
     set_type = qs.set_type
 
     if len(include_values) > 0:
@@ -396,7 +396,7 @@ def make_organ_and_values(query_params):
 def make_cluster_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    qs = QuerySet.objects.get(query_handle__icontains=pickle_hash)
+    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
     set_type = qs.set_type
 
     if len(include_values) > 0:
@@ -509,12 +509,8 @@ def cluster_evaluation_detail(self, request):
         return response
 
 
-def evaluate_qs(query_params):
-    pickle_hash = query_params["key"]
-    set_type = query_params["set_type"]
-    evaluated_set = unpickle_query_set(query_handle=pickle_hash, set_type=set_type)
-    limit = int(query_params["limit"])
-    offset = int(query_params["offset"])
+def evaluate_qs(set_type, key, limit, offset):
+    evaluated_set = unpickle_query_set(query_handle=key, set_type=set_type)
     evaluated_set = evaluated_set[offset:limit]
     return evaluated_set
 
@@ -522,10 +518,10 @@ def evaluate_qs(query_params):
 def evaluation_list(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-        validate_list_evaluation_args(query_params)
-        query_params = process_evaluation_args(query_params)
         set_type = query_params["set_type"]
-        eval_qs = evaluate_qs(query_params)
+        validate_list_evaluation_args(query_params)
+        key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
+        eval_qs = evaluate_qs(set_type, key, limit, offset)
         self.queryset = eval_qs
         # Set context
         context = {
