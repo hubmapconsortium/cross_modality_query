@@ -118,7 +118,9 @@ class AtacQuant(Quant):
 
 
 class CodexQuant(Quant):
-    statistic = models.CharField(max_length=16, null=True)  # One of mean, total, covariance
+    statistic = models.CharField(
+        max_length=16, null=True, db_index=True
+    )  # One of mean, total, covariance
 
 
 #    region = models.CharField(

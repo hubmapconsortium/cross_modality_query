@@ -46,6 +46,11 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
     elif comparator == "!=":
         q = q & ~Q(value__exact=value)
 
+    if input_type == "protein":
+        q = q & Q(statistic__iexact="mean")
+
+    print(q)
+
     return q
 
 
@@ -95,7 +100,6 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
-    statistic = "mean" if "statistic" not in query_params.keys() else query_params["statistic"]
 
     groupings_dict = {"organ": "grouping_name", "cluster": "grouping_name", "dataset": "uuid"}
 
@@ -108,14 +112,12 @@ def get_cell_filter(query_params: Dict) -> Q:
             [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
             for item in input_set
         ]
+        print(split_conditions)
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")
 
-        if input_type == "protein":
-            return q & Q(statistic=statistic)
-        else:
-            return q
+        return q
 
     elif input_type in groupings_dict:
 

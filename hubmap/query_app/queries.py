@@ -68,12 +68,14 @@ def clusters_from_pvals(pval_set):
 
 def cells_from_quants(quant_set, var):
 
-    cell_ids = quant_set.distinct("q_cell_id").values_list("q_cell_id", flat=True)
+    cell_ids = quant_set.values_list("q_cell_id", flat=True)
+    print("Cell ids gotten")
 
     if len(cell_ids) > 0:
         print(cell_ids[0])
 
     cells = Cell.objects.filter(cell_id__in=cell_ids)
+    print("Cell set found")
 
     if "<" in var:
         if isinstance(quant_set.first(), RnaQuant):
@@ -92,7 +94,6 @@ def cells_from_quants(quant_set, var):
 def get_quant_queryset(query_params: Dict, filter):
     if query_params["input_type"] == "protein":
         query_set = CodexQuant.objects.filter(filter)
-        print(len(query_set))
     elif query_params["genomic_modality"] == "rna":
         query_set = RnaQuant.objects.filter(filter)
     elif query_params["genomic_modality"] == "atac":
@@ -105,10 +106,7 @@ def get_quant_queryset(query_params: Dict, filter):
 
     query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
 
-    print(query_params.keys())
-    print("logical_operator" in query_params.keys())
-    if "logical_operator" in query_params.keys():
-        print(query_params["logical_operator"])
+    print("Query sets gotten")
 
     if len(query_sets) == 0:
         query_set = Cell.objects.filter(pk__in=[])
@@ -164,6 +162,7 @@ def get_genes_list(query_params: Dict, input_set=None):
 def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
+    print("Filter gotten")
 
     if query_params["input_type"] in ["gene", "protein"]:
         query_set = get_quant_queryset(query_params, filter)
@@ -293,6 +292,7 @@ def cell_query(self, request):
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
+        print("Parameters validated")
         query_set = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
 
     self.queryset = query_set
