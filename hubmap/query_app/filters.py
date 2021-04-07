@@ -87,7 +87,10 @@ def get_gene_filter(query_params: Dict) -> Q:
 
             q = combine_qs(qs, "or")
 
-        q = q & Q(value__lte=p_value) & Q(modality__modality_name__icontains=genomic_modality)
+        q = q & Q(value__lte=p_value)
+
+        if genomic_modality:
+            q = q & Q(modality__modality_name=genomic_modality)
 
         return q
 
@@ -162,12 +165,10 @@ def get_organ_filter(query_params: Dict) -> Q:
         # Query those genes and return their associated groupings
         p_value = query_params["p_value"]
         genomic_modality = query_params["genomic_modality"]
+        q = Q(p_gene__gene_symbol__in=input_set) & Q(value__lte=p_value)
+        if genomic_modality:
+            q = q & Q(modality__modality_name=genomic_modality)
 
-        q = (
-            Q(p_gene__gene_symbol__in=input_set)
-            & Q(modality__modality_name=genomic_modality)
-            & Q(value__lte=p_value)
-        )
         organ_pks = Organ.objects.all().values_list("pk", flat=True)
         q = q & Q(p_organ__in=organ_pks)
 
@@ -187,11 +188,11 @@ def get_cluster_filter(query_params: dict):
         # Query those genes and return their associated groupings
         p_value = query_params["p_value"]
 
-        q = (
-            Q(p_gene__gene_symbol__in=input_set)
-            & Q(value__lte=p_value)
-            & Q(modality__modality_name=genomic_modality)
-        )
+        q = Q(p_gene__gene_symbol__in=input_set) & Q(value__lte=p_value)
+
+        if genomic_modality:
+            q = q & Q(modality__modality_name=genomic_modality)
+
         cluster_pks = Cluster.objects.all().values_list("pk", flat=True)
         q = q & Q(p_cluster__in=cluster_pks)
 
@@ -208,8 +209,6 @@ def get_cluster_filter(query_params: dict):
         return q
 
     elif input_type == "dataset":
-
-        print(Dataset.objects.filter(uuid__in=input_set).count())
 
         cluster_ids = []
 
