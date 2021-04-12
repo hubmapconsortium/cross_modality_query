@@ -289,3 +289,28 @@ def process_evaluation_args(query_params):
     key = query_params["key"]
 
     return key, include_values, sort_by, limit, offset
+
+
+def validate_statistic_args(query_params):
+    required_fields = {"key", "set_type", "var_id", "stat_type"}
+    permitted_fields = required_fields
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    permitted_set_types = ["cell"]
+    permitted_set_types.sort()
+    set_type = query_params["set_type"]
+    if set_type not in permitted_set_types:
+        raise ValueError(f"{set_type} not supported, only {permitted_set_types}")
+
+    permitted_stat_types = ["mean", "min", "max", "stddev"]
+    permitted_stat_types.sort()
+    set_type = query_params["stat_type"]
+    if set_type not in permitted_set_types:
+        raise ValueError(f"{set_type} not supported, only {permitted_stat_types}")
+
+    return (
+        query_params["key"],
+        query_params["set_type"],
+        query_params["var_id"],
+        query_params["stat_type"],
+    )

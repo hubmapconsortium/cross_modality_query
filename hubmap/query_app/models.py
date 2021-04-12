@@ -172,3 +172,13 @@ class QuerySet(models.Model):
     def is_expired(self):
         age = django.utils.timezone.now() - self.created
         return age.total_seconds() > EXPIRATION_TIME
+
+
+class StatReport(models.Model):
+    query_handle = models.TextField()
+    var_id = models.TextField()
+    statistic_type = models.TextField()
+    rna_value = models.FloatField()
+    atac_value = models.FloatField()
+    codex_value = models.FloatField()
+    num_cells_excluded = models.IntegerField()

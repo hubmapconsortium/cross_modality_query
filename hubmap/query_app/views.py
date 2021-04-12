@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
+from .analysis import calc_stats
 from .models import (
     Cell,
     CellAndValues,
@@ -18,6 +19,7 @@ from .models import (
     OrganAndValues,
     Protein,
     QuerySet,
+    StatReport,
 )
 from .queries import (
     cell_query,
@@ -40,6 +42,7 @@ from .serializers import (
     ProteinSerializer,
     QuerySetCountSerializer,
     QuerySetSerializer,
+    StatReportSerializer,
 )
 from .set_evaluators import (
     cell_evaluation_detail,
@@ -277,3 +280,12 @@ class SetCountViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         return get_response(self, request, query_set_count)
+
+
+class StatisticViewSet(viewsets.ModelViewSet):
+    queryset = StatReport
+    serializer_class = StatReportSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, calc_stats)

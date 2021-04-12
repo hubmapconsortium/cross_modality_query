@@ -13,6 +13,7 @@ from .models import (
     OrganAndValues,
     Protein,
     QuerySet,
+    StatReport,
 )
 
 
@@ -130,3 +131,17 @@ class QuerySetCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuerySet
         fields = ["query_handle", "set_type", "count"]
+
+
+class StatReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StatReport
+        fields = [
+            "query_handle",
+            "var_id",
+            "statistic_type",
+            "rna_value",
+            "atac_value",
+            "codex_value",
+            "cells_excluded",
+        ]
