@@ -10,7 +10,7 @@ This is only a high-level outline of the API:
 See the [Python client examples](https://github.com/hubmapconsortium/hubmap-api-py-client/tree/main/examples) for details.
 
 The API supports a small number of basic operations which can be combined to construct more complex queries.
-The API runs at a **`base_url`**: Currently `https://cells.dev.hubmapconsortium.org/api` is available.
+The API runs at a **`base_url`**: Currently `https://cells.api.hubmapconsortium.org/api` is available.
 
 Issuing a `POST` to `{base_url}/{output_type}/`, with query parameters in the body,
 will return a **query handle** representing `output_type` entities.
@@ -22,6 +22,10 @@ Issuing a `GET` to `{base_url}/{output_type}/` will retury a **query handle** re
 Issuing a `POST` to `{base_url}/{operation}/` (where `operation` is `union`, `intersection`, or `difference`),
 with query handles provided as `key_one` and `key_two` in the body, will return a new query handle,
 representing the result of the operation.
+
+Issuing a `POST` to `{base_url}/{statistic}/` (where `statistic` is `mean`, `stddev`, `min`, or `max`)
+with a query handle as `key_one` and a gene or protein identifier as `var_id` will return
+a statistical report on the expression of that gene/protein in the set provided.
 
 Three endpoints are provided for getting more information, given a query handle:
 - `{base_url}/count/` will return the number of matching entities.
