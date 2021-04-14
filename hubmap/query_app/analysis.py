@@ -33,11 +33,19 @@ def get_stat_values(query_set, var_id, stat_type):
     )
 
     if stat_type == "mean":
+        if get_num_zeros(rna_cells, rna_quants) > 0:
+            rna_value = rna_quants.aggregate(Sum("value"))
+            rna_value = rna_value / rna_cells.count()
+        else:
+            rna_value = rna_quants.aggregate(Avg("value"))
+
+        if get_num_zeros(atac_cells, atac_quants) > 0:
+            atac_value = atac_quants.aggregate(Sum("value"))
+            atac_value = atac_value / atac_cells.count()
+        else:
+            atac_value = atac_quants.aggregate(Avg("value"))
+
         codex_value = codex_quants.aggregate(Avg("value"))
-        rna_value = rna_quants.aggregate(Sum("value"))
-        atac_value = atac_quants.aggregate(Sum("value"))
-        rna_value = rna_value / rna_cells.count()
-        atac_value = atac_value / atac_cells.count()
 
     elif stat_type == "min":
         codex_value = codex_quants.aggregate(Min("value"))
@@ -57,8 +65,14 @@ def get_stat_values(query_set, var_id, stat_type):
 
     elif stat_type == "stddev":
         codex_value = codex_quants.aggregate(StdDev("value"))
-        rna_value = query_set_to_numpy(rna_cells, rna_quants).std()
-        atac_value = query_set_to_numpy(atac_cells, atac_quants).std()
+        if get_num_zeros(rna_cells, rna_quants) > 0:
+            rna_value = query_set_to_numpy(rna_cells, rna_quants).std()
+        else:
+            rna_value = rna_quants.aggregate(StdDev("value"))
+        if get_num_zeros(atac_cells, atac_quants) > 0:
+            atac_value = query_set_to_numpy(atac_cells, atac_quants).std()
+        else:
+            atac_value = atac_quants.aggregate(StdDev("value"))
 
     codex_cells_excluded = get_num_zeros(codex_cells, codex_quants)
 
