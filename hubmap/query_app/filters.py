@@ -5,6 +5,7 @@ from typing import Dict, List
 from django.db.models import Q
 
 from .models import Cell, Cluster, Dataset, Organ
+from .queries import get_cells_list
 from .validation import split_at_comparator
 
 
@@ -242,6 +243,22 @@ def get_dataset_filter(query_params: dict):
         q = Q(pk__in=dataset_pks)
 
         return q
+
+    if input_type == "gene":
+        gene_cells = get_cells_list(query_params)
+        datasets = gene_cells.distinct("dataset").values_list("dataset", flat=True)
+        filtered_datasets = []
+        min_cell_percentage = query_params["min_cell_percentage"]
+        for dataset in datasets:
+            dataset_cells = Cell.objects.filter(dataset=dataset)
+            dataset_and_gene_cells = dataset_cells & gene_cells
+            if (
+                dataset_and_gene_cells.count() / dataset_cells.count() * 100.0
+                >= min_cell_percentage
+            ):
+                filtered_datasets.append(dataset)
+
+        return Q(pk__in=filtered_datasets)
 
 
 def get_protein_filter(query_params: dict):

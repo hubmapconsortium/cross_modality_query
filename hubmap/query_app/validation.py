@@ -94,12 +94,14 @@ def validate_cluster_query_params(query_params):
 
 
 def validate_dataset_query_params(query_params):
-    permitted_input_types = ["cell", "cluster", "dataset"]
+    permitted_input_types = ["cell", "cluster", "dataset", "gene"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
     required_fields = {"input_type", "input_set"}
     permitted_fields = required_fields | {"input_set_token"}
+    if input_type == "gene":
+        permitted_fields.add("min_cell_percentage")
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
     check_parameter_types_and_values(query_params)
