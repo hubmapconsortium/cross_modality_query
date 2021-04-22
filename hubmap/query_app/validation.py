@@ -33,6 +33,7 @@ def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_f
     if len(missing_fields) > 0:
         raise ValueError(f"Missing parameters: {missing_fields}")
     extra_fields = list(param_fields - permitted_fields)
+    extra_fields = [item for item in extra_fields if item not in required_fields]
     extra_fields.sort()
     if len(extra_fields) > 0:
         raise ValueError(f"Invalid parameters: {extra_fields}")
@@ -94,14 +95,16 @@ def validate_cluster_query_params(query_params):
 
 
 def validate_dataset_query_params(query_params):
-    permitted_input_types = ["cell", "cluster", "dataset", "gene"]
+    permitted_input_types = ["cell", "cluster", "dataset", "gene", "protein"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
     required_fields = {"input_type", "input_set"}
     permitted_fields = required_fields | {"input_set_token"}
-    if input_type == "gene":
+    if input_type in ["gene", "protein"]:
         permitted_fields.add("min_cell_percentage")
+        required_fields.add("genomic_modality")
+        print(required_fields)
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
     check_parameter_types_and_values(query_params)
@@ -167,12 +170,6 @@ def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
         query_params["input_set"].extend(qs.values_list(identifier, flat=True))
 
     if (
-        "limit" not in query_params.keys()
-        or not query_params["limit"].isnumeric()
-        or int(query_params["limit"]) > 100
-    ):
-        query_params["limit"] = 100
-    if (
         "p_value" not in query_params.keys()
         or query_params["p_value"] == ""
         or float(query_params["p_value"]) < 0.0
@@ -187,6 +184,9 @@ def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
 
     if "logical_operator" not in query_params.keys():
         query_params["logical_operator"] = "or"
+
+    if "min_cell_percentage" not in query_params.keys():
+        query_params["min_cell_percentage"] = 10.0
 
     return query_params
 

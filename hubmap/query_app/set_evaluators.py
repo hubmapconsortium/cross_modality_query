@@ -122,6 +122,15 @@ def get_ordered_query_set(query_set, set_type, sort_by, values_type, limit, offs
     return query_set
 
 
+def get_quant_value(cell_id, gene_symbol, modality):
+    if modality == "rna":
+        quant = RnaQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+    if modality == "atac":
+        quant = AtacQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+
+    return 0.0 if quant is None else quant.value
+
+
 def get_values(query_set, set_type, values, values_type, statistic="mean"):
 
     values_dict = {}
@@ -130,7 +139,11 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
         # values must be genes
         if values_type == "gene":
             pks = query_set.values_list("pk", flat=True)
-            query_set = Cell.objects.filter(pk__in=pks)
+            query_set = (
+                Cell.objects.filter(pk__in=pks)
+                .prefetch_related("atac_quants")
+                .prefetch_related("rna_quants")
+            )
             atac_cells = query_set.filter(modality__modality_name="atac").values_list(
                 "cell_id", flat=True
             )
@@ -138,19 +151,36 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
                 "cell_id", flat=True
             )
 
-            atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
-                q_var_id__in=values
-            )
-            rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
-                q_var_id__in=values
+            print("Modality cells gotten")
+
+            values_dict = {
+                cell: {gene: get_quant_value(cell, gene, "rna") for gene in values}
+                for cell in rna_cells
+            }
+            values_dict.update(
+                {
+                    cell: {gene: get_quant_value(cell, gene, "atac") for gene in values}
+                    for cell in atac_cells
+                }
             )
 
-            for cell in atac_cells:
-                cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
-            for cell in rna_cells:
-                cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
+            #            atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
+            #                q_var_id__in=values
+            #            )
+            #            rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
+            #                q_var_id__in=values
+            #            )
+
+            #            print("Modality quants gotten")
+
+            #        for cell in atac_cells:
+            #            cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
+            #            values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
+            #        for cell in rna_cells:
+            #            cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
+            #            values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
+
+            print("Values dict filled")
 
         elif values_type == "protein":
             pks = query_set.values_list("pk", flat=True)
@@ -234,7 +264,7 @@ def get_qs_count(query_params):
     query_set.count = qs.count()
     query_set.save()
 
-    qs_count = QuerySet.objects.filter(query_handle=pickle_hash)
+    qs_count = QuerySet.objects.filter(query_handle=pickle_hash).filter(count__gte=0)
     return qs_count
 
 
@@ -279,6 +309,8 @@ def make_cell_and_values(query_params):
         else get_values(query_set, "cell", include_values, values_type)
     )
 
+    print("Values dict gotten")
+
     cavs = []
 
     for cell in query_set:
@@ -298,18 +330,13 @@ def make_cell_and_values(query_params):
 
         cavs.append(cav)
 
-        kwargs = {
-            "cell_id": cell.cell_id,
-            "dataset": cell.dataset,
-            "modality": cell.modality,
-            "organ": cell.organ,
-            "values": values,
-        }
+    print("Cavs created")
 
-        cav = CellAndValues(**kwargs)
-        cav.save()
+    print(f"Num cav pks: {len(cavs)}")
 
     qs = CellAndValues.objects.filter(pk__in=cavs)
+
+    print(f"Qs count: {qs.count()}")
 
     return qs
 

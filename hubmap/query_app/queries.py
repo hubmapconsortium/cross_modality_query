@@ -244,7 +244,7 @@ def get_datasets_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_dataset_filter(query_params)
 
-    if query_params["input_type"] in ["cell", "cluster", "dataset"]:
+    if query_params["input_type"] in ["cell", "cluster", "dataset", "gene", "protein"]:
         query_set = Dataset.objects.filter(filter).distinct("uuid")
         query_handle = make_pickle_and_hash(query_set, "dataset")
         return QuerySet.objects.filter(query_handle=query_handle)
@@ -259,7 +259,6 @@ def get_proteins_list(query_params: Dict, input_set=None):
 
 
 def gene_query(self, request):
-
     if request.data == {}:
         all_genes = Gene.objects.all().distinct("gene_symbol")
         pickle_hash = make_pickle_and_hash(all_genes, "gene")

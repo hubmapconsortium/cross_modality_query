@@ -4,9 +4,87 @@ from typing import Dict, List
 
 from django.db.models import Q
 
-from .models import Cell, Cluster, Dataset, Organ
-from .queries import get_cells_list
-from .validation import split_at_comparator
+from .models import (
+    AtacQuant,
+    Cell,
+    Cluster,
+    CodexQuant,
+    Dataset,
+    Organ,
+    QuerySet,
+    RnaQuant,
+)
+from .utils import make_pickle_and_hash
+from .validation import process_query_parameters, split_at_comparator
+
+
+def cells_from_quants(quant_set, var):
+
+    cell_ids = quant_set.values_list("q_cell_id", flat=True)
+    print("Cell ids gotten")
+
+    if len(cell_ids) > 0:
+        print(cell_ids[0])
+
+    cells = Cell.objects.filter(cell_id__in=cell_ids)
+    print("Cell set found")
+
+    if "<" in var:
+        if isinstance(quant_set.first(), RnaQuant):
+            modality = "rna"
+        elif isinstance(quant_set.first(), AtacQuant):
+            modality = "atac"
+        else:
+            modality = "protein"
+
+    return cells
+
+
+def get_quant_queryset(query_params: Dict, filter):
+    if query_params["input_type"] == "protein":
+        query_set = CodexQuant.objects.filter(filter)
+    elif query_params["genomic_modality"] == "rna":
+        query_set = RnaQuant.objects.filter(filter)
+    elif query_params["genomic_modality"] == "atac":
+        query_set = AtacQuant.objects.filter(filter)
+
+    var_ids = [
+        split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
+        for item in query_params["input_set"]
+    ]
+
+    query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
+
+    print("Query sets gotten")
+
+    if len(query_sets) == 0:
+        query_set = Cell.objects.filter(pk__in=[])
+    elif len(query_sets) == 1:
+        query_set = query_sets[0]
+    elif len(query_sets) > 1:
+        if query_params["logical_operator"] == "and":
+            query_set = reduce(and_, query_sets)
+        elif query_params["logical_operator"] == "or":
+            query_set = reduce(or_, query_sets)
+
+    return query_set
+
+
+# Put fork here depending on whether or not we're returning expression values
+def get_cells_list(query_params: Dict, input_set=None):
+    query_params = process_query_parameters(query_params, input_set)
+    filter = get_cell_filter(query_params)
+    print("Filter gotten")
+
+    if query_params["input_type"] in ["gene", "protein"]:
+        query_set = get_quant_queryset(query_params, filter)
+    else:
+        query_set = Cell.objects.filter(filter)
+
+    query_set = query_set.distinct("cell_id")
+    print("Query set found")
+
+    return query_set
 
 
 def combine_qs(qs: List[Q], logical_operator: str) -> Q:
@@ -244,17 +322,16 @@ def get_dataset_filter(query_params: dict):
 
         return q
 
-    if input_type == "gene":
-        gene_cells = get_cells_list(query_params)
-        datasets = gene_cells.distinct("dataset").values_list("dataset", flat=True)
+    if input_type in ["gene", "protein"]:
+        var_cells = get_cells_list(query_params)
+        datasets = var_cells.distinct("dataset").values_list("dataset", flat=True)
         filtered_datasets = []
         min_cell_percentage = query_params["min_cell_percentage"]
         for dataset in datasets:
             dataset_cells = Cell.objects.filter(dataset=dataset)
-            dataset_and_gene_cells = dataset_cells & gene_cells
-            if (
-                dataset_and_gene_cells.count() / dataset_cells.count() * 100.0
-                >= min_cell_percentage
+            dataset_and_gene_cells = dataset_cells.intersection(var_cells)
+            if dataset_and_gene_cells.count() / dataset_cells.count() * 100.0 >= float(
+                min_cell_percentage
             ):
                 filtered_datasets.append(dataset)
 
