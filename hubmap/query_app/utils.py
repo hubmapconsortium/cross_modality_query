@@ -1,5 +1,9 @@
 import hashlib
+import json
 import pickle
+
+from django.db import connections
+from django.db.utils import OperationalError
 
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet
 
@@ -56,3 +60,21 @@ def unpickle_query_set(query_handle, set_type):
     qs.query = pickle.loads(query_pickle)
 
     return qs
+
+
+def get_database_status():
+    db_conn = connections["default"]
+    try:
+        c = db_conn.cursor()
+    except OperationalError:
+        connected = False
+    else:
+        connected = True
+    return connected
+
+
+def get_app_status():
+    json_file_path = "/opt/cross-modality-query/version.json"
+    json_dict = json.load(json_file_path)
+    json_dict["Postgres connection"] = get_app_status()
+    return json.dumps(json_dict)

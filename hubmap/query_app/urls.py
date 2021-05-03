@@ -91,6 +91,7 @@ urlpatterns = [
         views.ProteinListEvaluationViewSet.as_view({"post": "post"}),
         name="cluster_detail_evaluation",
     ),
+    path("status/", views.StatusViewSet.as_view({"get": "get"}), name="app_status"),
     path("geneform/", GeneQueryView.as_view(), name="gene_query_form"),
     path("cellform/", CellQueryView.as_view(), name="cell_query_form"),
     path("organform/", OrganQueryView.as_view(), name="organ_query_form"),

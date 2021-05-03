@@ -56,6 +56,7 @@ from .set_evaluators import (
     query_set_count,
 )
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
+from .utils import get_app_status
 
 
 class PaginationClass(PageNumberPagination):
@@ -302,3 +303,10 @@ class StatisticViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         return get_response(self, request, calc_stats)
+
+
+class StatusViewSet(viewsets.GenericViewSet):
+    pagination_class = PaginationClass
+
+    def get(self, request, format=None):
+        return HttpResponse(get_app_status())
