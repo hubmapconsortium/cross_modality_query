@@ -6,6 +6,7 @@ from .models import (
     Cluster,
     ClusterAndValues,
     Dataset,
+    DatasetAndValues,
     Gene,
     GeneAndValues,
     Modality,
@@ -119,6 +120,12 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClusterAndValues
         fields = ["cluster_method", "cluster_data", "grouping_name", "dataset", "values"]
+
+
+class DatasetAndValuesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DatasetAndValues
+        fields = ["uuid", "values"]
 
 
 class QuerySetSerializer(serializers.ModelSerializer):

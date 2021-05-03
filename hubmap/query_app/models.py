@@ -101,7 +101,7 @@ class Protein(models.Model):
 class Quant(models.Model):
     q_cell_id = models.CharField(max_length=128, null=True, db_index=True)
     q_var_id = models.CharField(max_length=64, null=True, db_index=True)
-    value = models.FloatField()
+    value = models.FloatField(db_index=True)
 
     class Meta:
         abstract = True
@@ -157,6 +157,11 @@ class GeneAndValues(Gene):
 
 
 class ClusterAndValues(Cluster):
+    values = models.JSONField(null=True)
+    created = models.DateTimeField(null=True, auto_now_add=True)
+
+
+class DatasetAndValues(Dataset):
     values = models.JSONField(null=True)
     created = models.DateTimeField(null=True, auto_now_add=True)
 

@@ -1,11 +1,71 @@
+from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from operator import and_, or_
+from time import perf_counter
 from typing import Dict, List
 
-from django.db.models import Q
+from django.core.cache import cache
+from django.db.models import Case, Count, IntegerField, Q, Sum, When
 
-from .models import Cell, Cluster, Dataset, Organ
-from .validation import split_at_comparator
+from .models import AtacQuant, Cell, Cluster, CodexQuant, Dataset, Organ, RnaQuant
+from .utils import unpickle_query_set
+from .validation import process_query_parameters, split_at_comparator
+
+
+def cells_from_quants(quant_set, var):
+
+    cell_ids = quant_set.values_list("q_cell_id", flat=True)
+
+    cell_pks = Cell.objects.filter(cell_id__in=cell_ids).values_list("pk", flat=True)
+
+    return Cell.objects.filter(pk__in=cell_pks)
+
+
+def get_quant_queryset(query_params: Dict, filter):
+    if query_params["input_type"] == "protein":
+        query_set = CodexQuant.objects.filter(filter)
+    elif query_params["genomic_modality"] == "rna":
+        query_set = RnaQuant.objects.filter(filter)
+    elif query_params["genomic_modality"] == "atac":
+        query_set = AtacQuant.objects.filter(filter)
+
+    var_ids = [
+        split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
+        for item in query_params["input_set"]
+    ]
+
+    query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
+
+    print("Query sets gotten")
+
+    if len(query_sets) == 0:
+        query_set = Cell.objects.filter(pk__in=[])
+    elif len(query_sets) == 1:
+        query_set = query_sets[0]
+    elif len(query_sets) > 1:
+        if query_params["logical_operator"] == "and":
+            query_set = reduce(and_, query_sets)
+        elif query_params["logical_operator"] == "or":
+            query_set = reduce(or_, query_sets)
+
+    return query_set
+
+
+# Put fork here depending on whether or not we're returning expression values
+def get_cells_list(query_params: Dict, input_set=None):
+    query_params = process_query_parameters(query_params, input_set)
+    filter = get_cell_filter(query_params)
+    print("Filter gotten")
+
+    if query_params["input_type"] in ["gene", "protein"]:
+        query_set = get_quant_queryset(query_params, filter)
+    else:
+        query_set = Cell.objects.filter(filter)
+
+    query_set = query_set.distinct("cell_id")
+    print("Query set found")
+
+    return query_set
 
 
 def combine_qs(qs: List[Q], logical_operator: str) -> Q:
@@ -218,6 +278,21 @@ def get_cluster_filter(query_params: dict):
         return Q(grouping_name__in=cluster_ids)
 
 
+def get_percentage_and_cache(params_tuple):
+    uuid = params_tuple[0]
+    var_cells = params_tuple[1]
+    include_values = params_tuple[2]
+    query_handle = cache.get(f"{uuid}_cells_set")
+    dataset_cells = unpickle_query_set(query_handle, "dataset")
+    dataset_count = cache.get(f"{uuid}_cells_count")
+    print(uuid)
+    print("Dataset cells found")
+    dataset_and_var_cells = dataset_cells.intersection(var_cells)
+    print("Intersection taken")
+    percentage = dataset_and_var_cells.count() / dataset_count
+    cache.set(f"{uuid}-{include_values}", percentage)
+
+
 def get_dataset_filter(query_params: dict):
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
@@ -242,6 +317,36 @@ def get_dataset_filter(query_params: dict):
         q = Q(pk__in=dataset_pks)
 
         return q
+
+    if input_type in ["gene", "protein"]:
+        var_cell_pks = get_cells_list(query_params).values_list("pk", flat=True)
+        var_cells = (
+            Cell.objects.filter(pk__in=var_cell_pks)
+            .only("pk", "dataset")
+            .select_related("dataset")
+        )
+        min_cell_percentage = query_params["min_cell_percentage"]
+        dataset_pks = var_cells.distinct("dataset").values_list("dataset", flat=True)
+
+        aggregate_kwargs = {
+            str(dataset_pk): Sum(
+                Case(When(dataset=dataset_pk, then=1), output_field=IntegerField())
+            )
+            for dataset_pk in dataset_pks
+        }
+        counts = var_cells.aggregate(**aggregate_kwargs)
+        dataset_counts = {
+            dataset_pk: Cell.objects.filter(dataset=dataset_pk).count()
+            for dataset_pk in dataset_pks
+        }
+
+        filtered_datasets = [
+            pk
+            for pk in dataset_pks
+            if counts[str(pk)] / dataset_counts[pk] * 100 >= float(min_cell_percentage)
+        ]
+
+        return Q(pk__in=filtered_datasets)
 
 
 def get_protein_filter(query_params: dict):
