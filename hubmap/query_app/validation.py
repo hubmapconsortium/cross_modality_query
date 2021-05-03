@@ -103,7 +103,8 @@ def validate_dataset_query_params(query_params):
     permitted_fields = required_fields | {"input_set_token"}
     if input_type in ["gene", "protein"]:
         permitted_fields.add("min_cell_percentage")
-        required_fields.add("genomic_modality")
+        if input_type == "gene":
+            required_fields.add("genomic_modality")
         print(required_fields)
     check_parameter_fields(query_params, required_fields, permitted_fields)
 
@@ -242,6 +243,7 @@ def validate_values_types(set_type, values_type):
         "gene": ["organ", "cluster"],
         "cluster": ["gene"],
         "organ": ["gene"],
+        "dataset": ["gene", "protein"],
     }
     allowed_types = type_map[set_type]
     allowed_types.sort()
@@ -280,9 +282,9 @@ def process_evaluation_args(query_params):
     if (
         "limit" not in query_params.keys()
         or not query_params["limit"].isdigit()
-        or int(query_params["limit"]) > 100
+        or int(query_params["limit"]) > 100000
     ):
-        query_params["limit"] = 100
+        query_params["limit"] = 100000
     else:
         query_params["limit"] = int(query_params["limit"])
 

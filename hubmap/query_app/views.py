@@ -12,6 +12,7 @@ from .models import (
     Cluster,
     ClusterAndValues,
     Dataset,
+    DatasetAndValues,
     Gene,
     GeneAndValues,
     Organ,
@@ -32,6 +33,7 @@ from .serializers import (
     CellSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
+    DatasetAndValuesSerializer,
     DatasetSerializer,
     GeneAndValuesSerializer,
     GeneSerializer,
@@ -44,6 +46,7 @@ from .serializers import (
 from .set_evaluators import (
     cell_evaluation_detail,
     cluster_evaluation_detail,
+    dataset_evaluation_detail,
     evaluation_list,
     gene_evaluation_detail,
     organ_evaluation_detail,
@@ -53,8 +56,8 @@ from .set_operators import query_set_difference, query_set_intersection, query_s
 
 
 class PaginationClass(PageNumberPagination):
-    page_size = 100
-    max_page_size = 100
+    page_size = 100000
+    max_page_size = 100000
 
 
 def get_response(self, request, callable: Callable):
@@ -186,6 +189,15 @@ class ClusterDetailEvaluationViewSet(viewsets.ModelViewSet):
         return get_response(self, request, cluster_evaluation_detail)
 
 
+class DatasetDetailEvaluationViewSet(viewsets.ModelViewSet):
+    queryset = DatasetAndValues.objects.all()
+    serializer_class = DatasetAndValuesSerializer
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        return get_response(self, request, dataset_evaluation_detail)
+
+
 class CellListEvaluationViewSet(viewsets.ModelViewSet):
     query_set = Cell.objects.all()
     serializer_class = CellSerializer
@@ -276,4 +288,5 @@ class SetCountViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
+        print(request.method)
         return get_response(self, request, query_set_count)

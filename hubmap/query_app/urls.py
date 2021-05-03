@@ -79,7 +79,7 @@ urlpatterns = [
     ),
     path(
         "datasetdetailevaluation/",
-        views.DatasetListEvaluationViewSet.as_view({"post": "post"}),
+        views.DatasetDetailEvaluationViewSet.as_view({"post": "post"}),
         name="dataset_detail_evaluation",
     ),
     path(

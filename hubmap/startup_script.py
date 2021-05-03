@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-
+import hashlib
 import json
+import pickle
 from argparse import ArgumentParser
 from os import fspath
 from pathlib import Path
@@ -26,6 +27,7 @@ from query_app.models import (
     Organ,
     Protein,
     PVal,
+    QuerySet,
     RnaQuant,
 )
 
@@ -358,6 +360,18 @@ def load_data(hdf_file: Path):
         create_proteins(hdf_file)
         print("Proteins created")
     return
+
+
+def make_pickle_and_hash(qs, set_type):
+    qry = qs.query
+    query_pickle = pickle.dumps(qry)
+    query_handle = str(hashlib.sha256(query_pickle).hexdigest())
+    if QuerySet.objects.filter(query_handle=query_handle).first() is None:
+        query_set = QuerySet(
+            query_pickle=query_pickle, query_handle=query_handle, set_type=set_type
+        )
+        query_set.save()
+    return query_handle
 
 
 def main(hdf_files: List[Path]):

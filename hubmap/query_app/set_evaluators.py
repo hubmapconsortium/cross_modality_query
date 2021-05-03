@@ -1,7 +1,8 @@
 from typing import List
 
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Sum, When
 
+from .filters import get_cells_list, split_at_comparator
 from .models import (
     AtacQuant,
     Cell,
@@ -9,6 +10,8 @@ from .models import (
     Cluster,
     ClusterAndValues,
     CodexQuant,
+    Dataset,
+    DatasetAndValues,
     Gene,
     GeneAndValues,
     Organ,
@@ -23,6 +26,7 @@ from .serializers import (
     CellSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
+    DatasetAndValuesSerializer,
     DatasetSerializer,
     GeneAndValuesSerializer,
     GeneSerializer,
@@ -41,6 +45,9 @@ from .validation import (
 
 
 def infer_values_type(values: List) -> str:
+
+    values = [split_at_comparator(item)[0].strip() for item in values]
+
     """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
     if Gene.objects.filter(gene_symbol__in=values).count() > 0:
         return "gene"
@@ -127,6 +134,13 @@ def get_quant_value(cell_id, gene_symbol, modality):
         quant = RnaQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
     if modality == "atac":
         quant = AtacQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+    elif modality == "codex":
+        quant = (
+            CodexQuant.objects.filter(q_var_id=gene_symbol)
+            .filter(q_cell_id=cell_id)
+            .filter(statistic="mean")
+            .first()
+        )
 
     return 0.0 if quant is None else quant.value
 
@@ -164,24 +178,6 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
                 }
             )
 
-            #            atac_quants = AtacQuant.objects.filter(q_cell_id__in=atac_cells).filter(
-            #                q_var_id__in=values
-            #            )
-            #            rna_quants = RnaQuant.objects.filter(q_cell_id__in=rna_cells).filter(
-            #                q_var_id__in=values
-            #            )
-
-            #            print("Modality quants gotten")
-
-            #        for cell in atac_cells:
-            #            cell_values = atac_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-            #            values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
-            #        for cell in rna_cells:
-            #            cell_values = rna_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-            #            values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
-
-            print("Values dict filled")
-
         elif values_type == "protein":
             pks = query_set.values_list("pk", flat=True)
             query_set = Cell.objects.filter(pk__in=pks)
@@ -190,15 +186,10 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
                 "cell_id", flat=True
             )
 
-            codex_quants = (
-                CodexQuant.objects.filter(q_cell_id__in=codex_cells)
-                .filter(q_var_id__in=values)
-                .filter(statistic=statistic)
-            )
-
-            for cell in codex_cells:
-                cell_values = codex_quants.filter(q_cell_id=cell).values_list("q_var_id", "value")
-                values_dict[cell] = {cv[0]: cv[1] for cv in cell_values}
+            values_dict = {
+                cell: {gene: get_quant_value(cell, gene, "codex") for gene in values}
+                for cell in codex_cells
+            }
 
         return values_dict
 
@@ -253,6 +244,34 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
             )
             values_dict[cluster.grouping_name] = {cp[0]: cp[1] for cp in cluster_pvals}
         return values_dict
+
+
+def get_percentages(query_set, include_values, values_type):
+    query_params = {
+        "input_type": values_type,
+        "input_set": include_values,
+        "logical_operator": "and",
+    }
+    if values_type == "gene" and query_set.first():
+        query_params["genomic_modality"] = query_set.first().modality.modality_name
+    var_cell_pks = get_cells_list(query_params, input_set=include_values).values_list(
+        "pk", flat=True
+    )
+    var_cells = (
+        Cell.objects.filter(pk__in=var_cell_pks).only("pk", "dataset").select_related("dataset")
+    )
+    dataset_pks = var_cells.distinct("dataset").values_list("dataset", flat=True)
+
+    aggregate_kwargs = {
+        str(dataset_pk): Sum(Case(When(dataset=dataset_pk, then=1), output_field=IntegerField()))
+        for dataset_pk in dataset_pks
+    }
+    dataset_counts = {
+        dataset_pk: Cell.objects.filter(dataset=dataset_pk).count() for dataset_pk in dataset_pks
+    }
+    counts = var_cells.aggregate(**aggregate_kwargs)
+    percentages_dict = {pk: counts[str(pk)] / dataset_counts[pk] * 100 for pk in dataset_pks}
+    return percentages_dict
 
 
 def get_qs_count(query_params):
@@ -464,6 +483,43 @@ def make_cluster_and_values(query_params):
     return ClusterAndValues.objects.filter(pk__in=clavs)
 
 
+def make_dataset_and_values(query_params):
+    pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
+
+    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
+    set_type = qs.set_type
+
+    if len(include_values) > 0:
+        values_type = infer_values_type(include_values)
+        validate_values_types(set_type, values_type)
+
+    query_set = unpickle_query_set(pickle_hash, set_type)
+
+    query_set = query_set[offset:limit]
+
+    print(len(include_values))
+
+    values_dict = (
+        {} if len(include_values) == 0 else get_percentages(query_set, include_values, values_type)
+    )
+
+    davs = []
+
+    for dataset in query_set[:limit]:
+        values = {} if dataset.pk not in values_dict else values_dict[dataset.pk]
+
+        kwargs = {
+            "uuid": dataset.uuid,
+            "values": values,
+        }
+        dav = DatasetAndValues(**kwargs)
+        dav.save()
+        davs.append(dav)
+
+    # Filter on query hash
+    return DatasetAndValues.objects.filter(pk__in=davs)
+
+
 def cell_evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
@@ -532,6 +588,24 @@ def cluster_evaluation_detail(self, request):
         }
 
         response = ClusterAndValuesSerializer(evaluated_set, many=True, context=context).data
+
+        return response
+
+
+def dataset_evaluation_detail(self, request):
+    if request.method == "POST":
+        query_params = request.data.dict()
+        if "values_included" in query_params.keys():
+            query_params["values_included"] = request.POST.getlist("values_included")
+        validate_detail_evaluation_args(query_params)
+        evaluated_set = make_dataset_and_values(query_params)
+        self.queryset = evaluated_set
+        # Set context
+        context = {
+            "request": request,
+        }
+
+        response = DatasetAndValuesSerializer(evaluated_set, many=True, context=context).data
 
         return response
 

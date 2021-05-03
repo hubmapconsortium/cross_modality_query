@@ -13,20 +13,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="AtacQuant",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("q_cell_id", models.CharField(db_index=True, max_length=64, null=True)),
-                ("q_gene_id", models.CharField(db_index=True, max_length=64, null=True)),
-                ("value", models.FloatField(null=True)),
-            ],
-        ),
-        migrations.CreateModel(
             name="Cell",
             fields=[
                 (
@@ -64,271 +50,6 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="Gene",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("gene_symbol", models.CharField(db_index=True, max_length=64)),
-                (
-                    "go_terms",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=50),
-                        blank=True,
-                        db_index=True,
-                        null=True,
-                        size=None,
-                    ),
-                ),
-            ],
-        ),
-        migrations.CreateModel(
-            name="Modality",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("modality_name", models.CharField(max_length=16)),
-            ],
-        ),
-        migrations.CreateModel(
-            name="Protein",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("protein_id", models.CharField(db_index=True, max_length=32)),
-                (
-                    "go_terms",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=50),
-                        blank=True,
-                        db_index=True,
-                        null=True,
-                        size=None,
-                    ),
-                ),
-            ],
-        ),
-        migrations.CreateModel(
-            name="Query",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                (
-                    "input_type",
-                    models.CharField(
-                        choices=[("Cell", "Cell"), ("Gene", "Gene"), ("Organ", "Organ")],
-                        max_length=5,
-                    ),
-                ),
-                (
-                    "input_set",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=1024), size=None
-                    ),
-                ),
-                (
-                    "logical_operator",
-                    models.CharField(choices=[("and", "or"), ("or", "or")], max_length=3),
-                ),
-            ],
-        ),
-        migrations.CreateModel(
-            name="QueryResults",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("created", models.DateTimeField(auto_created=True)),
-                ("mean", models.JSONField()),
-                ("covariance", models.JSONField()),
-                ("correlation", models.JSONField()),
-            ],
-        ),
-        migrations.CreateModel(
-            name="RnaQuant",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("q_cell_id", models.CharField(db_index=True, max_length=64, null=True)),
-                ("q_gene_id", models.CharField(db_index=True, max_length=64, null=True)),
-                ("value", models.FloatField(null=True)),
-            ],
-        ),
-        migrations.CreateModel(
-            name="CellAndValues",
-            fields=[
-                (
-                    "cell_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.cell",
-                    ),
-                ),
-                ("values", models.JSONField(null=True)),
-            ],
-            bases=("query_app.cell",),
-        ),
-        migrations.CreateModel(
-            name="Cluster",
-            fields=[
-                (
-                    "cellgrouping_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.cellgrouping",
-                    ),
-                ),
-                ("cluster_method", models.CharField(max_length=16)),
-                ("cluster_data", models.CharField(max_length=16)),
-            ],
-            bases=("query_app.cellgrouping",),
-        ),
-        migrations.CreateModel(
-            name="GeneAndValues",
-            fields=[
-                (
-                    "gene_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.gene",
-                    ),
-                ),
-                ("values", models.JSONField(null=True)),
-            ],
-            bases=("query_app.gene",),
-        ),
-        migrations.CreateModel(
-            name="Organ",
-            fields=[
-                (
-                    "cellgrouping_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.cellgrouping",
-                    ),
-                ),
-            ],
-            bases=("query_app.cellgrouping",),
-        ),
-        migrations.CreateModel(
-            name="PVal",
-            fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("value", models.FloatField(db_index=True, null=True)),
-                (
-                    "modality",
-                    models.ForeignKey(
-                        null=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="query_app.modality",
-                    ),
-                ),
-                (
-                    "p_gene",
-                    models.ForeignKey(
-                        null=True, on_delete=django.db.models.deletion.CASCADE, to="query_app.gene"
-                    ),
-                ),
-                (
-                    "p_group",
-                    models.ForeignKey(
-                        null=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="query_app.cellgrouping",
-                    ),
-                ),
-            ],
-        ),
-        migrations.AddField(
-            model_name="cell",
-            name="modality",
-            field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.CASCADE, to="query_app.modality"
-            ),
-        ),
-        migrations.CreateModel(
-            name="OrganAndValues",
-            fields=[
-                (
-                    "organ_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.organ",
-                    ),
-                ),
-                ("values", models.JSONField(null=True)),
-            ],
-            bases=("query_app.organ",),
-        ),
-        migrations.CreateModel(
-            name="GeneQueryResults",
-            fields=[
-                (
-                    "queryresults_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.queryresults",
-                    ),
-                ),
-                (
-                    "genes_and_values",
-                    models.ManyToManyField(related_name="queries", to="query_app.GeneAndValues"),
-                ),
-            ],
-            bases=("query_app.queryresults",),
-        ),
-        migrations.CreateModel(
             name="Dataset",
             fields=[
                 (
@@ -356,70 +77,32 @@ class Migration(migrations.Migration):
             bases=("query_app.cellgrouping",),
         ),
         migrations.CreateModel(
-            name="CellQueryResults",
+            name="Modality",
             fields=[
                 (
-                    "queryresults_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="query_app.queryresults",
+                    "id",
+                    models.AutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
                     ),
                 ),
-                (
-                    "cells_and_values",
-                    models.ManyToManyField(related_name="queries", to="query_app.CellAndValues"),
-                ),
+                ("modality_name", models.CharField(max_length=16)),
             ],
-            bases=("query_app.queryresults",),
-        ),
-        migrations.AddField(
-            model_name="cell",
-            name="clusters",
-            field=models.ManyToManyField(null=True, related_name="cells", to="query_app.Cluster"),
-        ),
-        migrations.AddField(
-            model_name="cell",
-            name="dataset",
-            field=models.ForeignKey(
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="cells",
-                to="query_app.dataset",
-            ),
-        ),
-        migrations.AddField(
-            model_name="cell",
-            name="organ",
-            field=models.ForeignKey(
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="cells",
-                to="query_app.organ",
-            ),
         ),
         migrations.CreateModel(
-            name="OrganQueryResults",
+            name="Organ",
             fields=[
                 (
-                    "queryresults_ptr",
+                    "cellgrouping_ptr",
                     models.OneToOneField(
                         auto_created=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         parent_link=True,
                         primary_key=True,
                         serialize=False,
-                        to="query_app.queryresults",
+                        to="query_app.cellgrouping",
                     ),
                 ),
-                (
-                    "organs_and_values",
-                    models.ManyToManyField(related_name="queries", to="query_app.OrganAndValues"),
-                ),
             ],
-            bases=("query_app.queryresults",),
+            bases=("query_app.cellgrouping",),
         ),
     ]
