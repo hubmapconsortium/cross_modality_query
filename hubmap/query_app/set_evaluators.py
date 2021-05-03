@@ -46,7 +46,14 @@ from .validation import (
 
 def infer_values_type(values: List) -> str:
 
-    values = [split_at_comparator(item)[0].strip() for item in values]
+    print(values)
+
+    values = [
+        split_at_comparator(item)[0].strip()
+        if len(split_at_comparator(item)) > 0
+        else item.strip()
+        for item in values
+    ]
 
     """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
     if Gene.objects.filter(gene_symbol__in=values).count() > 0:
