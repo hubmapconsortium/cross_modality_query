@@ -2,12 +2,15 @@ import numpy as np
 from django.db.models import Avg, Max, Min, StdDev, Sum
 
 from .models import AtacQuant, CodexQuant, RnaQuant, StatReport
+from .serializers import StatReportSerializer
 from .utils import unpickle_query_set
 from .validation import validate_statistic_args
 
 
 def get_num_zeros(cell_set, quant_set):
-    return cell_set.count() - quant_set.count()
+    num_zeroes = cell_set.count() - quant_set.count()
+    print("num_zeroes found")
+    return num_zeroes
 
 
 def query_set_to_numpy(cell_set, quant_set):
@@ -22,30 +25,41 @@ def get_stat_values(query_set, var_id, stat_type):
     codex_cells = query_set.filter(modality__modality_name="codex")
     rna_cells = query_set.filter(modality__modality_name="rna")
     atac_cells = query_set.filter(modality__modality_name="atac")
-    codex_quants = CodexQuant.filter(q_var_id=var_id).filter(
+
+    print("Cells for each modality found")
+
+    codex_quants = CodexQuant.objects.filter(q_var_id=var_id).filter(
         q_cell_id__in=codex_cells.values_list("cell_id", flat=True)
     )
-    rna_quants = RnaQuant.filter(q_var_id=var_id).filter(
+    rna_quants = RnaQuant.objects.filter(q_var_id=var_id).filter(
         q_cell_id__in=rna_cells.values_list("cell_id", flat=True)
     )
-    atac_quants = AtacQuant.filter(q_var_id=var_id).filter(
+    atac_quants = AtacQuant.objects.filter(q_var_id=var_id).filter(
         q_cell_id__in=atac_cells.values_list("cell_id", flat=True)
     )
 
+    print("Quants for each modality found")
+
     if stat_type == "mean":
         if get_num_zeros(rna_cells, rna_quants) > 0:
-            rna_value = rna_quants.aggregate(Sum("value"))
+            rna_value = rna_quants.aggregate(Sum("value"))["value__avg"]
             rna_value = rna_value / rna_cells.count()
         else:
-            rna_value = rna_quants.aggregate(Avg("value"))
+            rna_value = rna_quants.aggregate(Avg("value"))["value__avg"]
+
+        print("RNA value found")
 
         if get_num_zeros(atac_cells, atac_quants) > 0:
-            atac_value = atac_quants.aggregate(Sum("value"))
+            atac_value = atac_quants.aggregate(Sum("value"))["value__avg"]
             atac_value = atac_value / atac_cells.count()
         else:
-            atac_value = atac_quants.aggregate(Avg("value"))
+            atac_value = atac_quants.aggregate(Avg("value"))["value__avg"]
 
-        codex_value = codex_quants.aggregate(Avg("value"))
+        print("Atac value found")
+
+        codex_value = codex_quants.aggregate(Avg("value"))["value__avg"]
+
+        print("Codex value found")
 
     elif stat_type == "min":
         codex_value = codex_quants.aggregate(Min("value"))
@@ -76,10 +90,14 @@ def get_stat_values(query_set, var_id, stat_type):
 
     codex_cells_excluded = get_num_zeros(codex_cells, codex_quants)
 
+    if not codex_cells_excluded:
+        codex_cells_excluded = 0
+
     return codex_value, rna_value, atac_value, codex_cells_excluded
 
 
 def calc_stats(query_handle, set_type, var_id, stat_type):
+    print(f"Calc stats called")
     query_set = unpickle_query_set(query_handle, set_type)
     codex_value, rna_value, atac_value, codex_cells_excluded = get_stat_values(
         query_set, var_id, stat_type
@@ -98,14 +116,20 @@ def calc_stats(query_handle, set_type, var_id, stat_type):
         StatReport.objects.filter(query_handle=query_handle)
         .filter(var_id=var_id)
         .filter(statistic_type=stat_type)
+        .order_by("pk")
     )
+    print(f"Stat reports count: {stat_reports.count()}")
     return stat_reports
 
 
-def calculate_statistics(request):
+def calculate_statistics(self, request):
     query_params = request.data.dict()
-    stat_type = request.path.split("/")[-1]
+    stat_type = request.path.split("/")[-2]
     query_params["stat_type"] = stat_type
+
+    print(request.path)
+    print(request.path.split("/"))
+    print(stat_type)
 
     query_handle, set_type, var_id, stat_type = validate_statistic_args(query_params)
 
@@ -113,9 +137,22 @@ def calculate_statistics(request):
         StatReport.objects.filter(query_handle=query_handle)
         .filter(var_id=var_id)
         .filter(statistic_type=stat_type)
+        .order_by("pk")
     )
+
     if existing_stat_reports.first() is not None:
-        return existing_stat_reports
+        print(f"Existing stat reports found")
+        query_set = existing_stat_reports
 
     else:
-        return calc_stats(query_handle, set_type, var_id, stat_type)
+        query_set = calc_stats(query_handle, set_type, var_id, stat_type)
+
+    self.queryset = query_set
+    # Set context
+    context = {
+        "request": request,
+    }
+
+    response = StatReportSerializer(query_set, many=True, context=context).data
+
+    return response

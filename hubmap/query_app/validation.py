@@ -308,9 +308,9 @@ def validate_statistic_args(query_params):
 
     permitted_stat_types = ["mean", "min", "max", "stddev"]
     permitted_stat_types.sort()
-    set_type = query_params["stat_type"]
-    if set_type not in permitted_set_types:
-        raise ValueError(f"{set_type} not supported, only {permitted_stat_types}")
+    stat_type = query_params["stat_type"]
+    if stat_type not in permitted_stat_types:
+        raise ValueError(f"{stat_type} not supported, only {permitted_stat_types}")
 
     return (
         query_params["key"],

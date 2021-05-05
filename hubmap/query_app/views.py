@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
-from .analysis import calc_stats
+from .analysis import calculate_statistics
 from .models import (
     Cell,
     CellAndValues,
@@ -292,21 +292,26 @@ class SetCountViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        print(request.method)
         return get_response(self, request, query_set_count)
 
 
 class StatisticViewSet(viewsets.ModelViewSet):
-    queryset = StatReport
+    queryset = StatReport.objects.all()
     serializer_class = StatReportSerializer
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        return get_response(self, request, calc_stats)
+        return get_response(self, request, calculate_statistics)
 
 
 class StatusViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
 
     def get(self, request, format=None):
-        return HttpResponse(get_app_status())
+        try:
+            return HttpResponse(get_app_status())
+        except Exception as e:
+            tb = traceback.format_exc()
+            json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+            print(json_error_response)
+            return HttpResponse(json_error_response)

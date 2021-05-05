@@ -150,5 +150,5 @@ class StatReportSerializer(serializers.ModelSerializer):
             "rna_value",
             "atac_value",
             "codex_value",
-            "cells_excluded",
+            "num_cells_excluded",
         ]
