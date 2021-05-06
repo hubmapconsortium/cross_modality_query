@@ -2,7 +2,7 @@ version: '3'
 
 services:
   db:
-    image: postgres:13
+    image: "hubmap/cross-modality-query-db:latest"
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
