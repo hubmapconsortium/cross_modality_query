@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      -  /opt/postgres:/var/lib/postgresql/data
+      -  /data/postgres:/var/lib/postgresql/data
   memcached:
     image: memcached:latest
   uwsgi:
