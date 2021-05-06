@@ -1,4 +1,5 @@
 # requires v0.5 or newer of 'multi-docker-build' package
+hubmap/cross-modality-query-db	docker/postgres/Dockerfile
 hubmap/cross-modality-query-base  docker/base/Dockerfile
 hubmap/cross-modality-query-dev   docker/dev/Dockerfile
 # needs base directory build to copy code
