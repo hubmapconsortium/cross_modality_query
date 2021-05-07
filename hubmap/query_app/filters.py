@@ -48,6 +48,9 @@ def get_quant_queryset(query_params: Dict, filter):
         elif query_params["logical_operator"] == "or":
             query_set = reduce(or_, query_sets)
 
+    query_set = query_set.distinct("cell_id")
+    query_set = Cell.objects.filter(pk__in=list(query_set.values_list("pk", flat=True)))
+
     return query_set
 
 
@@ -62,7 +65,6 @@ def get_cells_list(query_params: Dict, input_set=None):
     else:
         query_set = Cell.objects.filter(filter)
 
-    query_set = query_set.distinct("cell_id")
     print("Query set found")
 
     return query_set
@@ -106,8 +108,8 @@ def process_single_condition(split_condition: List[str], input_type: str) -> Q:
     elif comparator == "!=":
         q = q & ~Q(value__exact=value)
 
-    if input_type == "protein":
-        q = q & Q(statistic__iexact="mean")
+    #    if input_type == "protein":
+    #        q = q & Q(statistic__iexact="mean")
 
     print(q)
 
@@ -319,7 +321,7 @@ def get_dataset_filter(query_params: dict):
         return q
 
     if input_type in ["gene", "protein"]:
-        var_cell_pks = get_cells_list(query_params).values_list("pk", flat=True)
+        var_cell_pks = list(get_cells_list(query_params).values_list("pk", flat=True))
         var_cells = (
             Cell.objects.filter(pk__in=var_cell_pks)
             .only("pk", "dataset")

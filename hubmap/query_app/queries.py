@@ -118,6 +118,9 @@ def get_quant_queryset(query_params: Dict, filter):
         elif query_params["logical_operator"] == "or":
             query_set = reduce(or_, query_sets)
 
+    query_set = query_set.distinct("cell_id")
+    query_set = Cell.objects.filter(pk__in=query_set.values_list("pk", flat=True))
+
     return query_set
 
 
@@ -168,9 +171,6 @@ def get_cells_list(query_params: Dict, input_set=None):
         query_set = get_quant_queryset(query_params, filter)
     else:
         query_set = Cell.objects.filter(filter)
-
-    query_set = query_set.distinct("cell_id")
-    print("Query set found")
 
     query_handle = make_pickle_and_hash(query_set, "cell")
     return QuerySet.objects.filter(query_handle=query_handle)

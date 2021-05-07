@@ -137,17 +137,14 @@ def get_ordered_query_set(query_set, set_type, sort_by, values_type, limit, offs
 
 
 def get_quant_value(cell_id, gene_symbol, modality):
+    print(f"{cell_id}, {gene_symbol}, {modality}")
     if modality == "rna":
         quant = RnaQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
     if modality == "atac":
         quant = AtacQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
     elif modality == "codex":
-        quant = (
-            CodexQuant.objects.filter(q_var_id=gene_symbol)
-            .filter(q_cell_id=cell_id)
-            .filter(statistic="mean")
-            .first()
-        )
+        quant = CodexQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+        print("Quant found")
 
     return 0.0 if quant is None else quant.value
 
@@ -160,6 +157,9 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
         # values must be genes
         if values_type == "gene":
             pks = query_set.values_list("pk", flat=True)
+            print(len(pks))
+            query_set = Cell.objects.filter(pk__in=pks)
+            print(query_set.count())
             query_set = (
                 Cell.objects.filter(pk__in=pks)
                 .prefetch_related("atac_quants")
@@ -194,7 +194,7 @@ def get_values(query_set, set_type, values, values_type, statistic="mean"):
             )
 
             values_dict = {
-                cell: {gene: get_quant_value(cell, gene, "codex") for gene in values}
+                cell: {protein: get_quant_value(cell, protein, "codex") for protein in values}
                 for cell in codex_cells
             }
 
@@ -329,18 +329,21 @@ def make_cell_and_values(query_params):
         else get_ordered_query_set(query_set, "cell", sort_by, values_type, limit, offset)
     )
 
+    print("Query_set sliced")
+
     values_dict = (
         {}
         if len(include_values) == 0
         else get_values(query_set, "cell", include_values, values_type)
     )
 
-    print("Values dict gotten")
-
     cavs = []
 
     for cell in query_set:
-        values = {} if cell.cell_id not in values_dict else values_dict[cell.cell_id]
+        if values_type == "protein":
+            values = {var: get_quant_value(cell.cell_id, var, "codex") for var in include_values}
+        else:
+            values = {} if cell.cell_id not in values_dict else values_dict[cell.cell_id]
 
         kwargs = {
             "cell_id": cell.cell_id,
