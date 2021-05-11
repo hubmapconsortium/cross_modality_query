@@ -19,7 +19,6 @@ from .models import (
     Organ,
     OrganAndValues,
     Protein,
-    QuerySet,
     StatReport,
 )
 from .queries import (
@@ -42,8 +41,6 @@ from .serializers import (
     OrganAndValuesSerializer,
     OrganSerializer,
     ProteinSerializer,
-    QuerySetCountSerializer,
-    QuerySetSerializer,
     StatReportSerializer,
 )
 from .set_evaluators import (
@@ -64,6 +61,42 @@ class PaginationClass(PageNumberPagination):
     max_page_size = 100000
 
 
+def get_generic_response(self, callable, request):
+    try:
+        return HttpResponse(callable(self, request))
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+        print(json_error_response)
+        return HttpResponse(json_error_response)
+
+
+def query(self, request):
+    endpoints_dict = {
+        "gene": gene_query,
+        "organ": organ_query,
+        "cell": cell_query,
+        "dataset": dataset_query,
+        "cluster": cluster_query,
+        "protein": protein_query,
+    }
+    endpoint = request.path.split("/")[-2]
+    callable = endpoints_dict[endpoint]
+    return get_generic_response(self, callable, request)
+
+
+def operation(self, request):
+    endpoints_dict = {
+        "union": query_set_union,
+        "intersection": query_set_intersection,
+        "difference": query_set_difference,
+    }
+    endpoint = request.path.split("/")[-2]
+    callable = endpoints_dict[endpoint]
+    return get_generic_response(self, callable, request)
+
+
 def get_response(self, request, callable: Callable):
     try:
         response = callable(self, request)
@@ -77,81 +110,18 @@ def get_response(self, request, callable: Callable):
         return HttpResponse(json_error_response)
 
 
-class CellViewSet(viewsets.ModelViewSet):
-    query_set = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, cell_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, cell_query)
-
-
-class OrganViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, organ_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, organ_query)
-
-
-class GeneViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, gene_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, gene_query)
-
-
-class ProteinViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
+class QueryViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
 
-    def get(self, request, format=None):
-        return get_response(self, request, protein_query)
-
     def post(self, request, format=None):
-        return get_response(self, request, protein_query)
+        return query(self, request)
 
 
-class ClusterViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
+class OperationViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, cluster_query)
 
     def post(self, request, format=None):
-        return get_response(self, request, cluster_query)
-
-
-class DatasetViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, dataset_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, dataset_query)
+        return operation(self, request)
 
 
 class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -259,36 +229,7 @@ class ProteinListEvaluationViewSet(viewsets.ModelViewSet):
         return get_response(self, request, evaluation_list)
 
 
-class SetIntersectionViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_intersection)
-
-
-class SetUnionViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_union)
-
-
-class SetDifferenceViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_difference)
-
-
 class SetCountViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
@@ -308,10 +249,4 @@ class StatusViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
 
     def get(self, request, format=None):
-        try:
-            return HttpResponse(get_app_status())
-        except Exception as e:
-            tb = traceback.format_exc()
-            json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
-            print(json_error_response)
-            return HttpResponse(json_error_response)
+        get_generic_response(self, get_app_status, request)

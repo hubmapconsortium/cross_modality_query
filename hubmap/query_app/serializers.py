@@ -128,18 +128,6 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
         fields = ["uuid", "values"]
 
 
-class QuerySetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuerySet
-        fields = ["query_handle", "set_type"]
-
-
-class QuerySetCountSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuerySet
-        fields = ["query_handle", "set_type", "count"]
-
-
 class StatReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = StatReport
