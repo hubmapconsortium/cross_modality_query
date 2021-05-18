@@ -9,8 +9,13 @@ from pymongo import MongoClient
 
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 
-MONGO_HOST_AND_PORT = "mongodb://localhost:27017/"
+MONGO_USERNAME = "root"
+MONGO_PASSWORD = settings.MONGO_PASSWORD
+MONGO_HOSTNAME = "18.207.164.186"
+MONGO_PORT = "27017"
+MONGO_HOST_AND_PORT = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:{MONGO_PORT}/"
 MONGO_DB_NAME = "token_store"
+MONGO_COLLECTION_NAME = "pickles_and_hashes"
 
 
 def set_intersection(query_set_1, query_set_2):

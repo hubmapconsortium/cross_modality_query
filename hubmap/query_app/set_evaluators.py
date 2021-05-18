@@ -505,7 +505,8 @@ def make_dataset_and_values(query_params):
 
     query_set = unpickle_query_set(pickle_hash, set_type)
 
-    query_set = query_set[offset:limit]
+    query_set_pks = query_set[offset:limit]
+    query_set = Dataset.objects.filter(pk__in=query_set_pks)
 
     print(len(include_values))
 
