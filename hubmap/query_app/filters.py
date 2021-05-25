@@ -65,6 +65,10 @@ def get_cells_list(query_params: Dict, input_set=None):
     else:
         query_set = Cell.objects.filter(filter)
 
+    pks = query_set.values_list("pk", flat=True)
+    query_set = Cell.objects.filter(pk__in=pks)
+    query_set = query_set.distinct("cell_id")
+
     print("Query set found")
 
     return query_set
@@ -338,7 +342,7 @@ def get_dataset_filter(query_params: dict):
         }
         counts = var_cells.aggregate(**aggregate_kwargs)
         dataset_counts = {
-            dataset_pk: Cell.objects.filter(dataset=dataset_pk).count()
+            dataset_pk: Cell.objects.filter(dataset=dataset_pk).distinct("cell_id").count()
             for dataset_pk in dataset_pks
         }
 

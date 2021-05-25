@@ -172,6 +172,10 @@ def get_cells_list(query_params: Dict, input_set=None):
     else:
         query_set = Cell.objects.filter(filter)
 
+    pks = query_set.values_list("pk", flat=True)
+    query_set = Cell.objects.filter(pk__in=pks)
+    query_set = query_set.distinct("cell_id")
+
     query_handle = make_pickle_and_hash(query_set, "cell")
     return QuerySet.objects.filter(query_handle=query_handle)
 
