@@ -17,6 +17,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic.base import RedirectView
 
+from query_app.utils import set_up_mongo
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("query_app.urls")),

@@ -2,8 +2,8 @@ import hashlib
 import json
 import pickle
 from collections import OrderedDict
+from datetime import datetime
 
-from bson import Binary
 from django.conf import settings
 from django.db import connections
 from django.db.utils import OperationalError
@@ -19,6 +19,14 @@ MONGO_PORT = "27017"
 MONGO_HOST_AND_PORT = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:{MONGO_PORT}/"
 MONGO_DB_NAME = "token_store"
 MONGO_COLLECTION_NAME = "pickles_and_hashes"
+TOKEN_EXPIRATION_TIME = 14400  # 4 hours in seconds
+
+
+def set_up_mongo():
+    client = MongoClient(MONGO_HOST_AND_PORT)
+    db = client[MONGO_DB_NAME]
+    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
+    return
 
 
 def set_intersection(query_set_1, query_set_2):
@@ -41,6 +49,7 @@ def make_pickle_and_hash(qs, set_type):
         "query_handle": query_handle,
         "query_pickle": query_pickle,
         "set_type": set_type,
+        "created_at": datetime.utcnow(),
     }
     collection.insert_one(doc)
 

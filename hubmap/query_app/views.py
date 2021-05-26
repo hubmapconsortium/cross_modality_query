@@ -250,7 +250,7 @@ class StatusViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
 
     def get(self, request, format=None):
-        get_generic_response(self, get_app_status, request)
+        return get_generic_response(self, get_app_status, request)
 
 
 class LandingPageView(viewsets.GenericViewSet):
