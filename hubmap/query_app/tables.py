@@ -89,13 +89,11 @@ class ClusterAndValuesTable(tables.Table):
 
 class QuerySetTable(tables.Table):
     class Meta:
-        model = models.QuerySet
-        fields = ["query_pickle_hash", "set_type"]
+        model = models.Cell
         template_name = "django_tables2/bootstrap4.html"
 
 
 class QuerySetCountTable(tables.Table):
     class Meta:
-        model = models.QuerySet
-        fields = ["query_pickle_hash", "set_type", "count"]
+        model = models.Cell
         template_name = "django_tables2/bootstrap4.html"

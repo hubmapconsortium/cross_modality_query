@@ -13,7 +13,6 @@ from .models import (
     Organ,
     OrganAndValues,
     Protein,
-    QuerySet,
     StatReport,
 )
 

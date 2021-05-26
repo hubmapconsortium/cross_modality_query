@@ -30,7 +30,6 @@ from .models import (
     GeneAndValues,
     Organ,
     OrganAndValues,
-    QuerySet,
 )
 from .queries import get_cells_list, get_clusters_list, get_genes_list, get_organs_list
 from .set_evaluators import (
@@ -325,7 +324,7 @@ class DatasetListView(SingleTableView):
 
 
 class QuerySetListView(SingleTableView):
-    model = QuerySet
+    model = Cell
     table_class = QuerySetTable
     template_name = "query_set_list.html"
     paginator_class = PaginationClass
@@ -335,7 +334,7 @@ class QuerySetListView(SingleTableView):
 
 
 class QuerySetIntersectionListView(SingleTableView):
-    model = QuerySet
+    model = Cell
     table_class = QuerySetTable
     template_name = "query_set_list.html"
     paginator_class = PaginationClass
@@ -345,7 +344,7 @@ class QuerySetIntersectionListView(SingleTableView):
 
 
 class QuerySetUnionListView(SingleTableView):
-    model = QuerySet
+    model = Cell
     table_class = QuerySetTable
     template_name = "query_set_list.html"
     paginator_class = PaginationClass
@@ -355,7 +354,7 @@ class QuerySetUnionListView(SingleTableView):
 
 
 class QuerySetNegationListView(SingleTableView):
-    model = QuerySet
+    model = Cell
     table_class = QuerySetTable
     template_name = "query_set_list.html"
     paginator_class = PaginationClass
@@ -365,7 +364,7 @@ class QuerySetNegationListView(SingleTableView):
 
 
 class QuerySetCountListView(SingleTableView):
-    model = QuerySet
+    model = Cell
     table_class = QuerySetCountTable
     template_name = "query_set_list.html"
     paginator_class = PaginationClass

@@ -18,7 +18,6 @@ from .models import (
     OrganAndValues,
     Protein,
     PVal,
-    QuerySet,
     RnaQuant,
 )
 from .serializers import (
@@ -33,9 +32,12 @@ from .serializers import (
     OrganAndValuesSerializer,
     OrganSerializer,
     ProteinSerializer,
-    QuerySetCountSerializer,
 )
-from .utils import unpickle_query_set
+from .utils import (
+    get_response_from_query_handle,
+    get_response_with_count_from_query_handle,
+    unpickle_query_set,
+)
 from .validation import (
     process_evaluation_args,
     validate_detail_evaluation_args,
@@ -283,45 +285,23 @@ def get_percentages(query_set, include_values, values_type):
 
 def get_qs_count(query_params):
     pickle_hash = query_params["key"]
-    set_type = query_params["set_type"]
-
-    qs = unpickle_query_set(pickle_hash, set_type)
-    query_set = QuerySet.objects.filter(query_handle=pickle_hash).first()
-    query_set.count = qs.count()
-    query_set.save()
-
-    qs_count = QuerySet.objects.filter(query_handle=pickle_hash).filter(count__gte=0)
-    return qs_count
+    return get_response_with_count_from_query_handle(pickle_hash)
 
 
 def query_set_count(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-
-    qs_count = get_qs_count(query_params)
-
-    self.queryset = qs_count
-    # Set context
-    context = {
-        "request": request,
-    }
-
-    response = QuerySetCountSerializer(qs_count, many=True, context=context).data
-
-    return response
+        return get_qs_count(query_params)
 
 
 def make_cell_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
-    set_type = qs.set_type
+    query_set, set_type = unpickle_query_set(pickle_hash)
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
-
-    query_set = unpickle_query_set(pickle_hash, set_type)
 
     query_set = (
         query_set[offset:limit]
@@ -373,14 +353,13 @@ def make_cell_and_values(query_params):
 def make_gene_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
-    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
-    set_type = qs.set_type
+    query_set, set_type = unpickle_query_set(pickle_hash)
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
 
-    query_set = unpickle_query_set(pickle_hash, set_type)
+    query_set = unpickle_query_set(pickle_hash)
 
     # Filter on timestamp
 
@@ -413,15 +392,13 @@ def make_gene_and_values(query_params):
 def make_organ_and_values(query_params):
 
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
-
-    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
-    set_type = qs.set_type
+    query_set, set_type = unpickle_query_set(pickle_hash)
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
 
-    query_set = unpickle_query_set(pickle_hash, set_type)
+    query_set = unpickle_query_set(pickle_hash)
 
     query_set = (
         query_set[offset:limit]
@@ -451,15 +428,11 @@ def make_organ_and_values(query_params):
 
 def make_cluster_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
-
-    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
-    set_type = qs.set_type
+    query_set, set_type = unpickle_query_set(pickle_hash)
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
-
-    query_set = unpickle_query_set(pickle_hash, set_type)
 
     query_set = (
         query_set[offset:limit]
@@ -495,17 +468,13 @@ def make_cluster_and_values(query_params):
 
 def make_dataset_and_values(query_params):
     pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
-
-    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
-    set_type = qs.set_type
+    query_set, set_type = unpickle_query_set(pickle_hash)
 
     if len(include_values) > 0:
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
 
-    query_set = unpickle_query_set(pickle_hash, set_type)
-
-    query_set_pks = query_set[offset:limit]
+    query_set_pks = query_set[offset:limit].values_list("pk", flat=True)
     query_set = Dataset.objects.filter(pk__in=query_set_pks)
 
     print(len(include_values))
@@ -622,7 +591,7 @@ def dataset_evaluation_detail(self, request):
 
 
 def evaluate_qs(set_type, key, limit, offset):
-    evaluated_set = unpickle_query_set(query_handle=key, set_type=set_type)
+    evaluated_set, set_type = unpickle_query_set(query_handle=key)
     evaluated_set = evaluated_set[offset:limit]
     return evaluated_set
 
