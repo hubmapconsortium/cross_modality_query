@@ -4,13 +4,10 @@ from rest_framework.schemas import get_schema_view
 
 from query_app import views
 
-from .browser_views import *
-
 admin.autodiscover()
 # first we define the serializers
 
 urlpatterns = [
-    path("", LandingFormView.as_view(), name="landing_page"),
     path("gene/", views.QueryViewSet.as_view({"post": "post"}), name="gene_query"),
     path("cell/", views.QueryViewSet.as_view({"post": "post"}), name="cell_query"),
     path("organ/", views.QueryViewSet.as_view({"post": "post"}), name="organ_query"),
@@ -90,46 +87,6 @@ urlpatterns = [
         name="cluster_detail_evaluation",
     ),
     path("status/", views.StatusViewSet.as_view({"get": "get"}), name="app_status"),
-    path("geneform/", GeneQueryView.as_view(), name="gene_query_form"),
-    path("cellform/", CellQueryView.as_view(), name="cell_query_form"),
-    path("organform/", OrganQueryView.as_view(), name="organ_query_form"),
-    path("clusterform/", ClusterQueryView.as_view(), name="cluster_query_form"),
-    path("datasetform/", DatasetQueryView.as_view(), name="dataset_query_form"),
-    path("intersectionform/", SetIntersectionFormView.as_view(), name="intersection_form"),
-    path("unionform/", SetUnionFormView.as_view(), name="union_form"),
-    path("countform/", SetCountFormView.as_view(), name="count_form"),
-    path("evaluationform/", EvaluationLandingFormView.as_view(), name="evaluation_form"),
-    path("cellevaluationform/", CellSetEvaluationFormView.as_view(), name="cell_evaluation_form"),
-    path("geneevaluationform/", GeneSetEvaluationFormView.as_view(), name="gene_evaluation_form"),
-    path(
-        "organevaluationform/", OrganSetEvaluationFormView.as_view(), name="organ_evaluation_form"
-    ),
-    path(
-        "clusterevaluationform/",
-        ClusterSetEvaluationFormView.as_view(),
-        name="cluster_evaluation_form",
-    ),
-    path("celllistform/", CellSetListFormView.as_view(), name="cell_evaluation_form"),
-    path("genelistform/", GeneSetListFormView.as_view(), name="gene_evaluation_form"),
-    path("organlistform/", OrganSetListFormView.as_view(), name="organ_evaluation_form"),
-    path("clusterlistform/", ClusterSetListFormView.as_view(), name="cluster_evaluation_form"),
-    path("datasetlistform/", DatasetSetListFormView.as_view(), name="dataset_evaluation_form"),
-    path("celllist/", CellListView.as_view(), name="cell_list"),
-    path("genelist/", GeneListView.as_view(), name="gene_list"),
-    path("clusterlist/", ClusterListView.as_view(), name="cluster_list"),
-    path("organlist/", OrganListView.as_view(), name="organ_list"),
-    path("celldetail/", CellDetailView.as_view(), name="cell_list"),
-    path("genedetail/", GeneDetailView.as_view(), name="gene_list"),
-    path("clusterdetail/", ClusterDetailView.as_view(), name="cluster_list"),
-    path("organdetail/", OrganDetailView.as_view(), name="organ_list"),
-    path("querysetlist/", QuerySetListView.as_view(), name="query_set_list"),
-    path(
-        "intersectionlist/",
-        QuerySetIntersectionListView.as_view(),
-        name="query_set_intersection_list",
-    ),
-    path("unionlist/", QuerySetUnionListView.as_view(), name="query_set_union_list"),
-    path("querysetcountlist/", QuerySetCountListView.as_view(), name="query_set_count_list"),
     path(
         "openapi",
         get_schema_view(
