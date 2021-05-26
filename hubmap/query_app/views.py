@@ -3,6 +3,7 @@ import traceback
 from typing import Callable
 
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
@@ -250,3 +251,8 @@ class StatusViewSet(viewsets.GenericViewSet):
 
     def get(self, request, format=None):
         get_generic_response(self, get_app_status, request)
+
+
+class LandingPageView(viewsets.GenericViewSet):
+    def get(self, request):
+        return redirect("/api/openapi/")

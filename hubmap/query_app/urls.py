@@ -8,6 +8,7 @@ admin.autodiscover()
 # first we define the serializers
 
 urlpatterns = [
+    path("", views.LandingPageView.as_view({"get": "get"}), name="landing_page"),
     path("gene/", views.QueryViewSet.as_view({"post": "post"}), name="gene_query"),
     path("cell/", views.QueryViewSet.as_view({"post": "post"}), name="cell_query"),
     path("organ/", views.QueryViewSet.as_view({"post": "post"}), name="organ_query"),
@@ -88,7 +89,7 @@ urlpatterns = [
     ),
     path("status/", views.StatusViewSet.as_view({"get": "get"}), name="app_status"),
     path(
-        "openapi",
+        "openapi/",
         get_schema_view(
             title="HuBMAP cell indexing",
             version="0.1-dev",
