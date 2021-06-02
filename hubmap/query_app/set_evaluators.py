@@ -259,6 +259,7 @@ def get_percentages(query_set, include_values, values_type):
         "input_set": include_values,
         "logical_operator": "and",
     }
+    query_set = Dataset.objects.filter(pk__in=query_set.values_list("pk", flat=True))
     if values_type == "gene" and query_set.first():
         query_params["genomic_modality"] = query_set.first().modality.modality_name
     var_cell_pks = get_cells_list(query_params, input_set=include_values).values_list(
@@ -267,14 +268,17 @@ def get_percentages(query_set, include_values, values_type):
     var_cells = (
         Cell.objects.filter(pk__in=var_cell_pks).only("pk", "dataset").select_related("dataset")
     )
-    dataset_pks = var_cells.distinct("dataset").values_list("dataset", flat=True)
+
+    dataset_pks = set(list(var_cells.values_list("dataset", flat=True)))
 
     aggregate_kwargs = {
         str(dataset_pk): Sum(Case(When(dataset=dataset_pk, then=1), output_field=IntegerField()))
         for dataset_pk in dataset_pks
     }
+
     dataset_counts = {
-        dataset_pk: Cell.objects.filter(dataset=dataset_pk).count() for dataset_pk in dataset_pks
+        dataset_pk: Cell.objects.filter(dataset=dataset_pk).distinct("cell_id").count()
+        for dataset_pk in dataset_pks
     }
     counts = var_cells.aggregate(**aggregate_kwargs)
     percentages_dict = {pk: counts[str(pk)] / dataset_counts[pk] * 100 for pk in dataset_pks}
@@ -322,14 +326,13 @@ def make_cell_and_values(query_params):
         validate_values_types(set_type, values_type)
 
     query_set = unpickle_query_set(pickle_hash, set_type)
+    query_set = query_set.distinct("cell_id")
 
     query_set = (
         query_set[offset:limit]
         if sort_by is None
         else get_ordered_query_set(query_set, "cell", sort_by, values_type, limit, offset)
     )
-
-    print("Query_set sliced")
 
     values_dict = (
         {}
@@ -359,13 +362,7 @@ def make_cell_and_values(query_params):
 
         cavs.append(cav)
 
-    print("Cavs created")
-
-    print(f"Num cav pks: {len(cavs)}")
-
     qs = CellAndValues.objects.filter(pk__in=cavs)
-
-    print(f"Qs count: {qs.count()}")
 
     return qs
 
@@ -503,11 +500,9 @@ def make_dataset_and_values(query_params):
         values_type = infer_values_type(include_values)
         validate_values_types(set_type, values_type)
 
-    query_set = unpickle_query_set(pickle_hash, set_type)
+    query_set = unpickle_query_set(pickle_hash, set_type).distinct("uuid")
 
     query_set = query_set[offset:limit]
-
-    print(len(include_values))
 
     values_dict = (
         {} if len(include_values) == 0 else get_percentages(query_set, include_values, values_type)
@@ -622,6 +617,12 @@ def dataset_evaluation_detail(self, request):
 
 def evaluate_qs(set_type, key, limit, offset):
     evaluated_set = unpickle_query_set(query_handle=key, set_type=set_type)
+    if set_type == "cell":
+        evaluated_set = Cell.objects.filter(pk__in=evaluated_set.values_list("pk", flat=True))
+        evaluated_set = evaluated_set.distinct("cell_id")
+    elif set_type == "dataset":
+        evaluated_set = Dataset.objects.filter(pk__in=evaluated_set.values_list("pk", flat=True))
+        evaluated_set = evaluated_set.distinct("uuid")
     evaluated_set = evaluated_set[offset:limit]
     return evaluated_set
 

@@ -249,7 +249,11 @@ def get_datasets_list(query_params: Dict, input_set=None):
     filter = get_dataset_filter(query_params)
 
     if query_params["input_type"] in ["cell", "cluster", "dataset", "gene", "protein"]:
-        query_set = Dataset.objects.filter(filter).distinct("uuid")
+        query_set = (
+            Dataset.objects.filter(filter)
+            .filter(modality__modality_name__isnull=False)
+            .distinct("uuid")
+        )
         query_handle = make_pickle_and_hash(query_set, "dataset")
         return QuerySet.objects.filter(query_handle=query_handle)
 
