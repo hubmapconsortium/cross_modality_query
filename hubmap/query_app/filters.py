@@ -54,7 +54,6 @@ def get_quant_queryset(query_params: Dict, filter):
     return query_set
 
 
-# Put fork here depending on whether or not we're returning expression values
 def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
@@ -64,10 +63,6 @@ def get_cells_list(query_params: Dict, input_set=None):
         query_set = get_quant_queryset(query_params, filter)
     else:
         query_set = Cell.objects.filter(filter)
-
-    pks = query_set.values_list("pk", flat=True)
-    query_set = Cell.objects.filter(pk__in=pks)
-    query_set = query_set.distinct("cell_id")
 
     print("Query set found")
 

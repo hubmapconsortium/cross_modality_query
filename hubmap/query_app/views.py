@@ -20,6 +20,7 @@ from .models import (
     OrganAndValues,
     Protein,
     QuerySet,
+    RnaQuant,
     StatReport,
 )
 from .queries import (
@@ -47,16 +48,15 @@ from .serializers import (
     StatReportSerializer,
 )
 from .set_evaluators import (
-    cell_evaluation_detail,
     cluster_evaluation_detail,
-    dataset_evaluation_detail,
+    evaluation_detail,
     evaluation_list,
     gene_evaluation_detail,
     organ_evaluation_detail,
     query_set_count,
 )
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
-from .utils import get_app_status
+from .utils import get_app_status, unpickle_query_set
 
 
 class PaginationClass(PageNumberPagination):
@@ -155,13 +155,13 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
 
 class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
-    query_set = CellAndValues.objects.all()
+    query_set = Cell.objects.all()
     serializer_class = CellAndValuesSerializer
     pagination_class = PaginationClass
-    model = CellAndValues
+    model = Cell
 
     def post(self, request, format=None):
-        return get_response(self, request, cell_evaluation_detail)
+        return get_response(self, request, evaluation_detail)
 
 
 class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -199,7 +199,7 @@ class DatasetDetailEvaluationViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        return get_response(self, request, dataset_evaluation_detail)
+        return get_response(self, request, evaluation_detail)
 
 
 class CellListEvaluationViewSet(viewsets.ModelViewSet):
@@ -310,6 +310,37 @@ class StatusViewSet(viewsets.GenericViewSet):
     def get(self, request, format=None):
         try:
             return HttpResponse(get_app_status())
+        except Exception as e:
+            tb = traceback.format_exc()
+            json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+            print(json_error_response)
+            return HttpResponse(json_error_response)
+
+
+def get_cell_values(request):
+    query_params = request.data.dict()
+    set_token = query_params["key"]
+    var_id = query_params["var_id"]
+    modality = query_params["modality"]
+    cell_set = unpickle_query_set(set_token, "cell")
+    cell_ids = cell_set.values_list("cell_id", flat=True)
+    if modality == "rna":
+        quants_list = list(
+            RnaQuant.objects.filter(q_cell_id__in=cell_ids)
+            .filter(q_var_id=var_id)
+            .values_list("value", flat=True)
+        )
+        zeroes_list = [0] * (len(cell_ids) - len(quants_list))
+        values_list = quants_list + zeroes_list
+        return json.dumps({var_id: values_list})
+
+
+class CellValuesViewSet(viewsets.GenericViewSet):
+    pagination_class = PaginationClass
+
+    def post(self, request, format=None):
+        try:
+            return HttpResponse(get_cell_values(request))
         except Exception as e:
             tb = traceback.format_exc()
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})

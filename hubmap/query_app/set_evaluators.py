@@ -149,110 +149,6 @@ def get_quant_value(cell_id, gene_symbol, modality):
     return 0.0 if quant is None else quant.value
 
 
-def get_values(query_set, set_type, values, values_type, statistic="mean"):
-
-    values_dict = {}
-
-    if set_type == "cell":
-        # values must be genes
-        if values_type == "gene":
-            pks = query_set.values_list("pk", flat=True)
-            print(len(pks))
-            query_set = Cell.objects.filter(pk__in=pks)
-            print(query_set.count())
-            query_set = (
-                Cell.objects.filter(pk__in=pks)
-                .prefetch_related("atac_quants")
-                .prefetch_related("rna_quants")
-            )
-            atac_cells = query_set.filter(modality__modality_name="atac").values_list(
-                "cell_id", flat=True
-            )
-            rna_cells = query_set.filter(modality__modality_name="rna").values_list(
-                "cell_id", flat=True
-            )
-
-            print("Modality cells gotten")
-
-            values_dict = {
-                cell: {gene: get_quant_value(cell, gene, "rna") for gene in values}
-                for cell in rna_cells
-            }
-            values_dict.update(
-                {
-                    cell: {gene: get_quant_value(cell, gene, "atac") for gene in values}
-                    for cell in atac_cells
-                }
-            )
-
-        elif values_type == "protein":
-            pks = query_set.values_list("pk", flat=True)
-            query_set = Cell.objects.filter(pk__in=pks)
-
-            codex_cells = query_set.filter(modality__modality_name="codex").values_list(
-                "cell_id", flat=True
-            )
-
-            values_dict = {
-                cell: {protein: get_quant_value(cell, protein, "codex") for protein in values}
-                for cell in codex_cells
-            }
-
-        return values_dict
-
-    elif set_type == "gene":
-        # values must be organs or clusters
-        gene_ids = query_set.values_list("gene_symbol", flat=True)
-
-        if values_type == "organ":
-            organs = Organ.objects.filter(grouping_name__in=values).values_list("pk", flat=True)
-            pvals = PVal.objects.filter(p_organ__in=organs).filter(
-                p_gene__gene_symbol__in=gene_ids
-            )
-            for gene in query_set:
-                gene_pvals = pvals.filter(p_gene__gene_symbol=gene.gene_symbol).values_list(
-                    "p_organ__grouping_name", "value"
-                )
-                values_dict[gene.gene_symbol] = {gp[0]: gp[1] for gp in gene_pvals}
-
-        elif values_type == "cluster":
-            clusters = Cluster.objects.filter(grouping_name__in=values).values_list(
-                "pk", flat=True
-            )
-            pvals = PVal.objects.filter(p_cluster__in=clusters).filter(
-                p_gene__gene_symbol__in=gene_ids
-            )
-            for gene in query_set:
-                gene_pvals = pvals.filter(p_gene__gene_symbol=gene.gene_symbol).values_list(
-                    "p_cluster__grouping_name", "value"
-                )
-                values_dict[gene.gene_symbol] = {gp[0]: gp[1] for gp in gene_pvals}
-
-        return values_dict
-
-    elif set_type == "organ":
-        # values must be genes
-        pvals = PVal.objects.filter(p_organ__in=query_set.values_list("pk", flat=True)).filter(
-            p_gene__gene_symbol__in=values
-        )
-        for organ in query_set:
-            organ_pvals = pvals.filter(p_organ=organ).values_list("p_gene__gene_symbol", "value")
-            values_dict[organ.grouping_name] = {op[0]: op[1] for op in organ_pvals}
-        return values_dict
-
-    elif set_type == "cluster":
-        # values must be genes
-        pvals = PVal.objects.filter(p_cluster__in=query_set.values_list("pk", flat=True)).filter(
-            p_gene__gene_symbol__in=values
-        )
-        for cluster in query_set:
-            cluster_pvals = pvals.filter(p_cluster=cluster).values_list(
-                "p_gene__gene_symbol", "value"
-            )
-            values_dict[cluster.grouping_name] = {cp[0]: cp[1] for cp in cluster_pvals}
-        return values_dict
-
-
 def get_percentages(query_set, include_values, values_type):
     query_params = {
         "input_type": values_type,
@@ -313,58 +209,6 @@ def query_set_count(self, request):
     response = QuerySetCountSerializer(qs_count, many=True, context=context).data
 
     return response
-
-
-def make_cell_and_values(query_params):
-    pickle_hash, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
-
-    qs = QuerySet.objects.filter(query_handle__icontains=pickle_hash).first()
-    set_type = qs.set_type
-
-    if len(include_values) > 0:
-        values_type = infer_values_type(include_values)
-        validate_values_types(set_type, values_type)
-
-    query_set = unpickle_query_set(pickle_hash, set_type)
-    query_set = query_set.distinct("cell_id")
-
-    query_set = (
-        query_set[offset:limit]
-        if sort_by is None
-        else get_ordered_query_set(query_set, "cell", sort_by, values_type, limit, offset)
-    )
-
-    values_dict = (
-        {}
-        if len(include_values) == 0
-        else get_values(query_set, "cell", include_values, values_type)
-    )
-
-    cavs = []
-
-    for cell in query_set:
-        if values_type == "protein":
-            values = {var: get_quant_value(cell.cell_id, var, "codex") for var in include_values}
-        else:
-            values = {} if cell.cell_id not in values_dict else values_dict[cell.cell_id]
-
-        kwargs = {
-            "cell_id": cell.cell_id,
-            "dataset": cell.dataset,
-            "modality": cell.modality,
-            "organ": cell.organ,
-            "values": values,
-        }
-
-        cav = CellAndValues(**kwargs)
-
-        cav.save()
-
-        cavs.append(cav)
-
-    qs = CellAndValues.objects.filter(pk__in=cavs)
-
-    return qs
 
 
 def make_gene_and_values(query_params):
@@ -650,6 +494,35 @@ def evaluation_list(self, request):
             response = OrganSerializer(eval_qs, many=True, context=context).data
         if set_type == "dataset":
             response = DatasetSerializer(eval_qs, many=True, context=context).data
+        if set_type == "protein":
+            response = ProteinSerializer(eval_qs, many=True, context=context).data
+
+        return response
+
+
+def evaluation_detail(self, request):
+    if request.method == "POST":
+        query_params = request.data.dict()
+        set_type = query_params["set_type"]
+        validate_list_evaluation_args(query_params)
+        key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
+        eval_qs = evaluate_qs(set_type, key, limit, offset)
+        self.queryset = eval_qs
+        # Set context
+        context = {
+            "request": request,
+        }
+
+        if set_type == "cell":
+            response = CellAndValuesSerializer(eval_qs, many=True, context=context).data
+        if set_type == "gene":
+            response = GeneAndValuesSerializer(eval_qs, many=True, context=context).data
+        if set_type == "cluster":
+            response = ClusterAndValuesSerializer(eval_qs, many=True, context=context).data
+        if set_type == "organ":
+            response = OrganAndValuesSerializer(eval_qs, many=True, context=context).data
+        if set_type == "dataset":
+            response = DatasetAndValuesSerializer(eval_qs, many=True, context=context).data
         if set_type == "protein":
             response = ProteinSerializer(eval_qs, many=True, context=context).data
 

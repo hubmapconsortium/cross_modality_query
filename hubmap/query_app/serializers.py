@@ -1,10 +1,17 @@
+import json
+from typing import List
+
+from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
+from .filters import get_cells_list, split_at_comparator
 from .models import (
+    AtacQuant,
     Cell,
     CellAndValues,
     Cluster,
     ClusterAndValues,
+    CodexQuant,
     Dataset,
     DatasetAndValues,
     Gene,
@@ -13,9 +20,112 @@ from .models import (
     Organ,
     OrganAndValues,
     Protein,
+    PVal,
     QuerySet,
+    RnaQuant,
     StatReport,
 )
+
+
+def infer_values_type(values: List) -> str:
+
+    print(values)
+
+    values = [
+        split_at_comparator(item)[0].strip()
+        if len(split_at_comparator(item)) > 0
+        else item.strip()
+        for item in values
+    ]
+
+    """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
+    if Gene.objects.filter(gene_symbol__in=values).count() > 0:
+        return "gene"
+    if Protein.objects.filter(protein_id__in=values).count() > 0:
+        return "protein"
+    if Cluster.objects.filter(grouping_name__in=values).count() > 0:
+        return "cluster"
+    if Organ.objects.filter(grouping_name__in=values).count() > 0:
+        return "organ"
+    values.sort()
+    raise ValueError(
+        f"Value type could not be inferred. None of {values} recognized as gene, protein, cluster, or organ"
+    )
+
+
+def get_quant_value(cell_id, gene_symbol, modality):
+    if modality == "rna":
+        quant = RnaQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+    if modality == "atac":
+        quant = AtacQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+    elif modality == "codex":
+        quant = CodexQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+        print("Quant found")
+
+    return 0.0 if quant is None else quant.value
+
+
+def get_percentage(uuid, values_type, include_values):
+    query_params = {
+        "input_type": values_type,
+        "input_set": include_values,
+        "logical_operator": "and",
+    }
+    dataset = Dataset.objects.filter(uuid=uuid).first()
+    if values_type == "gene" and dataset:
+        query_params["genomic_modality"] = dataset.modality.modality_name
+    var_cell_pks = get_cells_list(query_params, input_set=include_values).values_list(
+        "pk", flat=True
+    )
+    var_cells = (
+        Cell.objects.filter(pk__in=var_cell_pks).only("pk", "dataset").select_related("dataset")
+    )
+
+    aggregate_kwargs = {
+        str(dataset.pk): Sum(Case(When(dataset=dataset.pk, then=1), output_field=IntegerField()))
+    }
+
+    dataset_count = Cell.objects.filter(dataset=dataset.pk).count()
+
+    count = var_cells.aggregate(**aggregate_kwargs)
+    percentage = count / dataset_count * 100
+    return percentage
+
+
+def get_values(identifier, set_type, values, values_type, statistic="mean"):
+
+    filter_kwargs_one_dict = {
+        "gene": {f"p_{values_type}__grouping_name__in": values},
+        "organ": {"p_gene__gene_symbol__in": values},
+        "cluster": {"p_gene__gene_symbol__in": values},
+    }
+    filter_kwargs_two_dict = {
+        "gene": {"p_gene__gene_symbol": identifier},
+        "organ": {"p_organ__grouping_name": identifier},
+        "cluster": {"p_cluster__grouping_name": identifier},
+    }
+    values_list_args_dict = {
+        "gene": {
+            "organ": ["p_organ__grouping_name", "value"],
+            "cluster": ["p_cluster__grouping_name", "value"],
+        },
+        "organ": {"gene": ["p_gene__gene_symbol", "value"]},
+        "cluster": {"gene": ["p_gene__gene_symbol", "value"]},
+    }
+
+    filter_kwargs_one = filter_kwargs_one_dict[set_type]
+    filter_kwargs_two = filter_kwargs_two_dict[set_type]
+    values_list_args = values_list_args_dict[set_type][values_type]
+
+    pvals = (
+        PVal.objects.filter(**filter_kwargs_one)
+        .filter(**filter_kwargs_two)
+        .values_list(*values_list_args)
+    )
+
+    values_dict = {pval[0]: pval[1] for pval in pvals}
+
+    return values_dict
 
 
 class ModalitySerializer(serializers.ModelSerializer):
@@ -76,9 +186,11 @@ class ProteinSerializer(serializers.ModelSerializer):
 class CellAndValuesSerializer(serializers.ModelSerializer):
     #    cell = CellSerializer(read_only=True)
     #    values = serializers.JSONField()
+
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
+    values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
         model = CellAndValues
@@ -90,6 +202,15 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             "organ",
             "values",
         ]
+
+    def get_values(self, obj):
+        request = self.context["request"]
+        var_ids = request.POST.getlist("values_included")
+        values_dict = {
+            var_id: get_quant_value(obj.cell_id, var_id, obj.modality.modality_name)
+            for var_id in var_ids
+        }
+        return json.dumps(values_dict)
 
 
 class GeneAndValuesSerializer(serializers.ModelSerializer):
@@ -123,9 +244,21 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
 
 
 class DatasetAndValuesSerializer(serializers.ModelSerializer):
+    values = serializers.SerializerMethodField(method_name="get_values")
+
     class Meta:
         model = DatasetAndValues
         fields = ["uuid", "values"]
+
+    def get_values(self, obj):
+        request = self.context["request"]
+        conditions = request.POST.getlist("values_included")
+        values_type = infer_values_type(conditions)
+        values_dict = {
+            condition: get_percentage(obj.uuid, values_type, conditions[0])
+            for condition in conditions
+        }
+        return json.dumps(values_dict)
 
 
 class QuerySetSerializer(serializers.ModelSerializer):

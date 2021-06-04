@@ -89,7 +89,12 @@ urlpatterns = [
     path(
         "proteindetailevaluation/",
         views.ProteinListEvaluationViewSet.as_view({"post": "post"}),
-        name="cluster_detail_evaluation",
+        name="protein_detail_evaluation",
+    ),
+    path(
+        "cellvaluesevaluation/",
+        views.CellValuesViewSet.as_view({"post": "post"}),
+        name="cell_values_evaluation",
     ),
     path("status/", views.StatusViewSet.as_view({"get": "get"}), name="app_status"),
     path("geneform/", GeneQueryView.as_view(), name="gene_query_form"),
