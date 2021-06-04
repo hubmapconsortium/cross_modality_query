@@ -1,5 +1,6 @@
 from typing import Dict, List, Set
 
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 from .utils import unpickle_query_set
 
 
@@ -24,6 +25,10 @@ def check_parameter_types_and_values(query_params):
         p_value = query_params["p_value"]
         if p_value is None or float(p_value) < 0 or float(p_value) > 1:
             raise ValueError(f"p_value {p_value} should be in [0,1]")
+
+    input_type = query_params["input_type"]
+    input_set = query_params["input_set"]
+    validate_input_terms(input_type, input_set)
 
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
@@ -318,3 +323,36 @@ def validate_statistic_args(query_params):
         query_params["var_id"],
         query_params["stat_type"],
     )
+
+
+def validate_input_terms(input_type: str, input_set: List[str]):
+
+    input_set = [
+        split_at_comparator(item) if len(split_at_comparator(item)) > 0 else item
+        for item in input_set
+    ]
+
+    identifiers_not_found = []
+    if input_type == "gene":
+        identifiers_not_found = [
+            item for item in input_set if not Gene.objects.filter(gene_symbol__iexact=item)
+        ]
+    if input_type == "protein":
+        identifiers_not_found = [
+            item for item in input_set if not Protein.objects.filter(protein_id__iexact=item)
+        ]
+    if input_type == "organ":
+        identifiers_not_found = [
+            item for item in input_set if not Organ.objects.filter(grouping_name__iexact=item)
+        ]
+    if input_type == "cluster":
+        identifiers_not_found = [
+            item for item in input_set if not Cluster.objects.filter(grouping_name__iexact=item)
+        ]
+    if input_type == "cell":
+        identifiers_not_found = [
+            item for item in input_set if not Cell.objects.filter(cell_id__iexact=item)
+        ]
+    if len(identifiers_not_found) > 0:
+        identifiers_string = ", ".join(identifiers_not_found)
+        raise ValueError(f"No {input_type} found with identifiers: {identifiers_string}")
