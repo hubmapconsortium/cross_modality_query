@@ -25,7 +25,7 @@ from .models import (
     QuerySet,
     RnaQuant,
 )
-from .serializers import ProteinSerializer, QuerySetSerializer
+from .serializers import QuerySetSerializer
 from .utils import make_pickle_and_hash
 from .validation import (
     process_query_parameters,

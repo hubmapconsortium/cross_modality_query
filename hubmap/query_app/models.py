@@ -139,33 +139,6 @@ class PVal(models.Model):
         return self.value
 
 
-class CellAndValues(Cell):
-    """A model used for storing and serializing cells and subsets of their expression values"""
-
-    values = models.JSONField(null=True)
-    created = models.DateTimeField(null=True, auto_now_add=True)
-
-
-class OrganAndValues(Organ):
-    values = models.JSONField(null=True)
-    created = models.DateTimeField(null=True, auto_now_add=True)
-
-
-class GeneAndValues(Gene):
-    values = models.JSONField(null=True)
-    created = models.DateTimeField(null=True, auto_now_add=True)
-
-
-class ClusterAndValues(Cluster):
-    values = models.JSONField(null=True)
-    created = models.DateTimeField(null=True, auto_now_add=True)
-
-
-class DatasetAndValues(Dataset):
-    values = models.JSONField(null=True)
-    created = models.DateTimeField(null=True, auto_now_add=True)
-
-
 class QuerySet(models.Model):
     query_pickle = models.BinaryField()
     query_handle = models.TextField()

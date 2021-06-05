@@ -1,7 +1,5 @@
-from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from operator import and_, or_
-from time import perf_counter
 from typing import Dict, List
 
 from django.core.cache import cache

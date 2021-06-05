@@ -9,15 +9,10 @@ from rest_framework.pagination import PageNumberPagination
 from .analysis import calculate_statistics
 from .models import (
     Cell,
-    CellAndValues,
     Cluster,
-    ClusterAndValues,
     Dataset,
-    DatasetAndValues,
     Gene,
-    GeneAndValues,
     Organ,
-    OrganAndValues,
     Protein,
     QuerySet,
     RnaQuant,
@@ -165,36 +160,36 @@ class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
 
 
 class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):
-    queryset = OrganAndValues.objects.all()
+    queryset = Organ.objects.all()
     serializer_class = OrganAndValuesSerializer
-    model = OrganAndValues
+    model = Organ
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        return get_response(self, request, organ_evaluation_detail)
+        return get_response(self, request, evaluation_detail)
 
 
 class GeneDetailEvaluationViewSet(viewsets.ModelViewSet):
-    queryset = GeneAndValues.objects.all()
+    queryset = Gene.objects.all()
     serializer_class = GeneAndValuesSerializer
     pagination_class = PaginationClass
-    model = GeneAndValues
+    model = Gene
 
     def post(self, request, format=None):
-        return get_response(self, request, gene_evaluation_detail)
+        return get_response(self, request, evaluation_detail)
 
 
 class ClusterDetailEvaluationViewSet(viewsets.ModelViewSet):
-    queryset = ClusterAndValues.objects.all()
+    queryset = Cluster.objects.all()
     serializer_class = ClusterAndValuesSerializer
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        return get_response(self, request, cluster_evaluation_detail)
+        return get_response(self, request, evaluation_detail)
 
 
 class DatasetDetailEvaluationViewSet(viewsets.ModelViewSet):
-    queryset = DatasetAndValues.objects.all()
+    queryset = Dataset.objects.all()
     serializer_class = DatasetAndValuesSerializer
     pagination_class = PaginationClass
 

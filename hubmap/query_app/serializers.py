@@ -8,17 +8,12 @@ from .filters import get_cells_list, split_at_comparator
 from .models import (
     AtacQuant,
     Cell,
-    CellAndValues,
     Cluster,
-    ClusterAndValues,
     CodexQuant,
     Dataset,
-    DatasetAndValues,
     Gene,
-    GeneAndValues,
     Modality,
     Organ,
-    OrganAndValues,
     Protein,
     PVal,
     QuerySet,
@@ -92,12 +87,12 @@ def get_percentage(uuid, values_type, include_values):
     return percentage
 
 
-def get_values(identifier, set_type, values, values_type, statistic="mean"):
+def get_p_values(identifier, set_type, var_id, var_type, statistic="mean"):
 
     filter_kwargs_one_dict = {
-        "gene": {f"p_{values_type}__grouping_name__in": values},
-        "organ": {"p_gene__gene_symbol__in": values},
-        "cluster": {"p_gene__gene_symbol__in": values},
+        "gene": {f"p_{var_type}__grouping_name": var_id},
+        "organ": {"p_gene__gene_symbol": var_id},
+        "cluster": {"p_gene__gene_symbol": var_id},
     }
     filter_kwargs_two_dict = {
         "gene": {"p_gene__gene_symbol": identifier},
@@ -193,7 +188,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
-        model = CellAndValues
+        model = Cell
         #        fields = ['cell', 'values']
         fields = [
             "cell_id",
@@ -216,10 +211,23 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
 class GeneAndValuesSerializer(serializers.ModelSerializer):
     #    values = serializers.JSONField()
     #    gene = GeneSerializer(read_only=True)
+    values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
-        model = GeneAndValues
+        model = Gene
         fields = ["gene_symbol", "go_terms", "values"]
+
+    def get_values(self, obj):
+        request = self.context["request"]
+        var_ids = request.POST.getlist("values_included")
+        var_type = infer_values_type(var_ids)
+        values_dict = {
+            var_id: get_p_values(
+                identifier=obj.gene_symbol, var_id=var_id, var_type=var_type, set_type="gene"
+            )
+            for var_id in var_ids
+        }
+        return json.dumps(values_dict)
 
 
 #        fields = ['gene', 'values']
@@ -228,26 +236,51 @@ class GeneAndValuesSerializer(serializers.ModelSerializer):
 class OrganAndValuesSerializer(serializers.ModelSerializer):
     #    organ = serializers.RelatedField(read_only=True)
     #    values = serializers.JSONField()
+    values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
-        model = OrganAndValues
+        model = Organ
         fields = ["grouping_name", "values"]
+
+    def get_values(self, obj):
+        request = self.context["request"]
+        var_ids = request.POST.getlist("values_included")
+        var_type = infer_values_type(var_ids)
+        values_dict = {
+            var_id: get_p_values(
+                identifier=obj.grouping_name, var_id=var_id, var_type=var_type, set_type="organ"
+            )
+            for var_id in var_ids
+        }
+        return json.dumps(values_dict)
 
 
 class ClusterAndValuesSerializer(serializers.ModelSerializer):
-
+    values = serializers.SerializerMethodField(method_name="get_values")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid", default=None)
 
     class Meta:
-        model = ClusterAndValues
+        model = Cluster
         fields = ["cluster_method", "cluster_data", "grouping_name", "dataset", "values"]
+
+    def get_values(self, obj):
+        request = self.context["request"]
+        var_ids = request.POST.getlist("values_included")
+        var_type = infer_values_type(var_ids)
+        values_dict = {
+            var_id: get_p_values(
+                identifier=obj.grouping_name, var_id=var_id, var_type=var_type, set_type="organ"
+            )
+            for var_id in var_ids
+        }
+        return json.dumps(values_dict)
 
 
 class DatasetAndValuesSerializer(serializers.ModelSerializer):
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
-        model = DatasetAndValues
+        model = Dataset
         fields = ["uuid", "values"]
 
     def get_values(self, obj):

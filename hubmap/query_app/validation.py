@@ -1,5 +1,6 @@
 from typing import Dict, List, Set
 
+from .models import Gene, Protein
 from .utils import unpickle_query_set
 
 
@@ -24,6 +25,27 @@ def check_parameter_types_and_values(query_params):
         p_value = query_params["p_value"]
         if p_value is None or float(p_value) < 0 or float(p_value) > 1:
             raise ValueError(f"p_value {p_value} should be in [0,1]")
+
+    check_input_set(query_params["input_type"], query_params["input_set"])
+
+
+def check_input_set(input_set, input_type):
+    input_set = [
+        split_at_comparator(item) if len(split_at_comparator(item)) > 0 else item
+        for item in input_set
+    ]
+    items_not_found = []
+    if input_type == "gene":
+        items_not_found = [
+            item for item in input_set if Gene.objects.filter(gene_symbol=item).first() is None
+        ]
+    if input_type == "protein":
+        items_not_found = [
+            item for item in input_set if Gene.objects.filter(gene_symbol=item).first() is None
+        ]
+    if len(items_not_found) > 0:
+        items_not_found_string = ", ".join(items_not_found)
+        raise ValueError(f"No {input_type}s found with names: {items_not_found_string}")
 
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
