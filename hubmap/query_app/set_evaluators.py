@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 from django.db.models import Case, IntegerField, Q, Sum, When
@@ -260,3 +261,40 @@ def evaluation_detail(self, request):
             response = ProteinSerializer(eval_qs, many=True, context=context).data
 
         return response
+
+
+def get_cell_values(request):
+    query_params = request.data.dict()
+    set_token = query_params["key"]
+    var_ids = request.POST.getlist("var_ids")
+    modality = query_params["modality"]
+    cell_set = unpickle_query_set(set_token, "cell")
+    cell_ids = cell_set.values_list("cell_id", flat=True)
+
+    values_dict = {}
+
+    for var_id in var_ids:
+        if modality == "rna":
+            quants_list = list(
+                RnaQuant.objects.filter(q_cell_id__in=cell_ids)
+                .filter(q_var_id=var_id)
+                .values_list("value", flat=True)
+            )
+        elif modality == "atac":
+            quants_list = list(
+                AtacQuant.objects.filter(q_cell_id__in=cell_ids)
+                .filter(q_var_id=var_id)
+                .values_list("value", flat=True)
+            )
+        elif modality == "codex":
+            quants_list = list(
+                CodexQuant.objects.filter(q_cell_id__in=cell_ids)
+                .filter(q_var_id=var_id)
+                .values_list("value", flat=True)
+            )
+
+        zeroes_list = [0] * (len(cell_ids) - len(quants_list))
+        values_list = quants_list + zeroes_list
+        values_dict[var_id] = values_list
+
+    return json.dumps(values_dict)

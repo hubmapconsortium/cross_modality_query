@@ -42,7 +42,12 @@ from .serializers import (
     QuerySetSerializer,
     StatReportSerializer,
 )
-from .set_evaluators import evaluation_detail, evaluation_list, query_set_count
+from .set_evaluators import (
+    evaluation_detail,
+    evaluation_list,
+    get_cell_values,
+    query_set_count,
+)
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
 from .utils import get_app_status, unpickle_query_set
 
@@ -303,24 +308,6 @@ class StatusViewSet(viewsets.GenericViewSet):
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
             print(json_error_response)
             return HttpResponse(json_error_response)
-
-
-def get_cell_values(request):
-    query_params = request.data.dict()
-    set_token = query_params["key"]
-    var_id = query_params["var_id"]
-    modality = query_params["modality"]
-    cell_set = unpickle_query_set(set_token, "cell")
-    cell_ids = cell_set.values_list("cell_id", flat=True)
-    if modality == "rna":
-        quants_list = list(
-            RnaQuant.objects.filter(q_cell_id__in=cell_ids)
-            .filter(q_var_id=var_id)
-            .values_list("value", flat=True)
-        )
-        zeroes_list = [0] * (len(cell_ids) - len(quants_list))
-        values_list = quants_list + zeroes_list
-        return json.dumps({var_id: values_list})
 
 
 class CellValuesViewSet(viewsets.GenericViewSet):
