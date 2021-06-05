@@ -82,7 +82,7 @@ def get_percentage(uuid, values_type, include_values):
 
     dataset_count = Cell.objects.filter(dataset=dataset.pk).count()
 
-    count = var_cells.aggregate(**aggregate_kwargs)
+    count = int(var_cells.aggregate(**aggregate_kwargs)[str(dataset.pk)])
     percentage = count / dataset_count * 100
     return percentage
 
@@ -110,17 +110,18 @@ def get_p_values(identifier, set_type, var_id, var_type, statistic="mean"):
 
     filter_kwargs_one = filter_kwargs_one_dict[set_type]
     filter_kwargs_two = filter_kwargs_two_dict[set_type]
-    values_list_args = values_list_args_dict[set_type][values_type]
+    values_list_args = values_list_args_dict[set_type][var_type]
 
-    pvals = (
+    pval = (
         PVal.objects.filter(**filter_kwargs_one)
         .filter(**filter_kwargs_two)
+        .order_by("value")
         .values_list(*values_list_args)
     )
 
-    values_dict = {pval[0]: pval[1] for pval in pvals}
+    value = pval[0][1]
 
-    return values_dict
+    return value
 
 
 class ModalitySerializer(serializers.ModelSerializer):

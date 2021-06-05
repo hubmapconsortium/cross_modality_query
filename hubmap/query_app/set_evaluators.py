@@ -117,20 +117,6 @@ def order_query_set(query_set, limit, values_dict, offset):
     return get_max_value_items(query_set, limit, vals_dict, offset)
 
 
-def get_ordered_query_set(query_set, set_type, sort_by, values_type, limit, offset):
-    sort_by_values = get_values(query_set, set_type, [sort_by], values_type)
-    sort_by_dict = {}
-    for key in sort_by_values:
-        if sort_by in sort_by_values[key].keys():
-            sort_by_dict[key] = sort_by_values[key][sort_by]
-        else:
-            sort_by_dict[key] = 0.0
-
-    query_set = order_query_set(query_set, limit, sort_by_dict, offset)
-
-    return query_set
-
-
 def get_quant_value(cell_id, gene_symbol, modality):
     print(f"{cell_id}, {gene_symbol}, {modality}")
     if modality == "rna":
@@ -251,7 +237,7 @@ def evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         set_type = query_params["set_type"]
-        validate_list_evaluation_args(query_params)
+        validate_detail_evaluation_args(query_params)
         key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
         eval_qs = evaluate_qs(set_type, key, limit, offset)
         self.queryset = eval_qs

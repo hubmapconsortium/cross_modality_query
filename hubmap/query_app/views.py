@@ -42,14 +42,7 @@ from .serializers import (
     QuerySetSerializer,
     StatReportSerializer,
 )
-from .set_evaluators import (
-    cluster_evaluation_detail,
-    evaluation_detail,
-    evaluation_list,
-    gene_evaluation_detail,
-    organ_evaluation_detail,
-    query_set_count,
-)
+from .set_evaluators import evaluation_detail, evaluation_list, query_set_count
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
 from .utils import get_app_status, unpickle_query_set
 
