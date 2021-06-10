@@ -288,11 +288,7 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
         request = self.context["request"]
         conditions = request.POST.getlist("values_included")
         values_type = infer_values_type(conditions)
-        values_dict = {
-            condition: get_percentage(obj.uuid, values_type, conditions[0])
-            for condition in conditions
-        }
-        return json.dumps(values_dict)
+        return get_percentage(obj.uuid, values_type, conditions[0])
 
 
 class QuerySetSerializer(serializers.ModelSerializer):
