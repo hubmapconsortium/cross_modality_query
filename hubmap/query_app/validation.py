@@ -4,7 +4,7 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
 from .models import Gene, Protein
-from .utils import unpickle_query_set
+from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
 def check_input_type(input_type, permitted_input_types):
@@ -265,21 +265,6 @@ def process_input_set(input_set: List, input_type: str):
         return None
 
 
-def split_at_comparator(item: str) -> List:
-    """str->List
-    Splits a string representation of a quantitative comparison into its parts
-    i.e. 'eg_protein>=50' -> ['eg_protein', '>=', '50']
-    If there is no comparator in the string, returns an empty list"""
-
-    comparator_list = ["<=", ">=", ">", "<", "==", "!="]
-    for comparator in comparator_list:
-        if comparator in item:
-            item_split = item.split(comparator)
-            item_split.insert(1, comparator)
-            return item_split
-    return []
-
-
 def validate_list_evaluation_args(query_params):
 
     required_fields = {"key", "set_type", "limit"}
@@ -292,6 +277,9 @@ def validate_detail_evaluation_args(query_params):
     required_fields = {"key", "set_type", "limit"}
     permitted_fields = required_fields | {"offset", "sort_by", "values_included"}
     check_parameter_fields(query_params, required_fields, permitted_fields)
+    if "values_included" in query_params and len(query_params["values_included"]) > 0:
+        values_type = infer_values_type(query_params["values_included"])
+        check_input_set(query_params["values_included"], values_type)
 
 
 def validate_values_types(set_type, values_type):

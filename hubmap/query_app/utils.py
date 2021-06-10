@@ -1,6 +1,7 @@
 import hashlib
 import json
 import pickle
+from typing import List
 
 from django.db import connections
 from django.db.utils import OperationalError
@@ -79,3 +80,51 @@ def get_app_status():
         json_dict = json.load(file)
         json_dict["Postgres connection"] = get_database_status()
         return json.dumps(json_dict)
+
+
+def infer_values_type(values: List) -> str:
+
+    print(values)
+
+    values = [
+        split_at_comparator(item)[0].strip()
+        if len(split_at_comparator(item)) > 0
+        else item.strip()
+        for item in values
+    ]
+
+    print(values)
+
+    values_up = [value.upper() for value in values]
+    values = values + values_up
+
+    print(values)
+
+    """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
+    if Gene.objects.filter(gene_symbol__in=values).count() > 0:
+        return "gene"
+    if Protein.objects.filter(protein_id__in=values).count() > 0:
+        return "protein"
+    if Cluster.objects.filter(grouping_name__in=values).count() > 0:
+        return "cluster"
+    if Organ.objects.filter(grouping_name__in=values).count() > 0:
+        return "organ"
+    values.sort()
+    raise ValueError(
+        f"Value type could not be inferred. None of {values} recognized as gene, protein, cluster, or organ"
+    )
+
+
+def split_at_comparator(item: str) -> List:
+    """str->List
+    Splits a string representation of a quantitative comparison into its parts
+    i.e. 'eg_protein>=50' -> ['eg_protein', '>=', '50']
+    If there is no comparator in the string, returns an empty list"""
+
+    comparator_list = ["<=", ">=", ">", "<", "==", "!="]
+    for comparator in comparator_list:
+        if comparator in item:
+            item_split = item.split(comparator)
+            item_split.insert(1, comparator)
+            return item_split
+    return []

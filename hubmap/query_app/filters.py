@@ -32,7 +32,9 @@ def get_quant_queryset(query_params: Dict, filter):
         for item in query_params["input_set"]
     ]
 
-    query_sets = [cells_from_quants(query_set.filter(q_var_id=var), var) for var in var_ids]
+    query_sets = [
+        cells_from_quants(query_set.filter(q_var_id__iexact=var), var) for var in var_ids
+    ]
 
     print("Query sets gotten")
 

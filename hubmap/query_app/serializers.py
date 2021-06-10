@@ -33,6 +33,9 @@ def infer_values_type(values: List) -> str:
         for item in values
     ]
 
+    values_up = [value.upper() for value in values]
+    values = values + values_up
+
     """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
     if Gene.objects.filter(gene_symbol__in=values).count() > 0:
         return "gene"
@@ -50,11 +53,21 @@ def infer_values_type(values: List) -> str:
 
 def get_quant_value(cell_id, gene_symbol, modality):
     if modality == "rna":
-        quant = RnaQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+        quant = (
+            RnaQuant.objects.filter(q_var_id__iexact=gene_symbol).filter(q_cell_id=cell_id).first()
+        )
     if modality == "atac":
-        quant = AtacQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+        quant = (
+            AtacQuant.objects.filter(q_var_id__iexact=gene_symbol)
+            .filter(q_cell_id=cell_id)
+            .first()
+        )
     elif modality == "codex":
-        quant = CodexQuant.objects.filter(q_var_id=gene_symbol).filter(q_cell_id=cell_id).first()
+        quant = (
+            CodexQuant.objects.filter(q_var_id__iexact=gene_symbol)
+            .filter(q_cell_id=cell_id)
+            .first()
+        )
         print("Quant found")
 
     return 0.0 if quant is None else quant.value

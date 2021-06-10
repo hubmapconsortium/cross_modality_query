@@ -32,39 +32,13 @@ from .serializers import (
     ProteinSerializer,
     QuerySetCountSerializer,
 )
-from .utils import unpickle_query_set
+from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 from .validation import (
     process_evaluation_args,
     validate_detail_evaluation_args,
     validate_list_evaluation_args,
     validate_values_types,
 )
-
-
-def infer_values_type(values: List) -> str:
-
-    print(values)
-
-    values = [
-        split_at_comparator(item)[0].strip()
-        if len(split_at_comparator(item)) > 0
-        else item.strip()
-        for item in values
-    ]
-
-    """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
-    if Gene.objects.filter(gene_symbol__in=values).count() > 0:
-        return "gene"
-    if Protein.objects.filter(protein_id__in=values).count() > 0:
-        return "protein"
-    if Cluster.objects.filter(grouping_name__in=values).count() > 0:
-        return "cluster"
-    if Organ.objects.filter(grouping_name__in=values).count() > 0:
-        return "organ"
-    values.sort()
-    raise ValueError(
-        f"Value type could not be inferred. None of {values} recognized as gene, protein, cluster, or organ"
-    )
 
 
 def get_max_value_items(query_set, limit, values_dict, offset):
@@ -239,6 +213,7 @@ def evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         set_type = query_params["set_type"]
+        query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
         eval_qs = evaluate_qs(set_type, key, limit, offset)
