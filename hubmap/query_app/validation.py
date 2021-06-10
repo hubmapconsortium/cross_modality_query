@@ -1,5 +1,8 @@
 from typing import Dict, List, Set
 
+from django.contrib.postgres.search import TrigramSimilarity
+from django.db.models.functions import Upper
+
 from .models import Gene, Protein
 from .utils import unpickle_query_set
 
@@ -32,22 +35,52 @@ def check_parameter_types_and_values(query_params):
 def check_input_set(input_set, input_type):
     print(f"input_type: {input_type}")
     input_set = [
-        split_at_comparator(item) if len(split_at_comparator(item)) > 0 else item
+        split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
         for item in input_set
     ]
     items_not_found = []
     if input_type == "gene":
         items_not_found = [
-            item for item in input_set if Gene.objects.filter(gene_symbol=item).first() is None
+            item
+            for item in input_set
+            if Gene.objects.filter(gene_symbol__iexact=item).first() is None
         ]
     if input_type == "protein":
         items_not_found = [
-            item for item in input_set if Protein.objects.filter(protein_id=item).first() is None
+            item
+            for item in input_set
+            if Protein.objects.filter(protein_id__iexact=item).first() is None
         ]
     print(len(items_not_found))
     if len(items_not_found) > 0:
         items_not_found_string = ", ".join(items_not_found)
-        raise ValueError(f"No {input_type}s found with names: {items_not_found_string}")
+        recommendations = []
+        for item in items_not_found:
+            recommendations += recommend_identifiers(item, input_type)
+        recommendations_string = ", ".join(recommendations)
+        raise ValueError(
+            f"No {input_type}s found with names: {items_not_found_string}. Suggestions: {recommendations_string}"
+        )
+
+
+def recommend_identifiers(identifier: str, input_type: str):
+    if input_type == "gene":
+        identifier_upper = identifier.upper()
+        annotated_genes = Gene.objects.annotate(
+            similarity=TrigramSimilarity(Upper("gene_symbol"), identifier_upper)
+        )
+        similar_genes = annotated_genes.filter(similarity__gt=0.3).order_by("-similarity")[0:5]
+        similar_ids = set(similar_genes.values_list("gene_symbol", flat=True))
+    elif input_type == "protein":
+        identifier_upper = identifier.upper()
+        annotated_proteins = Protein.objects.annotate(
+            similarity=TrigramSimilarity(Upper("protein_id"), identifier_upper)
+        )
+        similar_proteins = annotated_proteins.filter(similarity__gt=0.3).order_by("-similarity")[
+            0:5
+        ]
+        similar_ids = set(similar_proteins.values_list("protein_id", flat=True))
+    return similar_ids
 
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):

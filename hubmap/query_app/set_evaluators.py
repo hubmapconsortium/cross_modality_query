@@ -20,6 +20,7 @@ from .models import (
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
+    CellValuesSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
     DatasetAndValuesSerializer,
@@ -271,15 +272,18 @@ def get_cell_values(request):
     cell_set = unpickle_query_set(set_token, "cell")
     cell_ids = cell_set.values_list("cell_id", flat=True)
 
-    values_dict = {}
+    values_dict = {cell_id: {var_id: [0] for var_id in var_ids} for cell_id in cell_ids}
 
     for var_id in var_ids:
         if modality == "rna":
             quants_list = list(
                 RnaQuant.objects.filter(q_cell_id__in=cell_ids)
-                .filter(q_var_id=var_id)
-                .values_list("value", flat=True)
+                .filter(q_var_id__iexact=var_id)
+                .values_list("q_cell_id", "value")
             )
+            for tup in quants_list:
+                values_dict[tup[0]][var_id] = tup[1]
+
         elif modality == "atac":
             quants_list = list(
                 AtacQuant.objects.filter(q_cell_id__in=cell_ids)
@@ -293,8 +297,23 @@ def get_cell_values(request):
                 .values_list("value", flat=True)
             )
 
-        zeroes_list = [0] * (len(cell_ids) - len(quants_list))
-        values_list = quants_list + zeroes_list
-        values_dict[var_id] = values_list
-
     return json.dumps(values_dict)
+
+
+def get_cell_values_b(self, request):
+    if request.method == "POST":
+        query_params = request.data.dict()
+        set_type = query_params["set_type"]
+        validate_detail_evaluation_args(query_params)
+        key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
+        eval_qs = evaluate_qs(set_type, key, limit, offset)
+        self.queryset = eval_qs
+        # Set context
+        context = {
+            "request": request,
+        }
+
+        if set_type == "cell":
+            response = CellValuesSerializer(eval_qs, many=True, context=context).data
+
+        return response

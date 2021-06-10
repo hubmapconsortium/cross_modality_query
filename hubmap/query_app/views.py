@@ -29,6 +29,7 @@ from .queries import (
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
+    CellValuesSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
     DatasetAndValuesSerializer,
@@ -46,6 +47,7 @@ from .set_evaluators import (
     evaluation_detail,
     evaluation_list,
     get_cell_values,
+    get_cell_values_b,
     query_set_count,
 )
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
@@ -318,6 +320,16 @@ class CellValuesViewSet(viewsets.GenericViewSet):
             return HttpResponse(get_cell_values(request))
         except Exception as e:
             tb = traceback.format_exc()
-            json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+            json_error_response = json.dumps({"error": {"stack_trace": tb, "message": str(e)}})
             print(json_error_response)
             return HttpResponse(json_error_response)
+
+
+class CellValuesEvaluationViewSet(viewsets.ModelViewSet):
+    query_set = Cell.objects.all()
+    serializer_class = CellValuesSerializer
+    pagination_class = PaginationClass
+    model = Cell
+
+    def post(self, request, format=None):
+        return get_response(self, request, get_cell_values_b)

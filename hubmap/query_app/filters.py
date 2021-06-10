@@ -174,7 +174,6 @@ def get_cell_filter(query_params: Dict) -> Q:
             [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
             for item in input_set
         ]
-        print(split_conditions)
 
         qs = [process_single_condition(condition, input_type) for condition in split_conditions]
         q = combine_qs(qs, "or")

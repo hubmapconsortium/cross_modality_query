@@ -319,3 +319,24 @@ class StatReportSerializer(serializers.ModelSerializer):
             "codex_value",
             "num_cells_excluded",
         ]
+
+
+class CellValuesSerializer(serializers.ModelSerializer):
+
+    values = serializers.SerializerMethodField(method_name="get_values")
+
+    class Meta:
+        model = Cell
+        #        fields = ['cell', 'values']
+        fields = [
+            "values",
+        ]
+
+    def get_values(self, obj):
+        request = self.context["request"]
+        var_ids = request.POST.getlist("values_included")
+        values_dict = {
+            var_id: get_quant_value(obj.cell_id, var_id, obj.modality.modality_name)
+            for var_id in var_ids
+        }
+        return json.dumps(values_dict)
