@@ -65,8 +65,7 @@ def set_difference(set_key_one: str, set_key_two: str, set_type: str) -> str:
 def set_list_evaluation(set_key: str, set_type: str, limit: int, offset=0):
     request_url = base_url + set_type + "evaluation/"
     request_dict = {"key": set_key, "set_type": set_type, "limit": limit, "offset": offset}
-    response = c.post(request_url, request_dict).json()["results"]
-    response_json = response.json()
+    response_json = c.post(request_url, request_dict).json()["results"]
     return response_json
 
 
@@ -91,8 +90,7 @@ def set_detail_evaluation(
         "values_included": values_included,
         "sort_by": sort_by,
     }
-    response = c.post(request_url, request_dict).json()["results"]
-    response_json = response.json()
+    response_json = c.post(request_url, request_dict).json()["results"]
     return response_json  # Returns the key to be used in future computations
 
 
@@ -104,52 +102,42 @@ class CellTestCase(TestCase):
     def test_all_cells(self):
         all_cells = get_all("cell")
         all_cells_count = set_count(all_cells, "cell")
-        self.assertEqual(all_cells_count, 3000)
+        self.assertEqual(all_cells_count, 30)
 
     def test_cells_from_genes(self):
-        input_sets = {"atac": ["VIM > 0.015", "AASS > 0.11"], "rna": ["VIM > 10", "ABL1 > 0"]}
-        params_dict = {"rna": {"and": 1, "or": 27}, "atac": {"and": 4, "or": 995}}
-        for modality in params_dict:
-            input_set = input_sets[modality]
-            for log_op in modality:
-                cells_from_genes = hubmap_query(
-                    "gene", "cell", input_set, genomic_modality=modality, logical_operator=log_op
-                )
-                cells_from_genes_count = set_count(cells_from_genes, "cell")
-                self.assertEqual(
-                    cells_from_genes_count, params_dict["modality"]["logical_operator"]
-                )
+        input_set = ["ABHD17A"]
+        gene_cells = hubmap_query(
+            input_type="gene", output_type="cell", input_set=input_set, genomic_modality="rna"
+        )
+        gene_cells_count = set_count(gene_cells, "cell")
+        self.assertEqual(gene_cells_count, 5)
 
     def test_cells_from_proteins(self):
-        input_set = ["Ki67 > 1000", "CD21 > 1500"]
-        params_dict = {"and": 67, "or": 356}
-        for log_op in params_dict:
-            cells_from_proteins = hubmap_query(
-                "protein", "cell", input_set, logical_operator=log_op
-            )
-            cells_from_protein_count = set_count(cells_from_proteins, "cell")
-            self.assertEqual(cells_from_protein_count, params_dict["logical_operator"])
+        input_set = ["CD11c > 5000"]
+        protein_cells = hubmap_query(input_type="protein", output_type="cell", input_set=input_set)
+        protein_cells_count = set_count(protein_cells, "cell")
+        self.assertEqual(protein_cells_count, 2)
 
     def test_cells_from_cells(self):
         input_set = [
-            "0576b972e074074b4c51a61c3d17a6e3-AAACGAATCCAACCGG",
-            "0576b972e074074b4c51a61c3d17a6e3-AAACGCTCAACGACAG",
+            "0576b972e074074b4c51a61c3d17a6e3-AATGGCTTCTCGACGG",
+            "0576b972e074074b4c51a61c3d17a6e3-AGAAGTACACTGCACG",
         ]
-        cells_from_cells = hubmap_query("cell", "cell", input_set)
-        cells_from_cells_count = set_count(cells_from_cells, "cell")
-        self.assertEqual(cells_from_cells_count, 2)
+        cells = hubmap_query(input_type="cell", output_type="cell", input_set=input_set)
+        cells_count = set_count(cells, "cell")
+        self.assertEqual(cells_count, 2)
 
     def test_cells_from_organs(self):
-        input_set = ["Heart", "Lymph Node"]
-        cells_from_organ = hubmap_query("organ", "cell", input_set)
-        cells_from_organ_count = set_count(cells_from_organ, "cell")
-        self.assertEqual(cells_from_organ_count, 3000)
+        input_set = ["Heart"]
+        organ_cells = hubmap_query(input_type="organ", output_type="cell", input_set=input_set)
+        organ_cells_count = set_count(organ_cells, "cell")
+        self.assertEqual(organ_cells_count, 10)
 
     def test_cells_from_datasets(self):
-        input_set = ["a83a0a7b03d26167344ccbd0df46331e", "d4493657cde29702c5ed73932da5317c"]
-        cells_from_dataset = hubmap_query("dataset", "cell", input_set)
-        cells_from_dataset_count = set_count(cells_from_dataset, "cell")
-        self.assertEqual(cells_from_dataset_count, 2000)
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
+        dataset_cells = hubmap_query(input_type="dataset", output_type="cell", input_set=input_set)
+        dataset_cells_count = set_count(dataset_cells, "cell")
+        self.assertEqual(dataset_cells_count, 10)
 
 
 class GeneTestCase(TestCase):
@@ -160,49 +148,37 @@ class GeneTestCase(TestCase):
     def test_all_genes(self):
         all_genes = get_all("gene")
         all_genes_count = set_count(all_genes, "gene")
-        self.assertEqual(all_genes_count, 1834)
+        self.assertEqual(all_genes_count, 20)
 
     def test_genes_from_organs(self):
-        input_sets = {"rna": ["Lymph Node"], "atac": "Heart"}
-        params_dict = {"rna": 970, "atac": 987}
-        for modality in params_dict:
-            input_set = input_sets["modality"]
-            genes_from_organs = hubmap_query(
-                "organ", "gene", input_set, genomic_modality=modality, p_value=0.05
-            )
-            genes_from_organs_count = set_count(genes_from_organs, "gene")
-            self.assertEqual(genes_from_organs_count, params_dict[modality])
+        input_set = ["Heart"]
+        organ_genes = hubmap_query(
+            input_type="organ",
+            output_type="gene",
+            input_set=input_set,
+            genomic_modality="atac",
+            p_value=0.05,
+        )
+        organ_genes_count = set_count(organ_genes, "gene")
+        self.assertEqual(organ_genes_count, 10)
 
     def test_genes_from_clusters(self):
-        input_sets = {
-            "rna": ["leiden-UMAP-allrna-27", "leiden-UMAP-allrna-25"],
-            "atac": [
-                "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
-                "leiden-UMAP-d4493657cde29702c5ed73932da5317c-10",
-            ],
-        }
-        params_dict = {"rna": {"527": 0, "or": 852}, "atac": {"and": 962, "or": 571}}
-        for modality in params_dict:
-            input_set = input_sets[modality]
-            for logical_operator in ["and", "or"]:
-                genes_from_clusters = hubmap_query(
-                    "cluster",
-                    "gene",
-                    input_set,
-                    genomic_modality=modality,
-                    p_value=0.05,
-                    logical_operator=logical_operator,
-                )
-                genes_from_clusters_count = set_count(genes_from_clusters, "gene")
-                self.assertEqual(
-                    genes_from_clusters_count, params_dict[modality][logical_operator]
-                )
+        input_set = ["leiden-UMAP-allrna-0"]
+        cluster_genes = hubmap_query(
+            input_type="cluster",
+            output_type="gene",
+            input_set=input_set,
+            genomic_modality="rna",
+            p_value=0.05,
+        )
+        cluster_genes_count = set_count(cluster_genes, "gene")
+        self.assertEqual(cluster_genes_count, 22)
 
     def test_genes_from_genes(self):
-        input_set = ["VIM", "AASS"]
-        genes_from_genes = hubmap_query("gene", "gene", input_set)
-        genes_from_genes_count = set_count(genes_from_genes, "gene")
-        self.assertEqual(genes_from_genes_count, 2)
+        input_set = ["ABHD17A"]
+        genes = hubmap_query(input_type="gene", output_type="gene", input_set=input_set)
+        genes_count = set_count(genes, "gene")
+        self.assertEqual(genes_count, 1)
 
 
 class OrganTestCase(TestCase):
@@ -213,32 +189,34 @@ class OrganTestCase(TestCase):
     def test_all_organs(self):
         all_organs = get_all("organ")
         all_organs_count = set_count(all_organs, "organ")
-        self.assertEqual(all_organs_count, 2)
+        self.assertEqual(all_organs_count, 3)
 
     def test_organs_from_genes(self):
-        input_set = ["VIM"]
-        params_dict = {"rna": 1, "atac": 1}
-        for modality in params_dict:
-            organs_from_genes = hubmap_query(
-                "gene", "organ", input_set, genomic_modality=modality, p_value=0.05
-            )
-            organs_from_genes_count = set_count(organs_from_genes, "organ")
-            self.assertEqual(organs_from_genes_count, params_dict[modality])
+        input_set = ["ABHD17A"]
+        gene_organs = hubmap_query(
+            input_type="gene",
+            output_type="organ",
+            input_set=input_set,
+            genomic_modality="rna",
+            p_value=0.05,
+        )
+        gene_organs_count = set_count(gene_organs, "organ")
+        self.assertEqual(gene_organs_count, 2)
 
     def test_organs_from_cells(self):
         input_set = [
-            "0576b972e074074b4c51a61c3d17a6e3-AAACGAATCCAACCGG",
-            "0576b972e074074b4c51a61c3d17a6e3-AAACGCTCAACGACAG",
+            "0576b972e074074b4c51a61c3d17a6e3-AATGGCTTCTCGACGG",
+            "0576b972e074074b4c51a61c3d17a6e3-AGAAGTACACTGCACG",
         ]
-        organs_from_cells = hubmap_query("cell", "organ", input_set)
-        organs_from_cells_count = set_count(organs_from_cells, "organ")
-        self.assertEqual(organs_from_cells_count, 1)
+        cell_organs = hubmap_query(input_type="cell", output_type="organ", input_set=input_set)
+        cell_organs_count = set_count(cell_organs, "organ")
+        self.assertEqual(cell_organs_count, 1)
 
     def test_organs_from_organs(self):
-        input_set = ["Heart", "Lymph Node"]
-        organs_from_organs = hubmap_query("organ", "organ", input_set)
-        organs_from_organs_count = set_count(organs_from_organs, "organ")
-        self.assertEqual(organs_from_organs_count, 2)
+        input_set = ["Heart"]
+        organs = hubmap_query(input_type="organ", output_type="organ", input_set=input_set)
+        organs_count = set_count(organs, "organ")
+        self.assertEqual(organs_count, 1)
 
 
 class DatasetTestCase(TestCase):
@@ -253,15 +231,15 @@ class DatasetTestCase(TestCase):
 
     def test_datasets_from_cells(self):
         input_set = [
-            "0576b972e074074b4c51a61c3d17a6e3-AAACGAATCCAACCGG",
-            "0576b972e074074b4c51a61c3d17a6e3-AAACGCTCAACGACAG",
+            "0576b972e074074b4c51a61c3d17a6e3-AATGGCTTCTCGACGG",
+            "0576b972e074074b4c51a61c3d17a6e3-AGAAGTACACTGCACG",
         ]
-        datasets_from_cells = hubmap_query("cell", "dataset", input_set)
-        datasets_from_cells_count = set_count(datasets_from_cells, "dataset")
-        self.assertEqual(datasets_from_cells_count, 1)
+        cell_datasets = hubmap_query(input_type="cell", output_type="dataset", input_set=input_set)
+        cell_datasets_count = set_count(cell_datasets, "organ")
+        self.assertEqual(cell_datasets_count, 1)
 
     def test_datasets_from_datasets(self):
-        input_set = ["a83a0a7b03d26167344ccbd0df46331e", "d4493657cde29702c5ed73932da5317c"]
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3", "d4493657cde29702c5ed73932da5317c"]
         datasets_from_datasets = hubmap_query("dataset", "dataset", input_set)
         datasets_from_datasets_count = set_count(datasets_from_datasets, "dataset")
         self.assertEqual(datasets_from_datasets_count, 2)
@@ -284,23 +262,25 @@ class ClusterTestCase(TestCase):
     def test_all_clusters(self):
         all_clusters = get_all("cluster")
         all_clusters_count = set_count(all_clusters, "cluster")
-        self.assertEqual(all_clusters_count, 1059)
+        self.assertEqual(all_clusters_count, 69)
 
     def test_clusters_from_genes(self):
-        input_set = ["VIM"]
-        params_dict = {"rna": 0, "atac": 0}
-        for modality in params_dict:
-            clusters_from_genes = hubmap_query(
-                "gene", "cluster", input_set, genomic_modality=modality, p_value=0.05
-            )
-            clusters_from_genes_count = set_count(clusters_from_genes, "cluster")
-            self.assertEqual(clusters_from_genes_count, params_dict[modality])
+        input_set = ["ABHD17A"]
+        gene_clusters = hubmap_query(
+            input_type="gene",
+            output_type="cluster",
+            input_set=input_set,
+            genomic_modality="rna",
+            p_value=0.05,
+        )
+        gene_clusters_count = set_count(gene_clusters, "cluster")
+        self.assertEqual(gene_clusters_count, 22)
 
     def test_clusters_from_datasets(self):
-        input_set = ["a83a0a7b03d26167344ccbd0df46331e", "d4493657cde29702c5ed73932da5317c"]
+        input_set = ["d4493657cde29702c5ed73932da5317c"]
         clusters_from_datasets = hubmap_query("dataset", "cluster", input_set)
         clusters_from_datasets_count = set_count(clusters_from_datasets, "cluster")
-        self.assertEqual(clusters_from_datasets_count, 52)
+        self.assertEqual(clusters_from_datasets_count, 23)
 
     def test_clusters_from_clusters(self):
         input_set = [
@@ -323,7 +303,7 @@ class ProteinTestCase(TestCase):
         self.assertEqual(all_proteins_count, 10)
 
     def test_proteins_from_proteins(self):
-        input_set = [""]
+        input_set = ["CD107a", "CD11c"]
         proteins_from_proteins = hubmap_query("protein", "protein", input_set)
         proteins_from_proteins_count = set_count(proteins_from_proteins, "protein")
         self.assertEqual(proteins_from_proteins_count, 2)
@@ -334,32 +314,32 @@ class OperationsTestCase(TestCase):
         "/query_app/fixtures/minimal_dataset.json",
     ]
 
-    def test_intersection(self):
-        input_set = ["a83a0a7b03d26167344ccbd0df46331e"]
-        cells_from_dataset = hubmap_query("dataset", "cell", input_set)
-        input_set = ["Heart"]
-        cells_from_organ = hubmap_query("organ", "cell", input_set)
-        intersection_cells = set_intersection(cells_from_dataset, cells_from_organ, "cell")
-        intersection_cells_count = set_count(intersection_cells, "cell")
-        self.assertEqual(intersection_cells_count, 2000)
-
     def test_union(self):
-        input_set = ["Ki67 > 1000", "CD21 > 1500"]
-        cells_from_proteins = hubmap_query("protein", "cell", input_set, logical_operator="and")
-        input_set = ["Heart"]
+        input_set = ["d4493657cde29702c5ed73932da5317c"]
+        cells_from_dataset = hubmap_query("dataset", "cell", input_set)
+        input_set = ["Spleen"]
         cells_from_organ = hubmap_query("organ", "cell", input_set)
-        union_cells = set_union(cells_from_proteins, cells_from_organ, "cell")
+        intersection_cells = set_union(cells_from_dataset, cells_from_organ, "cell")
+        intersection_cells_count = set_count(intersection_cells, "cell")
+        self.assertEqual(intersection_cells_count, 20)
+
+    def test_intersection(self):
+        input_set = ["CD11c > 5000"]
+        cells_from_proteins = hubmap_query("protein", "cell", input_set)
+        input_set = ["Spleen"]
+        cells_from_organ = hubmap_query("organ", "cell", input_set)
+        union_cells = set_intersection(cells_from_proteins, cells_from_organ, "cell")
         union_cells_count = set_count(union_cells, "cell")
-        self.assertEqual(union_cells_count, 1067)
+        self.assertEqual(union_cells_count, 2)
 
     def test_difference(self):
-        input_set = ["Ki67 > 1000", "CD21 > 1500"]
+        input_set = ["CD11c > 5000"]
         cells_from_proteins = hubmap_query("protein", "cell", input_set, logical_operator="and")
-        input_set = ["Lymph Node"]
-        cells_from_organ = hubmap_query("organ", "cell", input_set)
-        difference_cells = set_difference(cells_from_organ, cells_from_proteins, "cell")
+        input_set = ["08e2ec17af557e638b5ffed2c162868f-R001_X004_Y009-7"]
+        cells_from_cell = hubmap_query("cell", "cell", input_set)
+        difference_cells = set_difference(cells_from_cell, cells_from_proteins, "cell")
         difference_cells_count = set_count(difference_cells, "cell")
-        self.assertEqual(difference_cells_count, 1933)
+        self.assertEqual(difference_cells_count, 1)
 
 
 class ListEvaluationTestCase(TestCase):
