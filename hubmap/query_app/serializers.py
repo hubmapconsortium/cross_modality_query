@@ -219,7 +219,10 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             var_id: get_quant_value(obj.cell_id, var_id, obj.modality.modality_name)
             for var_id in var_ids
         }
-        return json.dumps(values_dict)
+        return values_dict
+
+
+#        return json.dumps(values_dict)
 
 
 class GeneAndValuesSerializer(serializers.ModelSerializer):
@@ -241,7 +244,10 @@ class GeneAndValuesSerializer(serializers.ModelSerializer):
             )
             for var_id in var_ids
         }
-        return json.dumps(values_dict)
+        return values_dict
+
+
+#        return json.dumps(values_dict)
 
 
 #        fields = ['gene', 'values']
@@ -266,7 +272,10 @@ class OrganAndValuesSerializer(serializers.ModelSerializer):
             )
             for var_id in var_ids
         }
-        return json.dumps(values_dict)
+        return values_dict
+
+
+#        return json.dumps(values_dict)
 
 
 class ClusterAndValuesSerializer(serializers.ModelSerializer):
@@ -287,7 +296,10 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
             )
             for var_id in var_ids
         }
-        return json.dumps(values_dict)
+        return values_dict
+
+
+#        return json.dumps(values_dict)
 
 
 class DatasetAndValuesSerializer(serializers.ModelSerializer):
