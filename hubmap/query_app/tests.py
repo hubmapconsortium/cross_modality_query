@@ -24,9 +24,9 @@ def hubmap_query(
         "p_value": p_value,
         "logical_operator": logical_operator,
     }
-    for key in request_dict:
-        if request_dict[key] is None:
-            request_dict.pop(key)
+    request_dict = {
+        key: request_dict[key] for key in request_dict if request_dict[key] is not None
+    }
     return c.post(request_url, request_dict).json()["results"][0]["query_handle"]
 
 
@@ -90,13 +90,17 @@ def set_detail_evaluation(
         "values_included": values_included,
         "sort_by": sort_by,
     }
+    request_dict = {
+        key: request_dict[key] for key in request_dict if request_dict[key] is not None
+    }
+
     response_json = c.post(request_url, request_dict).json()["results"]
     return response_json  # Returns the key to be used in future computations
 
 
 class CellTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_all_cells(self):
@@ -142,7 +146,7 @@ class CellTestCase(TestCase):
 
 class GeneTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_all_genes(self):
@@ -172,7 +176,7 @@ class GeneTestCase(TestCase):
             p_value=0.05,
         )
         cluster_genes_count = set_count(cluster_genes, "gene")
-        self.assertEqual(cluster_genes_count, 22)
+        self.assertEqual(cluster_genes_count, 10)
 
     def test_genes_from_genes(self):
         input_set = ["ABHD17A"]
@@ -183,7 +187,7 @@ class GeneTestCase(TestCase):
 
 class OrganTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_all_organs(self):
@@ -221,7 +225,7 @@ class OrganTestCase(TestCase):
 
 class DatasetTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_all_datasets(self):
@@ -256,7 +260,7 @@ class DatasetTestCase(TestCase):
 
 class ClusterTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_all_clusters(self):
@@ -294,7 +298,7 @@ class ClusterTestCase(TestCase):
 
 class ProteinTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_all_proteins(self):
@@ -311,7 +315,7 @@ class ProteinTestCase(TestCase):
 
 class OperationsTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_union(self):
@@ -334,22 +338,22 @@ class OperationsTestCase(TestCase):
 
     def test_difference(self):
         input_set = ["CD11c > 5000"]
-        cells_from_proteins = hubmap_query("protein", "cell", input_set, logical_operator="and")
+        cells_from_proteins = hubmap_query("protein", "cell", input_set)
         input_set = ["08e2ec17af557e638b5ffed2c162868f-R001_X004_Y009-7"]
         cells_from_cell = hubmap_query("cell", "cell", input_set)
-        difference_cells = set_difference(cells_from_cell, cells_from_proteins, "cell")
+        difference_cells = set_difference(cells_from_proteins, cells_from_cell, "cell")
         difference_cells_count = set_count(difference_cells, "cell")
         self.assertEqual(difference_cells_count, 1)
 
 
 class ListEvaluationTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_cells(self):
         all_cells = get_all("cell")
-        evaluated_cell = set_list_evaluation(all_cells, "cell", 1)
+        evaluated_cell = set_list_evaluation(all_cells, "cell", 1)[0]
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
             evaluated_cell_fields, ["cell_id", "modality", "dataset", "organ", "clusters"]
@@ -357,92 +361,86 @@ class ListEvaluationTestCase(TestCase):
 
     def test_genes(self):
         all_genes = get_all("gene")
-        evaluated_gene = set_list_evaluation(all_genes, "gene", 1)
+        evaluated_gene = set_list_evaluation(all_genes, "gene", 1)[0]
         evaluated_gene_fields = list(evaluated_gene.keys())
         self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms"])
 
     def test_organs(self):
         all_organs = get_all("organ")
-        evaluated_organ = set_list_evaluation(all_organs, "organ", 1)
+        evaluated_organ = set_list_evaluation(all_organs, "organ", 1)[0]
         evaluated_organ_fields = list(evaluated_organ.keys())
         self.assertEqual(evaluated_organ_fields, ["grouping_name"])
 
     def test_clusters(self):
         all_clusters = get_all("cluster")
-        evaluated_cluster = set_list_evaluation(all_clusters, "cluster", 1)
+        evaluated_cluster = set_list_evaluation(all_clusters, "cluster", 1)[0]
         evaluated_cluster_fields = list(evaluated_cluster.keys())
         self.assertEqual(
             evaluated_cluster_fields,
             [
                 "cluster_method",
                 "cluster_data",
-                "dataset",
                 "grouping_name",
+                "dataset",
             ],
         )
-        pass
 
     def test_datasets(self):
         all_datasets = get_all("dataset")
-        evaluated_dataset = set_list_evaluation(all_datasets, "dataset", 1)
+        evaluated_dataset = set_list_evaluation(all_datasets, "dataset", 1)[0]
         evaluated_dataset_fields = list(evaluated_dataset.keys())
         self.assertEqual(evaluated_dataset_fields, ["uuid"])
-        pass
 
     def test_proteins(self):
         all_proteins = get_all("protein")
-        evaluated_protein = set_list_evaluation(all_proteins, "protein", 1)
+        evaluated_protein = set_list_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
         self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
-        pass
 
 
 class DetailEvaluationTestCase(TestCase):
     fixtures = [
-        "/query_app/fixtures/minimal_dataset.json",
+        "minimal_dataset_test.json",
     ]
 
     def test_cells(self):
         all_cells = get_all("cell")
-        evaluated_cell = set_detail_evaluation(all_cells, "cell", 1)
+        evaluated_cell = set_detail_evaluation(all_cells, "cell", 1)[0]
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
             evaluated_cell_fields,
-            ["cell_id", "modality", "dataset", "organ", "clusters", "values"],
+            ["cell_id", "modality", "dataset", "organ", "values"],
         )
 
     def test_genes(self):
         all_genes = get_all("gene")
-        evaluated_gene = set_detail_evaluation(all_genes, "gene", 1)
+        evaluated_gene = set_detail_evaluation(all_genes, "gene", 1)[0]
         evaluated_gene_fields = list(evaluated_gene.keys())
         self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "values"])
 
     def test_organs(self):
         all_organs = get_all("organ")
-        evaluated_organ = set_detail_evaluation(all_organs, "organ", 1)
+        evaluated_organ = set_detail_evaluation(all_organs, "organ", 1)[0]
         evaluated_organ_fields = list(evaluated_organ.keys())
         self.assertEqual(evaluated_organ_fields, ["grouping_name", "values"])
 
     def test_clusters(self):
         all_clusters = get_all("cluster")
-        evaluated_cluster = set_detail_evaluation(all_clusters, "cluster", 1)
+        evaluated_cluster = set_detail_evaluation(all_clusters, "cluster", 1)[0]
         evaluated_cluster_fields = list(evaluated_cluster.keys())
         self.assertEqual(
             evaluated_cluster_fields,
-            ["cluster_method", "cluster_data", "dataset", "grouping_name", "values"],
+            ["cluster_method", "cluster_data", "grouping_name", "dataset", "values"],
         )
-        pass
 
     def test_datasets(self):
         all_datasets = get_all("dataset")
-        evaluated_dataset = set_detail_evaluation(all_datasets, "dataset", 1)
+        evaluated_dataset = set_detail_evaluation(all_datasets, "dataset", 1)[0]
         evaluated_dataset_fields = list(evaluated_dataset.keys())
-        self.assertEqual(evaluated_dataset_fields, ["uuid"])
-        pass
+        self.assertEqual(evaluated_dataset_fields, ["uuid", "values"])
 
     def test_proteins(self):
         all_proteins = get_all("protein")
-        evaluated_protein = set_detail_evaluation(all_proteins, "protein", 1)
+        evaluated_protein = set_detail_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
         self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
-        pass

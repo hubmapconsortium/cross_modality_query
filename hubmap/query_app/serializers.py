@@ -33,6 +33,9 @@ def infer_values_type(values: List) -> str:
         for item in values
     ]
 
+    if len(values) == 0:
+        return None
+
     values_up = [value.upper() for value in values]
     values = values + values_up
 
@@ -312,8 +315,11 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
     def get_values(self, obj):
         request = self.context["request"]
         conditions = request.POST.getlist("values_included")
-        values_type = infer_values_type(conditions)
-        return get_percentage(obj.uuid, values_type, conditions[0])
+        if len(conditions) == 0:
+            return None
+        else:
+            values_type = infer_values_type(conditions)
+            return get_percentage(obj.uuid, values_type, conditions[0])
 
 
 class QuerySetSerializer(serializers.ModelSerializer):
