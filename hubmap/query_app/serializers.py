@@ -266,6 +266,9 @@ class OrganAndValuesSerializer(serializers.ModelSerializer):
         }
         return values_dict
 
+
+class ClusterAndValuesSerializer(serializers.ModelSerializer):
+    values = serializers.SerializerMethodField(method_name="get_values")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid", default=None)
 
     class Meta:
