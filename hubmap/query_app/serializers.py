@@ -225,9 +225,6 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
         return values_dict
 
 
-#        return json.dumps(values_dict)
-
-
 class GeneAndValuesSerializer(serializers.ModelSerializer):
     #    values = serializers.JSONField()
     #    gene = GeneSerializer(read_only=True)
@@ -250,15 +247,7 @@ class GeneAndValuesSerializer(serializers.ModelSerializer):
         return values_dict
 
 
-#        return json.dumps(values_dict)
-
-
-#        fields = ['gene', 'values']
-
-
 class OrganAndValuesSerializer(serializers.ModelSerializer):
-    #    organ = serializers.RelatedField(read_only=True)
-    #    values = serializers.JSONField()
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
@@ -277,12 +266,6 @@ class OrganAndValuesSerializer(serializers.ModelSerializer):
         }
         return values_dict
 
-
-#        return json.dumps(values_dict)
-
-
-class ClusterAndValuesSerializer(serializers.ModelSerializer):
-    values = serializers.SerializerMethodField(method_name="get_values")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid", default=None)
 
     class Meta:
@@ -300,9 +283,6 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
             for var_id in var_ids
         }
         return values_dict
-
-
-#        return json.dumps(values_dict)
 
 
 class DatasetAndValuesSerializer(serializers.ModelSerializer):
