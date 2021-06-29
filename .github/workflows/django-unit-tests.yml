@@ -13,9 +13,6 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.8]
-      include:
-        - db: postgres
-          db_port: 5432
     services:
       postgres:
         image: postgres:13
