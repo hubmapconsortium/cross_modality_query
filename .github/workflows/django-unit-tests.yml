@@ -18,7 +18,7 @@ jobs:
         image: postgres:13
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD:
+          POSTGRES_PASSWORD: postgres
         options: >-
             --health-cmd pg_isready
             --health-interval 10s
@@ -49,5 +49,5 @@ jobs:
         DB: postgres
         DB_HOST: 127.0.0.1
         DB_PORT: 5432
-        DB_PASSWORD:
+        DB_PASSWORD: postgres
       run: ./test.sh
