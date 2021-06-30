@@ -49,7 +49,7 @@ This matrix will be expanded over time, but queries that are better satisfied by
 | `organs`            | ✓         |           |           |           | ✓         | ✓         |
 | `proteins`          | ✓         |           | ✓         |           |           | ✓         |           |
 
-#Development Process
+Development Process
 
 ##To release via TEST infrastructure
 

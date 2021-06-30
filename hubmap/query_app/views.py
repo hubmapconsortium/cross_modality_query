@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
-from .analysis import calculate_statistics
+from .analysis import calculate_statistics, get_max_value
 from .models import (
     Cell,
     Cluster,
@@ -333,3 +333,16 @@ class CellValuesEvaluationViewSet(viewsets.ModelViewSet):
 
     def post(self, request, format=None):
         return get_response(self, request, get_cell_values_b)
+
+
+class MaxValueViewSet(viewsets.GenericViewSet):
+    pagination_class = PaginationClass
+
+    def get(self, request, format=None):
+        try:
+            return HttpResponse(get_max_value(request))
+        except Exception as e:
+            tb = traceback.format_exc()
+            json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+            print(json_error_response)
+            return HttpResponse(json_error_response)

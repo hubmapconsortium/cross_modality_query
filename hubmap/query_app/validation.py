@@ -363,3 +363,10 @@ def validate_statistic_args(query_params):
         query_params["var_id"],
         query_params["stat_type"],
     )
+
+
+def validate_modality(modality: str):
+    permitted_modalities = ["rna", "atac", "codex"]
+    permitted_modalities.sort()
+    if modality not in permitted_modalities:
+        raise ValueError(f"{modality} not supported, only {permitted_modalities}")

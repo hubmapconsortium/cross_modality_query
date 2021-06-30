@@ -4,7 +4,7 @@ from django.db.models import Avg, Max, Min, StdDev, Sum
 from .models import AtacQuant, CodexQuant, RnaQuant, StatReport
 from .serializers import StatReportSerializer
 from .utils import unpickle_query_set
-from .validation import validate_statistic_args
+from .validation import validate_modality, validate_statistic_args
 
 
 def get_num_zeros(cell_set, quant_set):
@@ -156,3 +156,16 @@ def calculate_statistics(self, request):
     response = StatReportSerializer(query_set, many=True, context=context).data
 
     return response
+
+
+def get_max_value(self, request):
+    query_params = request.data.dict()
+    modality = query_params["modality"]
+    validate_modality(modality)
+    if modality == "codex":
+        value = CodexQuant.objects.filter(statistic="mean").aggregate(Max("value"))
+    elif modality == "rna":
+        value = RnaQuant.objects.all().aggregate(Max("value"))
+    elif modality == "rna":
+        value = AtacQuant.objects.all().aggregate(Max("value"))
+    return {"maximum_value": value}
