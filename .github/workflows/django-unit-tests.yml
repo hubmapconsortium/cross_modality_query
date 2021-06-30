@@ -1,10 +1,6 @@
 name: Django CI
 
-on:
-  push:
-    branches: [ sfd5311/analysis-endpoints ]
-  pull_request:
-    branches: [ sfd5311/analysis-endpionts ]
+on: [push, pull_request]
 
 jobs:
   build:
