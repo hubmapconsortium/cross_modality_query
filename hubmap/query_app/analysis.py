@@ -161,11 +161,14 @@ def calculate_statistics(self, request):
 def get_max_value(self, request):
     query_params = request.data.dict()
     modality = query_params["modality"]
+    print(modality)
     validate_modality(modality)
     if modality == "codex":
         value = CodexQuant.objects.filter(statistic="mean").aggregate(Max("value"))
     elif modality == "rna":
         value = RnaQuant.objects.all().aggregate(Max("value"))
-    elif modality == "rna":
+    elif modality == "atac":
         value = AtacQuant.objects.all().aggregate(Max("value"))
+
+    value = value["value__max"]
     return {"maximum_value": value}

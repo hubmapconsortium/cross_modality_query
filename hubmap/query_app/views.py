@@ -2,22 +2,13 @@ import json
 import traceback
 from typing import Callable
 
-from django.http import HttpResponse
+from django.core import serializers
+from django.http import HttpResponse, JsonResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
 from .analysis import calculate_statistics, get_max_value
-from .models import (
-    Cell,
-    Cluster,
-    Dataset,
-    Gene,
-    Organ,
-    Protein,
-    QuerySet,
-    RnaQuant,
-    StatReport,
-)
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet, StatReport
 from .queries import (
     cell_query,
     cluster_query,
@@ -52,6 +43,9 @@ from .set_evaluators import (
 )
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
 from .utils import get_app_status, unpickle_query_set
+
+JSONSerializer = serializers.get_serializer("json")
+json_serializer = JSONSerializer()
 
 
 class PaginationClass(PageNumberPagination):
@@ -301,6 +295,7 @@ class StatisticViewSet(viewsets.ModelViewSet):
 
 class StatusViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = json_serializer
 
     def get(self, request, format=None):
         try:
@@ -337,10 +332,13 @@ class CellValuesEvaluationViewSet(viewsets.ModelViewSet):
 
 class MaxValueViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = json_serializer
 
-    def get(self, request, format=None):
+    def post(self, request, format=None):
         try:
-            return HttpResponse(get_max_value(request))
+            max_value_dict = get_max_value(self, request)
+            response = JsonResponse(max_value_dict)
+            return response
         except Exception as e:
             tb = traceback.format_exc()
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
