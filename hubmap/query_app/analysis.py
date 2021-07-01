@@ -174,4 +174,4 @@ def get_max_value(self, request):
     value = query_set.aggregate(Max("value"))
 
     value = value["value__max"]
-    return {"maximum_value": value}
+    return {"results": {"maximum_value": value}}
