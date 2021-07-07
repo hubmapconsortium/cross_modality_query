@@ -281,7 +281,7 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
         var_type = infer_values_type(var_ids)
         values_dict = {
             var_id: get_p_values(
-                identifier=obj.grouping_name, var_id=var_id, var_type=var_type, set_type="organ"
+                identifier=obj.grouping_name, var_id=var_id, var_type=var_type, set_type="cluster"
             )
             for var_id in var_ids
         }
