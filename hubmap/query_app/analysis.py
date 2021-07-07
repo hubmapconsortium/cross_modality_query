@@ -163,7 +163,7 @@ def get_max_value(self, request):
     validate_max_value_args(query_params)
     modality = query_params["modality"]
     if modality == "codex":
-        query_set = CodexQuant.objects.filter(statistic="mean")
+        query_set = CodexQuant.objects.all()
     elif modality == "rna":
         query_set = RnaQuant.objects.all()
     elif modality == "atac":
