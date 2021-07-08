@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
-from .analysis import calculate_statistics, get_max_value
+from .analysis import calculate_statistics, get_bounds
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet, StatReport
 from .queries import (
     cell_query,
@@ -330,14 +330,14 @@ class CellValuesEvaluationViewSet(viewsets.ModelViewSet):
         return get_response(self, request, get_cell_values_b)
 
 
-class MaxValueViewSet(viewsets.GenericViewSet):
+class ValueBoundsViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
     serializer_class = json_serializer
 
     def post(self, request, format=None):
         try:
-            max_value_dict = get_max_value(self, request)
-            response = JsonResponse(max_value_dict)
+            bounds_dict = get_bounds(self, request)
+            response = JsonResponse(bounds_dict)
             return response
         except Exception as e:
             tb = traceback.format_exc()

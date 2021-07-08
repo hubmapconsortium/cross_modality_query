@@ -369,7 +369,7 @@ def validate_statistic_args(query_params):
     )
 
 
-def validate_max_value_args(query_params: Dict):
+def validate_bounds_args(query_params: Dict):
     required_fields = {"modality"}
     permitted_fields = required_fields | {"var_id"}
     check_parameter_fields(query_params, required_fields, permitted_fields)
@@ -379,3 +379,15 @@ def validate_max_value_args(query_params: Dict):
     permitted_modalities.sort()
     if modality not in permitted_modalities:
         raise ValueError(f"{modality} not supported, only {permitted_modalities}")
+
+    if "var_id" in query_params:
+        if (
+            modality == "codex"
+            and Protein.objects.filter(protein_id=query_params["var_id"]).first() is None
+        ):
+            raise ValueError(f"{query_params['var_id']} is not in protein index")
+        if (
+            modality in ["atac", "rna"]
+            and Gene.objects.filter(gene_symbol=query_params["var_id"]).first() is None
+        ):
+            raise ValueError(f"{query_params['var_id']} is not in gene index")

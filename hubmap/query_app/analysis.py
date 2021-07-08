@@ -1,10 +1,10 @@
 import numpy as np
 from django.db.models import Avg, Max, Min, StdDev, Sum
 
-from .models import AtacQuant, CodexQuant, RnaQuant, StatReport
+from .models import AtacQuant, Cell, CodexQuant, RnaQuant, StatReport
 from .serializers import StatReportSerializer
 from .utils import unpickle_query_set
-from .validation import validate_max_value_args, validate_statistic_args
+from .validation import validate_bounds_args, validate_statistic_args
 
 
 def get_num_zeros(cell_set, quant_set):
@@ -158,9 +158,9 @@ def calculate_statistics(self, request):
     return response
 
 
-def get_max_value(self, request):
+def get_bounds(self, request):
     query_params = request.data.dict()
-    validate_max_value_args(query_params)
+    validate_bounds_args(query_params)
     modality = query_params["modality"]
     if modality == "codex":
         query_set = CodexQuant.objects.all()
@@ -170,8 +170,26 @@ def get_max_value(self, request):
         query_set = AtacQuant.objects.all()
     if "var_id" in query_params.keys():
         query_set = query_set.filter(q_var_id__iexact=query_params["var_id"])
+        if modality == "rna":
+            rna_cells_count = Cell.objects.filter(dataset__modality__modality_name="rna").count()
+            if rna_cells_count > query_set.count():
+                min_value = 0.0
+            else:
+                min_value = query_set.aggregate(Min("value"))["value__min"]
+        if modality == "atac":
+            atac_cells_count = Cell.objects.filter(dataset__modality__modality_name="atac").count()
+            if atac_cells_count > query_set.count():
+                min_value = 0.0
+            else:
+                min_value = query_set.aggregate(Min("value"))["value__min"]
 
-    value = query_set.aggregate(Max("value"))
+    else:
+        if modality in ["atac", "rna"]:
+            min_value = 0.0
 
-    value = value["value__max"]
-    return {"results": {"maximum_value": value}}
+    if modality == "codex":
+        min_value = query_set.aggregate(Min("value"))["value__min"]
+
+    max_value = query_set.aggregate(Max("value"))["value__max"]
+
+    return {"results": {"minimum_value": min_value, "maximum_value": max_value}}

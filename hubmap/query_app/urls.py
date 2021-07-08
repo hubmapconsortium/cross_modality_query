@@ -94,8 +94,8 @@ urlpatterns = [
         name="cell_values_evaluation",
     ),
     path(
-        "maxvalue/",
-        views.MaxValueViewSet.as_view({"post": "post"}),
+        "bounds/",
+        views.ValueBoundsViewSet.as_view({"post": "post"}),
         name="max_value",
     ),
     path("status/", views.StatusViewSet.as_view({"get": "get"}), name="app_status"),
