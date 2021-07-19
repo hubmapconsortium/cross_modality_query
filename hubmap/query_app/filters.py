@@ -5,7 +5,16 @@ from typing import Dict, List
 from django.core.cache import cache
 from django.db.models import Case, Count, IntegerField, Q, Sum, When
 
-from .models import AtacQuant, Cell, Cluster, CodexQuant, Dataset, Organ, RnaQuant
+from .models import (
+    AtacQuant,
+    Cell,
+    Cluster,
+    CodexQuant,
+    Dataset,
+    Modality,
+    Organ,
+    RnaQuant,
+)
 from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
 
