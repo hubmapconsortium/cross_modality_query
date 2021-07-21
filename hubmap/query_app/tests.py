@@ -143,6 +143,14 @@ class CellTestCase(TestCase):
         dataset_cells_count = set_count(dataset_cells, "cell")
         self.assertEqual(dataset_cells_count, 10)
 
+    def test_cells_from_modalitiess(self):
+        input_set = ["rna"]
+        modality_cells = hubmap_query(
+            input_type="modality", output_type="cell", input_set=input_set
+        )
+        modality_cells_count = set_count(modality_cells, "cell")
+        self.assertEqual(modality_cells_count, 10)
+
 
 class GeneTestCase(TestCase):
     fixtures = [
@@ -256,6 +264,14 @@ class DatasetTestCase(TestCase):
         datasets_from_clusters = hubmap_query("cluster", "dataset", input_set)
         datasets_from_clusters_count = set_count(datasets_from_clusters, "dataset")
         self.assertEqual(datasets_from_clusters_count, 1)
+
+    def test_datasets_from_modalitiess(self):
+        input_set = ["codex"]
+        modality_datasets = hubmap_query(
+            input_type="modality", output_type="dataset", input_set=input_set
+        )
+        modality_datasets_count = set_count(modality_datasets, "cell")
+        self.assertEqual(modality_datasets_count, 1)
 
 
 class ClusterTestCase(TestCase):

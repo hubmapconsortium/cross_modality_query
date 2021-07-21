@@ -5,7 +5,16 @@ from typing import Dict, List
 from django.core.cache import cache
 from django.db.models import Case, Count, IntegerField, Q, Sum, When
 
-from .models import AtacQuant, Cell, Cluster, CodexQuant, Dataset, Organ, RnaQuant
+from .models import (
+    AtacQuant,
+    Cell,
+    Cluster,
+    CodexQuant,
+    Dataset,
+    Modality,
+    Organ,
+    RnaQuant,
+)
 from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
 
@@ -165,7 +174,12 @@ def get_cell_filter(query_params: Dict) -> Q:
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
 
-    groupings_dict = {"organ": "grouping_name", "cluster": "grouping_name", "dataset": "uuid"}
+    groupings_dict = {
+        "organ": "grouping_name",
+        "cluster": "grouping_name",
+        "dataset": "uuid",
+        "modality": "modality_name",
+    }
 
     if input_type == "cell":
         return Q(cell_id__in=input_set)
@@ -184,19 +198,9 @@ def get_cell_filter(query_params: Dict) -> Q:
 
     elif input_type in groupings_dict:
 
-        # Query groupings and then union their cells fields
-        cell_pks = []
+        filter_kwargs = {f"{input_type}__{groupings_dict[input_type]}__in": input_set}
 
-        if input_type == "organ":
-            return Q(organ__grouping_name__in=input_set)
-
-        elif input_type == "cluster":
-            return Q(clusters__grouping_name__in=input_set)
-
-        elif input_type == "dataset":
-            return Q(dataset__uuid__in=input_set)
-
-        return Q(pk__in=cell_pks)
+        return Q(**filter_kwargs)
 
 
 def get_organ_filter(query_params: Dict) -> Q:
@@ -299,6 +303,9 @@ def get_dataset_filter(query_params: dict):
 
     if input_type == "dataset":
         return Q(uuid__in=input_set)
+
+    elif input_type == "modality":
+        return Q(modality__modality_name__in=input_set)
 
     if input_type == "cell":
         cell_qs = Cell.objects.filter(cell_id__in=input_set)
