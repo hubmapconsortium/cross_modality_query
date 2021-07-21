@@ -5,9 +5,9 @@ Server-side code for HuBMAP Cells API.
 [Javascript](https://github.com/hubmapconsortium/hubmap-api-js-client) clients available.
 
 
-##Development Process
+## Development Process
 
-###To release via TEST infrastructure
+### To release via TEST infrastructure
 
 -    Make new feature or bug fix branches from test-release.
 -    Make PRs to test-release. (This is the default branch.)
@@ -15,7 +15,7 @@ Server-side code for HuBMAP Cells API.
 -    Developer or someone on the team who is familiar with the change will test/qa the change
 -    When any current changes in the test-release have been approved after test/qa on TEST, Sean will release to PROD.
 
-###To work on features in the development environment before ready for testing and releasing
+### To work on features in the development environment before ready for testing and releasing
 
 -    Make new feature branches from test-release.
 -    Make PRs to dev-integrate.
