@@ -4,6 +4,24 @@ Server-side code for HuBMAP Cells API.
 [Python](https://github.com/hubmapconsortium/hubmap-api-py-client) and 
 [Javascript](https://github.com/hubmapconsortium/hubmap-api-js-client) clients available.
 
+
+##Development Process
+
+###To release via TEST infrastructure
+
+-    Make new feature or bug fix branches from test-release.
+-    Make PRs to test-release. (This is the default branch.)
+-    As a codeowner, Sean is automatically assigned as a reviewer to each PR. When all other reviewers have approved, he will approve as well, merge to TEST infrastructure, and redeploy and reindex the TEST instance.
+-    Developer or someone on the team who is familiar with the change will test/qa the change
+-    When any current changes in the test-release have been approved after test/qa on TEST, Sean will release to PROD.
+
+###To work on features in the development environment before ready for testing and releasing
+
+-    Make new feature branches from test-release.
+-    Make PRs to dev-integrate.
+-    As a codeowner, Sean is automatically assigned as a reviewer to each PR. When all other reviewers have approved, he will approve as well, merge to devel, and redeploy and reindex the DEV instance.
+-    When a feature branch is ready for testing and release, make a PR to test-release for deployment and testing on the TEST infrastructure as above.
+
 ## Usage
 
 This is only a high-level outline of the API:
@@ -48,20 +66,3 @@ This matrix will be expanded over time, but queries that are better satisfied by
 | `genes`             | ✓         |           | ✓         |           | ✓         | ✓         |           |           |
 | `organs`            | ✓         |           |           |           | ✓         | ✓         |           |           |
 | `proteins`          | ✓         |           | ✓         |           |           | ✓         |           |           |
-
-##Development Process
-
-##To release via TEST infrastructure
-
--    Make new feature or bug fix branches from test-release.
--    Make PRs to test-release. (This is the default branch.)
--    As a codeowner, Sean is automatically assigned as a reviewer to each PR. When all other reviewers have approved, he will approve as well, merge to TEST infrastructure, and redeploy and reindex the TEST instance.
--    Developer or someone on the team who is familiar with the change will test/qa the change
--    When any current changes in the test-release have been approved after test/qa on TEST, Sean will release to PROD.
-
-##To work on features in the development environment before ready for testing and releasing
-
--    Make new feature branches from test-release.
--    Make PRs to dev-integrate.
--    As a codeowner, Sean is automatically assigned as a reviewer to each PR. When all other reviewers have approved, he will approve as well, merge to devel, and redeploy and reindex the DEV instance.
--    When a feature branch is ready for testing and release, make a PR to test-release for deployment and testing on the TEST infrastructure as above.
