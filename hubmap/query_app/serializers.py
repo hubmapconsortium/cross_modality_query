@@ -1,6 +1,7 @@
 import json
 from typing import List
 
+from django.core.cache import cache
 from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
@@ -77,6 +78,16 @@ def get_quant_value(cell_id, gene_symbol, modality):
 
 
 def get_percentage(uuid, values_type, include_values):
+    if len(include_values) == 1:
+        split = split_at_comparator(include_values[0])
+        if len(split) > 1:
+            var_id = split[0]
+            cutoff = split[2]
+            key = f"{uuid}-{var_id}-{cutoff}"
+            cached_value = cache.get(key)
+            if cached_value:
+                return cached_value
+
     query_params = {
         "input_type": values_type,
         "input_set": include_values,

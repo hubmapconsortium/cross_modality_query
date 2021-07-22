@@ -11,12 +11,101 @@ from .models import (
     Cluster,
     CodexQuant,
     Dataset,
+    Gene,
     Modality,
     Organ,
+    Protein,
     RnaQuant,
 )
 from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
+
+modality_ranges_dict = {"rna": [0, 5], "atac": [-4, 1], "codex": [-1, -6]}
+min_percentages = [10 * i for i in range(0, 11)]
+
+
+def precompute_percentages():
+
+    for modality in modality_ranges_dict:
+        dataset_uuids = Dataset.objects.filter(modality__modality_name__iexact=modality)
+        exponents = list(
+            range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
+        )
+
+        if modality in ["atac", "rna"]:
+            var_ids = Gene.objects.all().values_list("gene_symbol", flat=True)
+            input_type = "gene"
+            genomic_modality = modality
+
+        elif modality in ["codex"]:
+            var_ids = Protein.objects.all().values_list("protein_id", flat=True)
+            input_type = "protein"
+            genomic_modality = None
+
+        modality_dict = {
+            var_id: {
+                10 ** exponent: {min_percent: [] for min_percent in min_percentages}
+                for exponent in exponents
+            }
+            for var_id in var_ids
+        }
+
+        for exponent in exponents:
+
+            cutoff = 10 ** exponent
+
+            for var_id in var_ids:
+                input_set = [f"{var_id} > {cutoff}"]
+                query_params = {
+                    "input_type": input_type,
+                    "input_set": input_set,
+                    "genomic_modality": genomic_modality,
+                }
+                cell_set = get_cells_list(query_params, input_set)
+                for uuid in dataset_uuids:
+                    params_tuple = (uuid, cell_set, input_set[0])
+                    percentage = get_percentage_and_cache(params_tuple)
+                    for min_percent in min_percentages:
+                        if percentage >= min_percent:
+                            modality_dict[var_id][cutoff][min_percent].append(uuid)
+
+        cache.set(modality, modality_dict)
+
+
+def check_for_precomputed_value(query_params):
+    input_type = query_params["input_type"]
+    modality = query_params["genomic_modality"] if input_type == "gene" else "codex"
+
+    min_cell_percent = query_params["min_cell_percentage"]
+    input_set = query_params["input_set"]
+
+    cutoff = split_at_comparator(input_set[0])[2]
+    exponents = list(
+        range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
+    )
+    cutoffs = [10 ** exponent for exponent in exponents]
+
+    if len(input_set) > 1 or min_cell_percent not in min_percentages or cutoff not in cutoffs:
+        return False
+
+    return True
+
+
+def get_pre_computed_value(query_params):
+    input_type = query_params["input_type"]
+    modality = query_params["genomic_modality"] if input_type == "gene" else "codex"
+
+    modality_dict = cache.get(modality)
+
+    min_cell_percent = query_params["min_cell_percentage"]
+    input_set = query_params["input_set"]
+
+    cutoff = split_at_comparator(input_set[0])[2]
+    var_id = split_at_comparator(input_set[0])[0]
+
+    uuids = modality_dict[var_id][cutoff][min_cell_percent]
+
+    return Q(uuid__in=uuids)
 
 
 def cells_from_quants(quant_set, var):
@@ -289,12 +378,16 @@ def get_percentage_and_cache(params_tuple):
     query_handle = cache.get(f"{uuid}_cells_set")
     dataset_cells = unpickle_query_set(query_handle, "dataset")
     dataset_count = cache.get(f"{uuid}_cells_count")
-    print(uuid)
-    print("Dataset cells found")
     dataset_and_var_cells = dataset_cells.intersection(var_cells)
-    print("Intersection taken")
     percentage = dataset_and_var_cells.count() / dataset_count
-    cache.set(f"{uuid}-{include_values}", percentage)
+    if len(include_values) == 1:
+        split = split_at_comparator(include_values[0])
+        if len(split) > 1:
+            var_id = split[0]
+            cutoff = split[2]
+            key = f"{uuid}-{var_id}-{cutoff}"
+            cache.set(key, percentage)
+    return percentage
 
 
 def get_dataset_filter(query_params: dict):
@@ -326,6 +419,10 @@ def get_dataset_filter(query_params: dict):
         return q
 
     if input_type in ["gene", "protein"]:
+
+        if check_for_precomputed_value(query_params):
+            return get_pre_computed_value(query_params)
+
         var_cell_pks = list(get_cells_list(query_params).values_list("pk", flat=True))
         var_cells = (
             Cell.objects.filter(pk__in=var_cell_pks)
