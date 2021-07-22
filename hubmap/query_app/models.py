@@ -160,3 +160,11 @@ class StatReport(models.Model):
     atac_value = models.FloatField(null=True)
     codex_value = models.FloatField(null=True)
     num_cells_excluded = models.IntegerField(null=True)
+
+
+class PrecomputedPercentage(models.Model):
+    dataset = models.ForeignKey(to=Dataset, on_delete=models.CASCADE, null=True)
+    modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
+    var_id = models.CharField(max_length=64, null=True, db_index=True)
+    cutoff = models.FloatField(null=True, db_index=True)
+    percentage = models.FloatField(null=True, db_index=True)

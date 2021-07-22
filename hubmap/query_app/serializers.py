@@ -1,7 +1,6 @@
 import json
 from typing import List
 
-from django.core.cache import cache
 from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
@@ -15,6 +14,7 @@ from .models import (
     Gene,
     Modality,
     Organ,
+    PrecomputedPercentage,
     Protein,
     PVal,
     QuerySet,
@@ -83,8 +83,13 @@ def get_percentage(uuid, values_type, include_values):
         if len(split) > 1:
             var_id = split[0]
             cutoff = split[2]
-            key = f"{uuid}-{var_id}-{cutoff}"
-            cached_value = cache.get(key)
+            cached_value = (
+                PrecomputedPercentage.objects.filter(dataset__uuid=uuid)
+                .filter(var_id=var_id)
+                .filter(cutoff=cutoff)
+                .first()
+                .percentage
+            )
             if cached_value:
                 return cached_value
 
