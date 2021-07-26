@@ -3,7 +3,7 @@ from typing import Dict, List, Set
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
-from .models import Gene, Protein
+from .models import Gene, Modality, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
@@ -33,7 +33,6 @@ def check_parameter_types_and_values(query_params):
 
 
 def check_input_set(input_set, input_type):
-    print(f"input_type: {input_type}")
     input_set = [
         split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
         for item in input_set
@@ -51,7 +50,12 @@ def check_input_set(input_set, input_type):
             for item in input_set
             if Protein.objects.filter(protein_id__iexact=item).first() is None
         ]
-    print(len(items_not_found))
+    if input_type == "modality":
+        items_not_found = [
+            item
+            for item in input_set
+            if Modality.objects.filter(modality_name__iexact=item).first() is None
+        ]
     if len(items_not_found) > 0:
         items_not_found_string = ", ".join(items_not_found)
         recommendations = []
@@ -80,16 +84,21 @@ def recommend_identifiers(identifier: str, input_type: str):
             0:5
         ]
         similar_ids = set(similar_proteins.values_list("protein_id", flat=True))
+    elif input_type == "modality":
+        identifier_upper = identifier.upper()
+        annotated_modalities = Modality.objects.annotate(
+            similarity=TrigramSimilarity(Upper("modality_name"), identifier_upper)
+        )
+        similar_modalities = annotated_modalities.filter(similarity__gt=0.3).order_by(
+            "-similarity"
+        )[0:5]
+        similar_ids = set(similar_modalities.values_list("modality_name", flat=True))
     return similar_ids
 
 
 def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_fields: Set):
-    print("check_parameter_fields called")
     param_fields = set(query_params.keys())
-    print(param_fields)
-    print(required_fields)
     missing_fields = list(required_fields - param_fields)
-    print(missing_fields)
     missing_fields.sort()
     if len(missing_fields) > 0:
         raise ValueError(f"Missing parameters: {missing_fields}")
@@ -156,7 +165,7 @@ def validate_cluster_query_params(query_params):
 
 
 def validate_dataset_query_params(query_params):
-    permitted_input_types = ["cell", "cluster", "dataset", "gene", "protein"]
+    permitted_input_types = ["cell", "cluster", "dataset", "gene", "modality", "protein"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -185,7 +194,7 @@ def validate_protein_query_params(query_params):
 
 
 def validate_cell_query_params(query_params):
-    permitted_input_types = ["organ", "gene", "dataset", "cluster", "protein", "cell"]
+    permitted_input_types = ["organ", "gene", "dataset", "cluster", "protein", "cell", "modality"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
