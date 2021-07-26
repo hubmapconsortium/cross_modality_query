@@ -40,7 +40,6 @@ class Migration(migrations.Migration):
                 ("var_id", models.CharField(null=True, max_length=64, db_index=True)),
                 ("cutoff", models.FloatField(null=True, db_index=True)),
                 ("percentage", models.FloatField(null=True, db_index=True)),
-                ("num_cells_excluded", models.IntegerField(null=True, db_index=True)),
             ],
         ),
     ]
