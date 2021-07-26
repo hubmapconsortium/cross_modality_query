@@ -1,15 +1,6 @@
 #!/usr/bin/env python
 
-import json
-from argparse import ArgumentParser
-from os import fspath
-from pathlib import Path
-from typing import List
-
-import numpy as np
-import pandas as pd
-from django.core.cache import cache
-from django.db import connection, transaction
+import re
 
 from .filters import get_cells_list, get_percentage_and_cache
 from .models import (
@@ -26,10 +17,19 @@ from .models import (
     PVal,
     RnaQuant,
 )
-from .utils import min_percentages, modality_ranges_dict
+from .utils import modality_ranges_dict
+
+
+def validate_ip_address(request):
+    allowed_ip_regex = "128.182.96.*"
+    ip = request.META["REMOTE_ADDR"]
+    prog = re.compile(allowed_ip_regex)
+    if not prog.match(ip):
+        raise ValueError("IP not authorized for write operations")
 
 
 def delete_old_data(request):
+    validate_ip_address(request)
     modality = request.data.dict()["modality"]
     Cell.objects.filter(modality__modality_name__icontains=modality).delete()
     modality_datasets = Dataset.objects.filter(
@@ -51,6 +51,7 @@ def delete_old_data(request):
 
 
 def set_up_cluster_relationships(request):
+    validate_ip_address(request)
     cluster_cells_dict = request.data.dict()
     cluster_id = cluster_cells_dict["cluster"]
     cells_ids = cluster_cells_dict["cells"]
@@ -82,6 +83,7 @@ def get_foreign_keys(kwargs, model_name):
 
 
 def create_model(request):
+    validate_ip_address(request)
     request_dict = request.data.dict()
     model_name = request_dict["model_name"]
     kwargs_list = request_dict["kwargs_list"]
@@ -129,7 +131,7 @@ def create_model(request):
 
 
 def precompute_percentages(request):
-
+    validate_ip_address(request)
     modality = request.data.dict()["modality"]
 
     kwargs_list = []

@@ -8,7 +8,12 @@ from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
 from .analysis import calculate_statistics, get_bounds
-from .data_loading import create_model, delete_old_data, set_up_cluster_relationships
+from .data_loading import (
+    create_model,
+    delete_old_data,
+    precompute_percentages,
+    set_up_cluster_relationships,
+)
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet, StatReport
 from .queries import (
     cell_query,
@@ -347,28 +352,33 @@ class ValueBoundsViewSet(viewsets.GenericViewSet):
             return HttpResponse(json_error_response)
 
 
-class DeleteModalityDataView(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
+class DeleteModalityDataView(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = json_serializer
 
     def post(self, request, format=None):
         return get_response(self, request, delete_old_data)
 
 
-class SetUpClusterRelationshipsView(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
+class SetUpClusterRelationshipsView(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = json_serializer
 
     def post(self, request, format=None):
         return get_response(self, request, set_up_cluster_relationships)
 
 
-class CreateModelView(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
+class CreateModelView(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = json_serializer
 
     def post(self, request, format=None):
         return get_response(self, request, create_model)
+
+
+class PrecomputePercentagesView(viewsets.GenericViewSet):
+    pagination_class = PaginationClass
+    serializer_class = json_serializer
+
+    def post(self, request, format=None):
+        return get_response(self, request, precompute_percentages)
