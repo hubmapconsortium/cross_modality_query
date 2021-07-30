@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 import re
+from time import perf_counter
+
+from django.core.cache import cache
 
 from .filters import get_cells_list, get_percentage_and_cache
 from .models import (
@@ -28,7 +31,7 @@ def validate_ip_address(request):
         raise ValueError("IP not authorized for write operations")
 
 
-def delete_old_data(request):
+def delete_old_data(self, request):
     validate_ip_address(request)
     modality = request.data.dict()["modality"]
     Cell.objects.filter(modality__modality_name__icontains=modality).delete()
@@ -50,7 +53,7 @@ def delete_old_data(request):
         CodexQuant.objects.all().delete()
 
 
-def set_up_cluster_relationships(request):
+def set_up_cluster_relationships(self, request):
     validate_ip_address(request)
     cluster_cells_dict = request.data.dict()
     cluster_id = cluster_cells_dict["cluster"]
@@ -82,7 +85,7 @@ def get_foreign_keys(kwargs, model_name):
     return kwargs
 
 
-def create_model(request):
+def create_model(self, request):
     validate_ip_address(request)
     request_dict = request.data.dict()
     model_name = request_dict["model_name"]
@@ -130,19 +133,33 @@ def create_model(request):
     return obj
 
 
-def precompute_percentages(request):
-    validate_ip_address(request)
+def precompute_percentages(self, request):
+    #    validate_ip_address(request)
     modality = request.data.dict()["modality"]
 
     kwargs_list = []
 
-    datasets = Dataset.objects.filter(modality__modality_name__iexact=modality)
+    already_indexed_datasets = PrecomputedPercentage.objects.filter(
+        modality__modality_name__iexact=modality
+    ).values_list("dataset", flat=True)
+    datasets = Dataset.objects.filter(modality__modality_name__iexact=modality).exclude(
+        pk__in=already_indexed_datasets
+    )
+
+    for dataset in datasets:
+        dataset_cells = Cell.objects.filter(dataset__uuid=dataset.uuid)
+        cache.set(f"{dataset.uuid}_cells_count", dataset_cells.count())
+
     exponents = list(
         range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
     )
 
     if modality in ["atac", "rna"]:
-        var_ids = Gene.objects.all().values_list("gene_symbol", flat=True)
+        var_ids = (
+            AtacQuant.objects.all().distinct("q_var_id").values_list("q_var_id", flat=True)
+            if modality == "atac"
+            else RnaQuant.objects.all().distinct("q_var_id").values_list("q_var_id", flat=True)
+        )
         input_type = "gene"
         genomic_modality = modality
 
@@ -153,21 +170,42 @@ def precompute_percentages(request):
 
     modality = Modality.objects.filter(modality_name=modality)
 
-    for exponent in exponents:
+    outer_start = perf_counter()
 
-        cutoff = 10 ** exponent
+    print(exponents)
 
+    var_cells = {}
+    print(var_cells.keys())
+
+    for dataset in datasets:
         for var_id in var_ids:
-            input_set = [f"{var_id} > {cutoff}"]
-            query_params = {
-                "input_type": input_type,
-                "input_set": input_set,
-                "genomic_modality": genomic_modality,
-            }
-            cell_set = get_cells_list(query_params, input_set)
-            for dataset in datasets:
+            zero = False
+            for exponent in exponents:
+                inner_start = perf_counter()
+                cutoff = 10 ** exponent
+                input_set = [f"{var_id} > {cutoff}"]
+                query_params = {
+                    "input_type": input_type,
+                    "input_set": input_set,
+                    "genomic_modality": genomic_modality,
+                }
+                if input_set[0] in var_cells.keys():
+                    print(f"var_cells gotten from cache")
+                    cell_set = var_cells[input_set[0]]
+                else:
+                    print(f"Num keys before {len(var_cells.keys())}")
+                    print(f"var_cells computed")
+                    cell_set = get_cells_list(query_params, input_set)
+                    var_cells[input_set[0]] = cell_set
+                    print(f"Num keys after {len(var_cells.keys())}")
+
+                print(dataset.uuid)
                 params_tuple = (dataset.uuid, cell_set, input_set[0])
-                percentage = get_percentage_and_cache(params_tuple)
+                percentage = 0.0 if zero else get_percentage_and_cache(params_tuple)
+                if percentage == 0.0:
+                    print("Hit a zero")
+                    zero = True
+
                 kwargs = {
                     "modality": modality,
                     "dataset": dataset,
@@ -175,7 +213,19 @@ def precompute_percentages(request):
                     "cutoff": cutoff,
                     "percentage": percentage,
                 }
+                inner_stop = perf_counter()
+                loop_time = inner_stop - inner_start
+                print(f"Time for single params set: {loop_time}")
                 kwargs_list.append(kwargs)
+
+    outer_mid = perf_counter()
+    time_to_compute_all = outer_mid - outer_start
+    print(f"Time to compute all params sets: {time_to_compute_all}")
 
     objs = [PrecomputedPercentage(**kwargs) for kwargs in kwargs_list]
     PrecomputedPercentage.objects.bulk_create(objs)
+    outer_stop = perf_counter()
+    time_to_store_all = outer_stop - outer_mid
+    print(f"Time to store all results: {time_to_store_all}")
+    response_dict = {"time": time_to_compute_all + time_to_store_all}
+    return response_dict

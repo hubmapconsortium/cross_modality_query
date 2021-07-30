@@ -329,9 +329,10 @@ def get_percentage_and_cache(params_tuple):
     uuid = params_tuple[0]
     var_cells = params_tuple[1]
     include_values = params_tuple[2]
-    query_handle = cache.get(f"{uuid}_cells_set")
-    dataset_cells = unpickle_query_set(query_handle, "dataset")
+    dataset_cells = Cell.objects.filter(dataset__uuid=uuid)
     dataset_count = cache.get(f"{uuid}_cells_count")
+    if not dataset_count:
+        dataset_count = dataset_cells.count()
     dataset_and_var_cells = dataset_cells.intersection(var_cells)
     percentage = dataset_and_var_cells.count() / dataset_count
     if len(include_values) == 1:

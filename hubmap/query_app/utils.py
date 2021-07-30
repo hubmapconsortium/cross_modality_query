@@ -8,7 +8,7 @@ from django.db.utils import OperationalError
 
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet
 
-modality_ranges_dict = {"rna": [0, 5], "atac": [-4, 1], "codex": [-1, -6]}
+modality_ranges_dict = {"rna": [0, 5], "atac": [-4, 1], "codex": [-1, 4]}
 min_percentages = [10 * i for i in range(0, 11)]
 
 

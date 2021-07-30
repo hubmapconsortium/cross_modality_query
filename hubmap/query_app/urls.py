@@ -108,22 +108,22 @@ urlpatterns = [
         name="openapi-schema",
     ),
     path(
-        "/add-delete/delete/",
+        "add-delete/delete/",
         views.DeleteModalityDataView.as_view({"post": "post"}),
         name="delete_modality_data_view",
     ),
     path(
-        "/add-delete/insert/",
+        "add-delete/insert/",
         views.CreateModelView.as_view({"post": "post"}),
         name="create_model_view",
     ),
     path(
-        "/add-delete/setuprelationships/",
+        "add-delete/setuprelationships/",
         views.SetUpClusterRelationshipsView.as_view({"post": "post"}),
         name="set_up_relationships_view",
     ),
     path(
-        "/add-delete/precomputepercentages/",
+        "add-delete/precomputepercentages/",
         views.PrecomputePercentagesView.as_view({"post": "post"}),
         name="precompute_percentages_view",
     ),

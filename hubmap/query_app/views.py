@@ -381,4 +381,12 @@ class PrecomputePercentagesView(viewsets.GenericViewSet):
     serializer_class = json_serializer
 
     def post(self, request, format=None):
-        return get_response(self, request, precompute_percentages)
+        try:
+            response_dict = precompute_percentages(self, request)
+            response = JsonResponse(response_dict)
+            return response
+        except Exception as e:
+            tb = traceback.format_exc()
+            json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+            print(json_error_response)
+            return HttpResponse(json_error_response)
