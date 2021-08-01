@@ -164,7 +164,7 @@ class CellSerializer(serializers.ModelSerializer):
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
-    #    clusters = serializers.RelatedField(read_only=True, many=True)
+    clusters = serializers.RelatedField(read_only=True, many=True)
 
     class Meta:
         model = Cell
