@@ -199,7 +199,10 @@ def get_cell_filter(query_params: Dict) -> Q:
     elif input_type in groupings_dict:
 
         if input_type == "cluster":
-            filter_kwargs = {f"{input_type}s__{groupings_dict[input_type]}__in": input_set}
+            cluster_pks = Cluster.objects.filter(grouping_name__in=input_set).values_list(
+                "pk", flat=True
+            )
+            filter_kwargs = {"clusters__in": cluster_pks}
         else:
             filter_kwargs = {f"{input_type}__{groupings_dict[input_type]}__in": input_set}
 
@@ -269,7 +272,7 @@ def get_cluster_filter(query_params: dict):
 
         cell_qs = Cell.objects.filter(cell_id__in=input_set)
 
-        cluster_pks = [cluster for cell in cell_qs for cluster in cell.clusters.all()]
+        cluster_pks = [cluster.id for cell in cell_qs for cluster in cell.clusters.all()]
 
         q = Q(pk__in=cluster_pks)
 

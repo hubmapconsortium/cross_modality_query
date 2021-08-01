@@ -164,7 +164,7 @@ class CellSerializer(serializers.ModelSerializer):
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
-    clusters = serializers.RelatedField(read_only=True, many=True)
+    clusters = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = Cell
@@ -196,22 +196,21 @@ class ProteinSerializer(serializers.ModelSerializer):
 
 
 class CellAndValuesSerializer(serializers.ModelSerializer):
-    #    cell = CellSerializer(read_only=True)
-    #    values = serializers.JSONField()
 
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
+    clusters = serializers.StringRelatedField(many=True)
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
         model = Cell
-        #        fields = ['cell', 'values']
         fields = [
             "cell_id",
             "modality",
             "dataset",
             "organ",
+            "clusters",
             "values",
         ]
 
