@@ -272,7 +272,7 @@ def get_cluster_filter(query_params: dict):
 
         cell_qs = Cell.objects.filter(cell_id__in=input_set)
 
-        cluster_pks = [cluster.id for cell in cell_qs for cluster in cell.clusters.all()]
+        cluster_pks = {cluster.id for cell in cell_qs for cluster in cell.clusters.all()}
 
         q = Q(pk__in=cluster_pks)
 
