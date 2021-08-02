@@ -425,7 +425,7 @@ class DetailEvaluationTestCase(TestCase):
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
             evaluated_cell_fields,
-            ["cell_id", "modality", "dataset", "organ", "values"],
+            ["cell_id", "modality", "dataset", "organ", "clusters", "values"],
         )
 
     def test_genes(self):

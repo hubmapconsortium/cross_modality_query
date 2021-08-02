@@ -237,7 +237,7 @@ def get_clusters_list(query_params: Dict, input_set=None):
         elif query_params["logical_operator"] == "or":
             query_set = reduce(or_, query_sets)
 
-    elif query_params["input_type"] in ["cluster", "dataset"]:
+    elif query_params["input_type"] in ["cluster", "dataset", "cell"]:
         query_set = Cluster.objects.filter(filter)
 
     query_set = query_set.distinct("grouping_name")
