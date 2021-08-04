@@ -52,6 +52,12 @@ class Cluster(CellGrouping):
         to=Dataset, related_name="clusters", on_delete=models.CASCADE, null=True
     )
 
+    def __repr__(self):
+        return self.grouping_name
+
+    def __str__(self):
+        return "%s" % self.grouping_name
+
 
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=128, null=True)
