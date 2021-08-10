@@ -1,8 +1,7 @@
 # cross_modality_query
 
 Server-side code for HuBMAP Cells API.
-[Python](https://github.com/hubmapconsortium/hubmap-api-py-client) and 
-[Javascript](https://github.com/hubmapconsortium/hubmap-api-js-client) clients available.
+[Python](https://github.com/hubmapconsortium/hubmap-api-py-client) client available.
 
 
 ## Development Process
