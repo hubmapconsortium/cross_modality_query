@@ -174,9 +174,6 @@ def precompute_percentages(self, request):
 
     print(exponents)
 
-    var_cells = {}
-    print(var_cells.keys())
-
     for dataset in datasets:
         for var_id in var_ids:
             zero = False
@@ -189,15 +186,7 @@ def precompute_percentages(self, request):
                     "input_set": input_set,
                     "genomic_modality": genomic_modality,
                 }
-                if input_set[0] in var_cells.keys():
-                    print(f"var_cells gotten from cache")
-                    cell_set = var_cells[input_set[0]]
-                else:
-                    print(f"Num keys before {len(var_cells.keys())}")
-                    print(f"var_cells computed")
-                    cell_set = get_cells_list(query_params, input_set)
-                    var_cells[input_set[0]] = cell_set
-                    print(f"Num keys after {len(var_cells.keys())}")
+                cell_set = get_cells_list(query_params, input_set)
 
                 print(dataset.uuid)
                 params_tuple = (dataset.uuid, cell_set, input_set[0])
