@@ -5,7 +5,6 @@ from time import perf_counter
 
 from django.core.cache import cache
 
-from .filters import get_cells_list, get_percentage_and_cache
 from .models import (
     AtacQuant,
     Cell,
@@ -20,6 +19,7 @@ from .models import (
     PVal,
     RnaQuant,
 )
+from .tasks import precompute_dataset_percentages
 from .utils import modality_ranges_dict
 
 
@@ -135,9 +135,8 @@ def create_model(self, request):
 
 def precompute_percentages(self, request):
     #    validate_ip_address(request)
+    outer_start = perf_counter()
     modality = request.data.dict()["modality"]
-
-    kwargs_list = []
 
     already_indexed_datasets = PrecomputedPercentage.objects.filter(
         modality__modality_name__iexact=modality
@@ -146,73 +145,15 @@ def precompute_percentages(self, request):
         pk__in=already_indexed_datasets
     )
 
-    for dataset in datasets:
-        dataset_cells = Cell.objects.filter(dataset__uuid=dataset.uuid)
-        cache.set(f"{dataset.uuid}_cells_count", dataset_cells.count())
-
-    exponents = list(
-        range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
-    )
-
-    if modality in ["atac", "rna"]:
-        var_ids = (
-            AtacQuant.objects.all().distinct("q_var_id").values_list("q_var_id", flat=True)
-            if modality == "atac"
-            else RnaQuant.objects.all().distinct("q_var_id").values_list("q_var_id", flat=True)
-        )
-        input_type = "gene"
-        genomic_modality = modality
-
-    elif modality in ["codex"]:
-        var_ids = Protein.objects.all().values_list("protein_id", flat=True)
-        input_type = "protein"
-        genomic_modality = None
-
-    modality = Modality.objects.filter(modality_name=modality)
-
-    outer_start = perf_counter()
-
-    print(exponents)
-
-    for dataset in datasets:
-        for var_id in var_ids:
-            zero = False
-            for exponent in exponents:
-                inner_start = perf_counter()
-                cutoff = 10 ** exponent
-                input_set = [f"{var_id} > {cutoff}"]
-                query_params = {
-                    "input_type": input_type,
-                    "input_set": input_set,
-                    "genomic_modality": genomic_modality,
-                }
-                cell_set = get_cells_list(query_params, input_set)
-
-                print(dataset.uuid)
-                params_tuple = (dataset.uuid, cell_set, input_set[0])
-                percentage = 0.0 if zero else get_percentage_and_cache(params_tuple)
-                if percentage == 0.0:
-                    print("Hit a zero")
-                    zero = True
-
-                kwargs = {
-                    "modality": modality,
-                    "dataset": dataset,
-                    "var_id": var_id,
-                    "cutoff": cutoff,
-                    "percentage": percentage,
-                }
-                inner_stop = perf_counter()
-                loop_time = inner_stop - inner_start
-                print(f"Time for single params set: {loop_time}")
-                kwargs_list.append(kwargs)
+    kwargs_lists = precompute_dataset_percentages.map(datasets)
 
     outer_mid = perf_counter()
     time_to_compute_all = outer_mid - outer_start
     print(f"Time to compute all params sets: {time_to_compute_all}")
 
-    objs = [PrecomputedPercentage(**kwargs) for kwargs in kwargs_list]
-    PrecomputedPercentage.objects.bulk_create(objs)
+    for kwargs_list in kwargs_lists:
+        objs = [PrecomputedPercentage(**kwargs) for kwargs in kwargs_list]
+        PrecomputedPercentage.objects.bulk_create(objs)
     outer_stop = perf_counter()
     time_to_store_all = outer_stop - outer_mid
     print(f"Time to store all results: {time_to_store_all}")
