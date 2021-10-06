@@ -1,3 +1,4 @@
+anndata
 celery
 Django>=3.2
 django-bootstrap4

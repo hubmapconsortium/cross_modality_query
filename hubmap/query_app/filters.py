@@ -5,6 +5,15 @@ from typing import Dict, List
 from django.core.cache import cache
 from django.db.models import Case, Count, IntegerField, Q, Sum, When
 
+from .apps import (
+    atac_adata,
+    atac_percentages,
+    atac_pvals,
+    codex_adata,
+    rna_adata,
+    rna_percentages,
+    rna_pvals,
+)
 from .models import (
     AtacQuant,
     Cell,
@@ -145,6 +154,11 @@ def get_gene_filter(query_params: Dict) -> Q:
 
     if input_type in groupings_dict:
 
+        if genomic_modality == "atac":
+            df = atac_pvals
+        elif genomic_modality == "rna":
+            df = rna_pvals
+
         # Assumes clusters are of the form uuid-clusternum
         if input_type == "cluster":
 
@@ -184,7 +198,7 @@ def get_cell_filter(query_params: Dict) -> Q:
     if input_type == "cell":
         return Q(cell_id__in=input_set)
 
-    if input_type in ["protein", "gene"]:
+    if input_type in ["gene", "protein"]:
 
         split_conditions = [
             [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
@@ -331,14 +345,32 @@ def get_dataset_filter(query_params: dict):
 
         return q
 
-    if input_type in ["gene", "protein"]:
+    if input_type in ["gene"]:
+
+        genomic_modality = query_params["genomic_modality"]
+        if genomic_modality == "rna":
+            df = rna_percentages
+        elif genomic_modality == "atac":
+            df = atac_percentages
+
+        min_cell_percentage = query_params["min_cell_percentage"]
+
+        input_set_split = split_at_comparator(input_set[0])
+        var_id = input_set_split[0]
+        cutoff = input_set_split[2]
+
+        if var_id in list(df["var_id"].unique()) and cutoff in list(df["cutoff"].unique()):
+            df = df[df["var_id"] == var_id]
+            df = df[df["cutoff"] == cutoff]
+            df = df[df["percentage"] >= min_cell_percentage]
+            return Q(uuid__in=list(df["dataset"].unique()))
+
         var_cell_pks = list(get_cells_list(query_params).values_list("pk", flat=True))
         var_cells = (
             Cell.objects.filter(pk__in=var_cell_pks)
             .only("pk", "dataset")
             .select_related("dataset")
         )
-        min_cell_percentage = query_params["min_cell_percentage"]
         dataset_pks = var_cells.distinct("dataset").values_list("dataset", flat=True)
 
         aggregate_kwargs = {
