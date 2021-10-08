@@ -10,6 +10,7 @@ from .apps import (
     atac_percentages,
     atac_pvals,
     codex_adata,
+    codex_percentages,
     rna_adata,
     rna_percentages,
     rna_pvals,
@@ -28,15 +29,17 @@ from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
 
 
-def get_precomputed_datasets(genomic_modality, min_cell_percentage, input_set):
+def get_precomputed_datasets(modality, min_cell_percentage, input_set):
     print(f"Len input set: {len(input_set)}")
     if len(input_set) > 1:
         return None
 
-    if genomic_modality == "rna":
+    if modality == "rna":
         df = rna_percentages
-    elif genomic_modality == "atac":
+    elif modality == "atac":
         df = atac_percentages
+    elif modality == "codex":
+        df = codex_percentages
 
     input_set_split = split_at_comparator(input_set[0])
     input_set_split = [item.strip() for item in input_set_split]
@@ -382,13 +385,13 @@ def get_dataset_filter(query_params: dict):
         min_cell_percentage = query_params["min_cell_percentage"]
 
         if input_type == "gene":
-            genomic_modality = query_params["genomic_modality"]
-            precomputed_datasets = get_precomputed_datasets(
-                genomic_modality, min_cell_percentage, input_set
-            )
-            if precomputed_datasets:
-                print("Precomputed datasets found")
-                return precomputed_datasets
+            modality = query_params["genomic_modality"]
+        elif input_type == "protein":
+            modality = "codex"
+        precomputed_datasets = get_precomputed_datasets(modality, min_cell_percentage, input_set)
+        if precomputed_datasets:
+            print("Precomputed datasets found")
+            return precomputed_datasets
 
         print("Precomputed datasets not found")
         var_cell_pks = list(get_cells_list(query_params).values_list("pk", flat=True))

@@ -9,6 +9,7 @@ from .apps import (
     atac_percentages,
     atac_pvals,
     codex_adata,
+    codex_percentages,
     rna_adata,
     rna_percentages,
     rna_pvals,
@@ -86,16 +87,13 @@ def get_quant_value(cell_id, gene_symbol, modality):
 
 
 def get_precomputed_percentage(uuid, values_type, include_values):
-    #    if values_type == "protein":
-    #        df = codex_percentages
-
     modality = Dataset.objects.filter(uuid=uuid).first().modality.modality_name
     if modality == "rna":
         df = rna_percentages
     elif modality == "atac":
         df = atac_percentages
-
-    print(type(include_values))
+    elif modality == "codex":
+        df = codex_percentages
 
     if isinstance(include_values, list):
         set_split = split_at_comparator(include_values[0])
@@ -103,7 +101,6 @@ def get_precomputed_percentage(uuid, values_type, include_values):
         set_split = split_at_comparator(include_values)
 
     set_split = [item.strip() for item in set_split]
-    print(set_split)
     var_id = set_split[0]
     cutoff = float(set_split[2])
 
@@ -152,18 +149,12 @@ def get_percentage(uuid, values_type, include_values):
 
 def get_modality_pval(pval_df, identifier, set_type, var_id):
     if set_type in ["organ", "cluster"]:
-        print(len(pval_df.index))
         df = pval_df[pval_df["grouping_name"] == identifier]
-        print(len(pval_df.index))
         df = df[df["gene_id"] == var_id]
-        print(len(pval_df.index))
 
     elif set_type in ["gene"]:
-        print(len(pval_df.index))
         df = pval_df[pval_df["gene_id"] == identifier]
-        print(len(pval_df.index))
         df = df[df["grouping_name"] == var_id]
-        print(len(pval_df.index))
 
     value = list(df["value"])[0] if len(list(df["value"])) >= 1 else None
     return value
@@ -173,9 +164,6 @@ def get_p_values(identifier, set_type, var_id, var_type, statistic="mean"):
 
     rna_value = get_modality_pval(rna_pvals, identifier, set_type, var_id)
     atac_value = get_modality_pval(atac_pvals, identifier, set_type, var_id)
-
-    print(rna_value)
-    print(atac_value)
 
     if rna_value is not None and atac_value is not None:
         return min(rna_value, atac_value)
