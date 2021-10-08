@@ -28,6 +28,35 @@ from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
 
 
+def get_precomputed_datasets(genomic_modality, min_cell_percentage, input_set):
+    print(f"Len input set: {len(input_set)}")
+    if len(input_set) > 1:
+        return None
+
+    if genomic_modality == "rna":
+        df = rna_percentages
+    elif genomic_modality == "atac":
+        df = atac_percentages
+
+    input_set_split = split_at_comparator(input_set[0])
+    input_set_split = [item.strip() for item in input_set_split]
+    var_id = input_set_split[0]
+    cutoff = float(input_set_split[2])
+
+    if var_id in list(df["var_id"].unique()) and float(cutoff) in list(df["cutoff"].unique()):
+        print(len(df.index))
+        df = df[df["var_id"] == var_id]
+        print(len(df.index))
+        df = df[df["cutoff"] == cutoff]
+        print(len(df.index))
+        df = df[df["percentage"] >= float(min_cell_percentage)]
+        print(len(df.index))
+        print(df["dataset"].unique())
+        return Q(uuid__in=list(df["dataset"].unique()))
+
+    return None
+
+
 def cells_from_quants(quant_set, var):
 
     cell_ids = quant_set.values_list("q_cell_id", flat=True)
@@ -77,10 +106,7 @@ def get_cells_list(query_params: Dict, input_set=None):
     filter = get_cell_filter(query_params)
     print("Filter gotten")
 
-    if query_params["input_type"] in ["gene", "protein"]:
-        query_set = get_quant_queryset(query_params, filter)
-    else:
-        query_set = Cell.objects.filter(filter)
+    query_set = Cell.objects.filter(filter)
 
     print("Query set found")
 
@@ -99,38 +125,30 @@ def combine_qs(qs: List[Q], logical_operator: str) -> Q:
         return reduce(and_, qs)
 
 
-def process_single_condition(split_condition: List[str], input_type: str) -> Q:
+def process_single_condition(
+    split_condition: List[str], input_type: str, genomic_modality=None
+) -> Q:
     """List[str], str -> Q
     Finds the keyword args for a quantitative query based on the results of
     calling split_at_comparator() on a string representation of that condition"""
-    comparator = split_condition[1]
 
-    assert comparator in [">", ">=", "<=", "<", "==", "!="]
     value = float(split_condition[2].strip())
 
     var_id = split_condition[0].strip()
 
-    q = Q(q_var_id__iexact=var_id)
+    if input_type == "protein":
+        adata = codex_adata
+    elif genomic_modality == "rna":
+        adata = rna_adata
+    elif genomic_modality == "atac":
+        adata = atac_adata
 
-    if comparator == ">":
-        q = q & Q(value__gt=value)
-    elif comparator == ">=":
-        q = q & Q(value__gte=value)
-    elif comparator == "<":
-        q = q & (Q(value__lt=value))
-    elif comparator == "<=":
-        q = q & (Q(value__lte=value))
-    elif comparator == "==":
-        q = q & Q(value__exact=value)
-    elif comparator == "!=":
-        q = q & ~Q(value__exact=value)
+    adata = adata[:, [var_id]]
+    bool_series = adata.X >= value
+    adata = adata[bool_series, :]
+    cell_ids = list(adata.obs.index)
 
-    #    if input_type == "protein":
-    #        q = q & Q(statistic__iexact="mean")
-
-    print(q)
-
-    return q
+    return Q(cell_id__in=cell_ids)
 
 
 def get_gene_filter(query_params: Dict) -> Q:
@@ -154,29 +172,21 @@ def get_gene_filter(query_params: Dict) -> Q:
 
     if input_type in groupings_dict:
 
-        if genomic_modality == "atac":
-            df = atac_pvals
-        elif genomic_modality == "rna":
+        if genomic_modality == "rna":
             df = rna_pvals
+        elif genomic_modality == "atac":
+            df = atac_pvals
 
-        # Assumes clusters are of the form uuid-clusternum
-        if input_type == "cluster":
+        print(input_set)
+        print(len(df.index))
+        df = df[df["grouping_name"].isin(input_set)]
+        print(len(df.index))
+        df = df[df["value"] <= p_value]
+        print(len(df.index))
 
-            clusters = Cluster.objects.filter(grouping_name__in=input_set)
-            q = Q(p_cluster_id__in=clusters)
+        gene_symbols = list(df["gene_id"].unique())
 
-        else:
-            q_kwargs = [{groupings_dict[input_type]: element} for element in input_set]
-            qs = [Q(**kwargs) for kwargs in q_kwargs]
-
-            q = combine_qs(qs, "or")
-
-        q = q & Q(value__lte=p_value)
-
-        if genomic_modality:
-            q = q & Q(modality__modality_name=genomic_modality)
-
-        return q
+        return Q(gene_symbol__in=gene_symbols)
 
 
 def get_cell_filter(query_params: Dict) -> Q:
@@ -199,13 +209,22 @@ def get_cell_filter(query_params: Dict) -> Q:
         return Q(cell_id__in=input_set)
 
     if input_type in ["gene", "protein"]:
+        if input_type == "protein":
+            genomic_modality = None
+        else:
+            genomic_modality = query_params["genomic_modality"]
 
         split_conditions = [
             [item, ">", "0"] if len(split_at_comparator(item)) == 0 else split_at_comparator(item)
             for item in input_set
         ]
 
-        qs = [process_single_condition(condition, input_type) for condition in split_conditions]
+        split_conditions = [[item.strip() for condition in split_conditions for item in condition]]
+
+        qs = [
+            process_single_condition(condition, input_type, genomic_modality)
+            for condition in split_conditions
+        ]
         q = combine_qs(qs, "or")
 
         return q
@@ -247,16 +266,27 @@ def get_organ_filter(query_params: Dict) -> Q:
 
     elif input_type == "gene":
         # Query those genes and return their associated groupings
-        p_value = query_params["p_value"]
         genomic_modality = query_params["genomic_modality"]
-        q = Q(p_gene__gene_symbol__in=input_set) & Q(value__lte=p_value)
-        if genomic_modality:
-            q = q & Q(modality__modality_name=genomic_modality)
+        # Query those genes and return their associated groupings
+        p_value = query_params["p_value"]
 
-        organ_pks = Organ.objects.all().values_list("pk", flat=True)
-        q = q & Q(p_organ__in=organ_pks)
+        if genomic_modality == "rna":
+            df = rna_pvals
+        elif genomic_modality == "atac":
+            df = atac_pvals
 
-        return q
+        print(input_set)
+        print(len(df.index))
+        df = df[df["gene_id"].isin(input_set)]
+        print(len(df.index))
+        df = df[df["value"] <= p_value]
+        print(len(df.index))
+
+        grouping_names = list(df["grouping_name"].unique())
+
+        print(len(grouping_names))
+
+        return Q(grouping_name__in=grouping_names)
 
 
 def get_cluster_filter(query_params: dict):
@@ -272,15 +302,17 @@ def get_cluster_filter(query_params: dict):
         # Query those genes and return their associated groupings
         p_value = query_params["p_value"]
 
-        q = Q(p_gene__gene_symbol__in=input_set) & Q(value__lte=p_value)
+        if genomic_modality == "rna":
+            df = rna_pvals
+        elif genomic_modality == "atac":
+            df = atac_pvals
 
-        if genomic_modality:
-            q = q & Q(modality__modality_name=genomic_modality)
+        df = df[df["gene_id"].isin(input_set)]
+        df = df[df["value"] <= p_value]
 
-        cluster_pks = Cluster.objects.all().values_list("pk", flat=True)
-        q = q & Q(p_cluster__in=cluster_pks)
+        grouping_names = list(df["grouping_name"].unique())
 
-        return q
+        return Q(grouping_name__in=grouping_names)
 
     elif input_type == "cell":
 
@@ -345,26 +377,20 @@ def get_dataset_filter(query_params: dict):
 
         return q
 
-    if input_type in ["gene"]:
-
-        genomic_modality = query_params["genomic_modality"]
-        if genomic_modality == "rna":
-            df = rna_percentages
-        elif genomic_modality == "atac":
-            df = atac_percentages
+    if input_type in ["gene", "protein"]:
 
         min_cell_percentage = query_params["min_cell_percentage"]
 
-        input_set_split = split_at_comparator(input_set[0])
-        var_id = input_set_split[0]
-        cutoff = input_set_split[2]
+        if input_type == "gene":
+            genomic_modality = query_params["genomic_modality"]
+            precomputed_datasets = get_precomputed_datasets(
+                genomic_modality, min_cell_percentage, input_set
+            )
+            if precomputed_datasets:
+                print("Precomputed datasets found")
+                return precomputed_datasets
 
-        if var_id in list(df["var_id"].unique()) and cutoff in list(df["cutoff"].unique()):
-            df = df[df["var_id"] == var_id]
-            df = df[df["cutoff"] == cutoff]
-            df = df[df["percentage"] >= min_cell_percentage]
-            return Q(uuid__in=list(df["dataset"].unique()))
-
+        print("Precomputed datasets not found")
         var_cell_pks = list(get_cells_list(query_params).values_list("pk", flat=True))
         var_cells = (
             Cell.objects.filter(pk__in=var_cell_pks)

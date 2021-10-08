@@ -78,14 +78,16 @@ def get_quant_value(cell_id, gene_symbol, modality):
     if modality in ["rna", "atac"]:
         var_adata = adata[:, [gene_symbol]]
         cell_and_var_adata = var_adata[[cell_id], :]
-        val = cell_and_var_adata.X.flatten()[0]
+        cell_and_var_x = cell_and_var_adata.X.todense().flatten()[0]
+        print(type(cell_and_var_x))
+        val = cell_and_var_x
 
     return val
 
 
 def get_precomputed_percentage(uuid, values_type, include_values):
-    if values_type == "protein":
-        df = codex_percentages
+    #    if values_type == "protein":
+    #        df = codex_percentages
 
     modality = Dataset.objects.filter(uuid=uuid).first().modality.modality_name
     if modality == "rna":
@@ -93,9 +95,17 @@ def get_precomputed_percentage(uuid, values_type, include_values):
     elif modality == "atac":
         df = atac_percentages
 
-    set_split = split_at_comparator(include_values[0])
+    print(type(include_values))
+
+    if isinstance(include_values, list):
+        set_split = split_at_comparator(include_values[0])
+    else:
+        set_split = split_at_comparator(include_values)
+
+    set_split = [item.strip() for item in set_split]
+    print(set_split)
     var_id = set_split[0]
-    cutoff = set_split[2]
+    cutoff = float(set_split[2])
 
     if var_id in list(df["var_id"].unique()) and cutoff in list(df["cutoff"].unique()):
         df = df[df["var_id"] == var_id]
@@ -110,8 +120,10 @@ def get_percentage(uuid, values_type, include_values):
 
     precomputed_percentage = get_precomputed_percentage(uuid, values_type, include_values)
     if precomputed_percentage:
+        print("Precomputed percentage found")
         return precomputed_percentage
 
+    print("Precomputed percentage not found")
     query_params = {
         "input_type": values_type,
         "input_set": include_values,
@@ -140,14 +152,20 @@ def get_percentage(uuid, values_type, include_values):
 
 def get_modality_pval(pval_df, identifier, set_type, var_id):
     if set_type in ["organ", "cluster"]:
+        print(len(pval_df.index))
         df = pval_df[pval_df["grouping_name"] == identifier]
+        print(len(pval_df.index))
         df = df[df["gene_id"] == var_id]
+        print(len(pval_df.index))
 
     elif set_type in ["gene"]:
+        print(len(pval_df.index))
         df = pval_df[pval_df["gene_id"] == identifier]
+        print(len(pval_df.index))
         df = df[df["grouping_name"] == var_id]
+        print(len(pval_df.index))
 
-    value = list(df["value"])[0] if len(list(df["value"]) >= 1) else None
+    value = list(df["value"])[0] if len(list(df["value"])) >= 1 else None
     return value
 
 
@@ -156,11 +174,14 @@ def get_p_values(identifier, set_type, var_id, var_type, statistic="mean"):
     rna_value = get_modality_pval(rna_pvals, identifier, set_type, var_id)
     atac_value = get_modality_pval(atac_pvals, identifier, set_type, var_id)
 
-    if rna_value and atac_value:
+    print(rna_value)
+    print(atac_value)
+
+    if rna_value is not None and atac_value is not None:
         return min(rna_value, atac_value)
-    elif rna_value:
+    elif rna_value is not None:
         return rna_value
-    elif atac_value:
+    elif atac_value is not None:
         return atac_value
 
 

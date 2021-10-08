@@ -36,9 +36,12 @@ class QueryAppConfig(AppConfig):
         codex_adata = anndata.read(PATH_TO_CODEX_H5AD)
         rna_adata = anndata.read(PATH_TO_RNA_H5AD)
         atac_adata = anndata.read(PATH_TO_ATAC_H5AD)
+        print("Quant adatas read in")
         rna_pvals = get_pval_df(PATH_TO_RNA_PVALS)
         atac_pvals = get_pval_df(PATH_TO_ATAC_PVALS)
+        print("Pvals read in")
         rna_percentages = pd.read_hdf(PATH_TO_RNA_PERCENTAGES, "percentages")
         atac_percentages = pd.read_hdf(PATH_TO_ATAC_PERCENTAGES, "percentages")
         #        codex_percentages = pd.read_hdf(PATH_TO_CODEX_PERCENTAGES, "percentages")
+        print("Everything read in")
         return

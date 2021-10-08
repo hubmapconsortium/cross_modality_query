@@ -51,81 +51,6 @@ def get_zero_cells(gene: str, modality: str):
     return zero_cells
 
 
-def genes_from_pvals(pval_set):
-    ids = pval_set.distinct("p_gene").values_list("p_gene", flat=True)
-    return Gene.objects.filter(pk__in=list(ids))
-
-
-def organs_from_pvals(pval_set):
-    ids = pval_set.values_list("p_organ", flat=True).distinct()
-    return Organ.objects.filter(pk__in=list(ids))
-
-
-def clusters_from_pvals(pval_set):
-    ids = pval_set.values_list("p_cluster", flat=True).distinct()
-    return Cluster.objects.filter(pk__in=list(ids))
-
-
-def cells_from_quants(quant_set, var):
-
-    cell_ids = quant_set.values_list("q_cell_id", flat=True)
-    print("Cell ids gotten")
-
-    if len(cell_ids) > 0:
-        print(cell_ids[0])
-
-    cells = Cell.objects.filter(cell_id__in=cell_ids)
-    print("Cell set found")
-
-    if "<" in var:
-        if isinstance(quant_set.first(), RnaQuant):
-            modality = "rna"
-        elif isinstance(quant_set.first(), AtacQuant):
-            modality = "atac"
-        else:
-            modality = "protein"
-        if modality in ["rna", "atac"]:
-            zero_cells = get_zero_cells(var, modality)
-            cells = zero_cells | cells
-
-    return cells
-
-
-def get_quant_queryset(query_params: Dict, filter):
-    if query_params["input_type"] == "protein":
-        query_set = CodexQuant.objects.filter(filter)
-    elif query_params["genomic_modality"] == "rna":
-        query_set = RnaQuant.objects.filter(filter)
-    elif query_params["genomic_modality"] == "atac":
-        query_set = AtacQuant.objects.filter(filter)
-
-    var_ids = [
-        split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
-        for item in query_params["input_set"]
-    ]
-
-    query_sets = [
-        cells_from_quants(query_set.filter(q_var_id__iexact=var), var) for var in var_ids
-    ]
-
-    print("Query sets gotten")
-
-    if len(query_sets) == 0:
-        query_set = Cell.objects.filter(pk__in=[])
-    elif len(query_sets) == 1:
-        query_set = query_sets[0]
-    elif len(query_sets) > 1:
-        if query_params["logical_operator"] == "and":
-            query_set = reduce(and_, query_sets)
-        elif query_params["logical_operator"] == "or":
-            query_set = reduce(or_, query_sets)
-
-    query_set = query_set.distinct("cell_id")
-    query_set = Cell.objects.filter(pk__in=query_set.values_list("pk", flat=True))
-
-    return query_set
-
-
 def get_genes_list(query_params: Dict, input_set=None):
     if query_params["input_type"] is None:
         return Gene.objects.all()
@@ -133,29 +58,7 @@ def get_genes_list(query_params: Dict, input_set=None):
         query_params = process_query_parameters(query_params, input_set)
         filter = get_gene_filter(query_params)
 
-        if query_params["input_type"] in ["organ", "cluster"]:
-            query_set = PVal.objects.filter(filter)
-            ids = query_set.values_list("pk", flat=True)
-            query_set = PVal.objects.filter(pk__in=list([ids]))
-
-            grouping = "p_" + query_params["input_type"]
-            groups = query_set.values(grouping).distinct()
-            query_set_kwargs = [{grouping: group[grouping]} for group in groups]
-
-            query_sets = [
-                genes_from_pvals(query_set.filter(**kwargs)) for kwargs in query_set_kwargs
-            ]
-            if len(query_sets) == 0:
-                query_set = Gene.objects.filter(pk__in=[])
-            elif len(query_sets) == 1:
-                query_set = query_sets[0]
-            elif query_params["logical_operator"] == "and":
-                query_set = reduce(and_, query_sets)
-            elif query_params["logical_operator"] == "or":
-                query_set = reduce(or_, query_sets)
-
-        elif query_params["input_type"] == "gene":
-            query_set = Gene.objects.filter(filter)
+        query_set = Gene.objects.filter(filter)
 
         query_set = query_set.distinct("gene_symbol")
 
@@ -169,10 +72,7 @@ def get_cells_list(query_params: Dict, input_set=None):
     filter = get_cell_filter(query_params)
     print("Filter gotten")
 
-    if query_params["input_type"] in ["gene", "protein"]:
-        query_set = get_quant_queryset(query_params, filter)
-    else:
-        query_set = Cell.objects.filter(filter)
+    query_set = Cell.objects.filter(filter)
 
     pks = query_set.values_list("pk", flat=True)
     query_set = Cell.objects.filter(pk__in=pks)
@@ -184,32 +84,16 @@ def get_cells_list(query_params: Dict, input_set=None):
 
 def get_organs_list(query_params: Dict, input_set=None):
     if query_params.get("input_type") is None:
-        all_clusters = Cluster.objects.all().distinct("grouping_name")
-        query_handle = make_pickle_and_hash(all_clusters, "cluster")
+        all_organs = Organ.objects.all().distinct("grouping_name")
+        query_handle = make_pickle_and_hash(all_organs, "organ")
         return QuerySet.objects.filter(query_handle=query_handle)
     else:
         query_params = process_query_parameters(query_params, input_set)
         filter = get_organ_filter(query_params)
 
-        if query_params["input_type"] == "gene":
-            query_set = PVal.objects.filter(filter)
-            genes = query_set.values("p_gene").distinct()
-            query_sets = [
-                organs_from_pvals(query_set.filter(p_gene=gene["p_gene"])) for gene in genes
-            ]
-            if len(query_sets) == 0:
-                query_set = Organ.objects.filter(pk__in=[])
-            elif len(query_sets) == 1:
-                query_set = query_sets[0]
-            elif query_params["logical_operator"] == "and":
-                query_set = reduce(and_, query_sets)
-            elif query_params["logical_operator"] == "or":
-                query_set = reduce(or_, query_sets)
-
-        else:
-            query_set = Organ.objects.filter(filter)
-            ids = query_set.values_list("pk", flat=True)
-            query_set = Organ.objects.filter(pk__in=list(ids))
+        query_set = Organ.objects.filter(filter)
+        ids = query_set.values_list("pk", flat=True)
+        query_set = Organ.objects.filter(pk__in=list(ids))
 
         query_set = query_set.distinct("grouping_name")
 
@@ -221,24 +105,7 @@ def get_clusters_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cluster_filter(query_params)
 
-    if query_params["input_type"] == "gene":
-        query_set = PVal.objects.filter(filter).order_by("value")
-        genes = query_set.values("p_gene").distinct()
-
-        query_sets = [
-            clusters_from_pvals(query_set.filter(p_gene=gene["p_gene"])) for gene in genes
-        ]
-        if len(query_sets) == 0:
-            query_set = Cluster.objects.filter(pk__in=[])
-        elif len(query_sets) == 1:
-            query_set = query_sets[0]
-        elif query_params["logical_operator"] == "and":
-            query_set = reduce(and_, query_sets)
-        elif query_params["logical_operator"] == "or":
-            query_set = reduce(or_, query_sets)
-
-    elif query_params["input_type"] in ["cluster", "dataset", "cell"]:
-        query_set = Cluster.objects.filter(filter)
+    query_set = Cluster.objects.filter(filter)
 
     query_set = query_set.distinct("grouping_name")
 
