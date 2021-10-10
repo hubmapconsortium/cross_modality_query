@@ -89,11 +89,6 @@ urlpatterns = [
         name="protein_detail_evaluation",
     ),
     path(
-        "cellvaluesevaluation/",
-        views.CellValuesViewSet.as_view({"post": "post"}),
-        name="cell_values_evaluation",
-    ),
-    path(
         "bounds/",
         views.ValueBoundsViewSet.as_view({"post": "post"}),
         name="max_value",

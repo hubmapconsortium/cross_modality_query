@@ -21,6 +21,7 @@ def make_pickle_and_hash(qs, set_type):
     qry = qs.query
     query_pickle = pickle.dumps(qry)
     query_handle = str(hashlib.sha256(query_pickle).hexdigest())
+    print(query_handle)
     if QuerySet.objects.filter(query_handle=query_handle).first() is None:
         query_set = QuerySet(
             query_pickle=query_pickle, query_handle=query_handle, set_type=set_type

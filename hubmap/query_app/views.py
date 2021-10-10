@@ -20,7 +20,6 @@ from .queries import (
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
-    CellValuesSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
     DatasetAndValuesSerializer,
@@ -34,13 +33,7 @@ from .serializers import (
     QuerySetSerializer,
     StatReportSerializer,
 )
-from .set_evaluators import (
-    evaluation_detail,
-    evaluation_list,
-    get_cell_values,
-    get_cell_values_b,
-    query_set_count,
-)
+from .set_evaluators import evaluation_detail, evaluation_list, query_set_count
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
 from .utils import get_app_status, unpickle_query_set
 
@@ -56,6 +49,7 @@ class PaginationClass(PageNumberPagination):
 def get_response(self, request, callable: Callable):
     try:
         response = callable(self, request)
+        print(type(response))
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
@@ -305,29 +299,6 @@ class StatusViewSet(viewsets.GenericViewSet):
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
             print(json_error_response)
             return HttpResponse(json_error_response)
-
-
-class CellValuesViewSet(viewsets.GenericViewSet):
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        try:
-            return HttpResponse(get_cell_values(request))
-        except Exception as e:
-            tb = traceback.format_exc()
-            json_error_response = json.dumps({"error": {"stack_trace": tb, "message": str(e)}})
-            print(json_error_response)
-            return HttpResponse(json_error_response)
-
-
-class CellValuesEvaluationViewSet(viewsets.ModelViewSet):
-    query_set = Cell.objects.all()
-    serializer_class = CellValuesSerializer
-    pagination_class = PaginationClass
-    model = Cell
-
-    def post(self, request, format=None):
-        return get_response(self, request, get_cell_values_b)
 
 
 class ValueBoundsViewSet(viewsets.GenericViewSet):

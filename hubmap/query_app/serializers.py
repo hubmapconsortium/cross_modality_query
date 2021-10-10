@@ -1,6 +1,7 @@
 import json
 from typing import List
 
+import numpy as np
 from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
@@ -16,18 +17,14 @@ from .apps import (
 )
 from .filters import get_cells_list, split_at_comparator
 from .models import (
-    AtacQuant,
     Cell,
     Cluster,
-    CodexQuant,
     Dataset,
     Gene,
     Modality,
     Organ,
     Protein,
-    PVal,
     QuerySet,
-    RnaQuant,
     StatReport,
 )
 
@@ -80,7 +77,8 @@ def get_quant_value(cell_id, gene_symbol, modality):
         var_adata = adata[:, [gene_symbol]]
         cell_and_var_adata = var_adata[[cell_id], :]
         cell_and_var_x = cell_and_var_adata.X.todense().flatten()[0]
-        print(type(cell_and_var_x))
+        if isinstance(cell_and_var_x, np.ndarray):
+            cell_and_var_x = cell_and_var_x[0]
         val = cell_and_var_x
 
     return val
@@ -361,24 +359,3 @@ class StatReportSerializer(serializers.ModelSerializer):
             "codex_value",
             "num_cells_excluded",
         ]
-
-
-class CellValuesSerializer(serializers.ModelSerializer):
-
-    values = serializers.SerializerMethodField(method_name="get_values")
-
-    class Meta:
-        model = Cell
-        #        fields = ['cell', 'values']
-        fields = [
-            "values",
-        ]
-
-    def get_values(self, obj):
-        request = self.context["request"]
-        var_ids = request.POST.getlist("values_included")
-        values_dict = {
-            var_id: get_quant_value(obj.cell_id, var_id, obj.modality.modality_name)
-            for var_id in var_ids
-        }
-        return json.dumps(values_dict)
