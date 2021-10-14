@@ -46,15 +46,6 @@ def get_precomputed_datasets(modality, min_cell_percentage, input_set):
     return None
 
 
-def cells_from_quants(quant_set, var):
-
-    cell_ids = quant_set.values_list("q_cell_id", flat=True)
-
-    cell_pks = Cell.objects.filter(cell_id__in=cell_ids).values_list("pk", flat=True)
-
-    return Cell.objects.filter(pk__in=cell_pks)
-
-
 def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
