@@ -76,8 +76,10 @@ def get_quant_value(cell_id, gene_symbol, modality):
     if modality in ["rna", "atac"]:
         var_adata = adata[:, [gene_symbol]]
         cell_and_var_adata = var_adata[[cell_id], :]
-        cell_and_var_x = cell_and_var_adata.X.todense().flatten()[0]
-        if isinstance(cell_and_var_x, np.ndarray):
+        cell_and_var_x = cell_and_var_adata.X.todense()
+        if type(cell_and_var_x) == np.matrix:
+            cell_and_var_x = cell_and_var_x.A.flatten()[0]
+        while type(cell_and_var_x) in [np.ndarray, list]:
             cell_and_var_x = cell_and_var_x[0]
         val = cell_and_var_x
 
@@ -85,7 +87,12 @@ def get_quant_value(cell_id, gene_symbol, modality):
 
 
 def get_precomputed_percentage(uuid, values_type, include_values):
-    modality = Dataset.objects.filter(uuid=uuid).first().modality.modality_name
+    modality = (
+        Dataset.objects.filter(uuid=uuid)
+        .exclude(modality__isnull=True)
+        .first()
+        .modality.modality_name
+    )
     if modality == "rna":
         df = rna_percentages
     elif modality == "atac":

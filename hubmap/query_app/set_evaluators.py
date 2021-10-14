@@ -65,10 +65,26 @@ def annotate_with_values(cell_df, include_values, modality):
     return cell_df
 
 
+def annotate_list_with_values(dict_list, include_values, modality):
+    for cell_dict in dict_list:
+        cell_id = cell_dict["cell_id"]
+        quant_values = {
+            value: get_quant_value(cell_id, value, modality) for value in include_values
+        }
+        cell_dict["values"] = quant_values
+
+    return dict_list
+
+
 def get_dataset_cells(uuid, include_values, offset, limit):
     print("hash found")
     print(uuid)
-    modality = Dataset.objects.filter(uuid=uuid).first().modality.modality_name
+    modality = (
+        Dataset.objects.filter(uuid=uuid)
+        .exclude(modality__isnull=True)
+        .first()
+        .modality.modality_name
+    )
     if modality == "rna":
         cell_df = rna_cell_df
     elif modality == "atac":
@@ -78,18 +94,22 @@ def get_dataset_cells(uuid, include_values, offset, limit):
 
     cell_df = cell_df[cell_df["dataset"] == uuid]
 
-    keep_columns = ["cell_id", "dataset", "organ"]
+    keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
 
     cell_df = cell_df[offset:limit]
 
-    if len(include_values) > 0:
+    if len(include_values) > 0 and modality == "codex":
         cell_df = annotate_with_values(cell_df, include_values, modality)
+
+    if type(list(cell_df["clusters"])[0]) == str:
+        clusters_list = [clusters.split(",") for clusters in cell_df["clusters"]]
+        cell_df["clusters"] = pd.Series(clusters_list, index=cell_df.index)
 
     cell_dict_list = cell_df.to_dict(orient="records")
 
-    #    if len(include_values) > 0:
-    #        cell_dict_list = annotate_with_values(cell_dict_list, include_values, modality)
+    if len(include_values) > 0 and modality in ["atac", "rna"]:
+        cell_dict_list = annotate_list_with_values(cell_dict_list, include_values, modality)
 
     return cell_dict_list
 

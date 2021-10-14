@@ -55,12 +55,14 @@ class QueryAppConfig(AppConfig):
 
         codex_adata = anndata.read(PATH_TO_CODEX_H5AD)
         rna_adata = anndata.read(PATH_TO_RNA_H5AD)
+        rna_adata.var_names_make_unique()
         atac_adata = anndata.read(PATH_TO_ATAC_H5AD)
+        atac_adata.var_names_make_unique()
         print("Quant adatas read in")
-        #        rna_pvals = get_pval_df(PATH_TO_RNA_PVALS)
-        #        atac_pvals = get_pval_df(PATH_TO_ATAC_PVALS)
-        atac_pvals = pd.DataFrame()
-        rna_pvals = pd.DataFrame()
+        rna_pvals = get_pval_df(PATH_TO_RNA_PVALS)
+        atac_pvals = get_pval_df(PATH_TO_ATAC_PVALS)
+        #        atac_pvals = pd.DataFrame()
+        #        rna_pvals = pd.DataFrame()
         print("Pvals read in")
         rna_percentages = pd.read_hdf(PATH_TO_RNA_PERCENTAGES, "percentages")
         atac_percentages = pd.read_hdf(PATH_TO_ATAC_PERCENTAGES, "percentages")
@@ -69,5 +71,6 @@ class QueryAppConfig(AppConfig):
         rna_cell_df = pd.read_hdf(PATH_TO_RNA_PVALS, "cell")
         atac_cell_df = pd.read_hdf(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = pd.read_hdf(PATH_TO_CODEX_PVALS, "cell")
+        codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
         hash_dict = compute_dataset_hashes()
         return

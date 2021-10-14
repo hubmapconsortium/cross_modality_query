@@ -171,6 +171,14 @@ def get_gene_filter(query_params: Dict) -> Q:
     if input_type == "gene":
         return Q(gene_symbol__in=input_set)
 
+    elif input_type == "modality":
+        genes_list = []
+        if "rna" in input_set:
+            genes_list.extend(list(rna_adata.var.index))
+        if "atac" in input_set:
+            genes_list.extend(list(atac_adata.var.index))
+        return Q(gene_symbol__in=genes_list)
+
     genomic_modality = query_params["genomic_modality"]
 
     if input_type in groupings_dict:

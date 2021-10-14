@@ -110,7 +110,7 @@ def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_f
 
 
 def validate_gene_query_params(query_params):
-    permitted_input_types = ["organ", "cluster", "gene"]
+    permitted_input_types = ["organ", "cluster", "gene", "modality"]
     input_type = query_params["input_type"]
 
     check_input_type(input_type, permitted_input_types)
