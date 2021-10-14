@@ -15,16 +15,7 @@ from .apps import (
     rna_percentages,
     rna_pvals,
 )
-from .models import (
-    AtacQuant,
-    Cell,
-    Cluster,
-    CodexQuant,
-    Dataset,
-    Modality,
-    Organ,
-    RnaQuant,
-)
+from .models import Cell, Cluster, Dataset, Modality, Organ
 from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
 
@@ -47,14 +38,9 @@ def get_precomputed_datasets(modality, min_cell_percentage, input_set):
     cutoff = float(input_set_split[2])
 
     if var_id in list(df["var_id"].unique()) and float(cutoff) in list(df["cutoff"].unique()):
-        print(len(df.index))
         df = df[df["var_id"] == var_id]
-        print(len(df.index))
         df = df[df["cutoff"] == cutoff]
-        print(len(df.index))
         df = df[df["percentage"] >= float(min_cell_percentage)]
-        print(len(df.index))
-        print(df["dataset"].unique())
         return Q(uuid__in=list(df["dataset"].unique()))
 
     return None
@@ -67,41 +53,6 @@ def cells_from_quants(quant_set, var):
     cell_pks = Cell.objects.filter(cell_id__in=cell_ids).values_list("pk", flat=True)
 
     return Cell.objects.filter(pk__in=cell_pks)
-
-
-def get_quant_queryset(query_params: Dict, filter):
-    if query_params["input_type"] == "protein":
-        query_set = CodexQuant.objects.filter(filter)
-    elif query_params["genomic_modality"] == "rna":
-        query_set = RnaQuant.objects.filter(filter)
-    elif query_params["genomic_modality"] == "atac":
-        query_set = AtacQuant.objects.filter(filter)
-
-    var_ids = [
-        split_at_comparator(item)[0].strip() if len(split_at_comparator(item)) > 0 else item
-        for item in query_params["input_set"]
-    ]
-
-    query_sets = [
-        cells_from_quants(query_set.filter(q_var_id__iexact=var), var) for var in var_ids
-    ]
-
-    print("Query sets gotten")
-
-    if len(query_sets) == 0:
-        query_set = Cell.objects.filter(pk__in=[])
-    elif len(query_sets) == 1:
-        query_set = query_sets[0]
-    elif len(query_sets) > 1:
-        if query_params["logical_operator"] == "and":
-            query_set = reduce(and_, query_sets)
-        elif query_params["logical_operator"] == "or":
-            query_set = reduce(or_, query_sets)
-
-    query_set = query_set.distinct("cell_id")
-    query_set = Cell.objects.filter(pk__in=list(query_set.values_list("pk", flat=True)))
-
-    return query_set
 
 
 def get_cells_list(query_params: Dict, input_set=None):
@@ -140,11 +91,17 @@ def process_single_condition(
     var_id = split_condition[0].strip()
 
     if input_type == "protein":
+        modality = "codex"
         adata = codex_adata
     elif genomic_modality == "rna":
+        modality = "rna"
         adata = rna_adata
     elif genomic_modality == "atac":
+        modality = "atac"
         adata = atac_adata
+
+    if var_id not in adata.var.index:
+        raise ValueError(f"{var_id} not present in {modality} index")
 
     adata = adata[:, [var_id]]
     bool_series = adata.X >= value
