@@ -16,7 +16,10 @@ TOKEN_EXPIRATION_TIME = 14400  # 4 hours in seconds
 
 def set_up_mongo():
     client = MongoClient(MONGO_HOST_AND_PORT)
-    db = client[MONGO_DB_NAME]
+    print(type(client))
+    print(type(client[MONGO_DB_NAME]))
+    print(type(client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]))
+    db = client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]
     db.log_events.createIndex({"created_at": 1}, {"expireAfterSeconds": TOKEN_EXPIRATION_TIME})
     return
 
@@ -71,6 +74,8 @@ class QueryAppConfig(AppConfig):
         global rna_cell_df
         global atac_cell_df
         global hash_dict
+
+        set_up_mongo()
 
         codex_adata = anndata.read(PATH_TO_CODEX_H5AD)
         rna_adata = anndata.read(PATH_TO_RNA_H5AD)

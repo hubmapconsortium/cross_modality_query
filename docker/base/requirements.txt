@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 bson
-=======
 anndata
->>>>>>> sfd5311/in-memory-matrices
 celery
 Django>=3.2
 django-bootstrap4
@@ -13,7 +10,7 @@ numpy
 pandas
 psycopg2-binary>=2.8.6
 pylibmc
-pymongo
+pymongo >= 3.0
 pyyaml
 redis
 scikit-learn

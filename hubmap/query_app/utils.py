@@ -3,12 +3,14 @@ import json
 import pickle
 from collections import OrderedDict
 from datetime import datetime
+from typing import List
 
 from django.db import connections
 from django.db.utils import OperationalError
 from django.http import HttpResponse
 from pymongo import MongoClient
 
+from .apps import MONGO_COLLECTION_NAME, MONGO_DB_NAME, MONGO_HOST_AND_PORT
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 
 
