@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 bson
+=======
+anndata
+>>>>>>> sfd5311/in-memory-matrices
 celery
 Django>=3.2
 django-bootstrap4

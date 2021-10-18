@@ -1,24 +1,22 @@
 import json
 from typing import List
 
+import numpy as np
 from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
-from .filters import get_cells_list, split_at_comparator
-from .models import (
-    AtacQuant,
-    Cell,
-    Cluster,
-    CodexQuant,
-    Dataset,
-    Gene,
-    Modality,
-    Organ,
-    Protein,
-    PVal,
-    RnaQuant,
-    StatReport,
+from .apps import (
+    atac_adata,
+    atac_percentages,
+    atac_pvals,
+    codex_adata,
+    codex_percentages,
+    rna_adata,
+    rna_percentages,
+    rna_pvals,
 )
+from .filters import get_cells_list, split_at_comparator
+from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein, StatReport
 
 
 def infer_values_type(values: List) -> str:
@@ -54,28 +52,70 @@ def infer_values_type(values: List) -> str:
 
 
 def get_quant_value(cell_id, gene_symbol, modality):
-    if modality == "rna":
-        quant = (
-            RnaQuant.objects.filter(q_var_id__iexact=gene_symbol).filter(q_cell_id=cell_id).first()
-        )
-    if modality == "atac":
-        quant = (
-            AtacQuant.objects.filter(q_var_id__iexact=gene_symbol)
-            .filter(q_cell_id=cell_id)
-            .first()
-        )
-    elif modality == "codex":
-        quant = (
-            CodexQuant.objects.filter(q_var_id__iexact=gene_symbol)
-            .filter(q_cell_id=cell_id)
-            .first()
-        )
-        print("Quant found")
+    if modality == "codex":
+        adata = codex_adata
+        var_adata = adata[:, [gene_symbol]]
+        cell_and_var_adata = var_adata[[cell_id], :]
+        val = cell_and_var_adata.X.flatten()[0]
 
-    return 0.0 if quant is None else quant.value
+    elif modality == "rna":
+        adata = rna_adata
+    elif modality == "atac":
+        adata = atac_adata
+
+    if modality in ["rna", "atac"]:
+        var_adata = adata[:, [gene_symbol]]
+        cell_and_var_adata = var_adata[[cell_id], :]
+        cell_and_var_x = cell_and_var_adata.X.todense()
+        if type(cell_and_var_x) == np.matrix:
+            cell_and_var_x = cell_and_var_x.A.flatten()[0]
+        while type(cell_and_var_x) in [np.ndarray, list]:
+            cell_and_var_x = cell_and_var_x[0]
+        val = cell_and_var_x
+
+    return val
+
+
+def get_precomputed_percentage(uuid, values_type, include_values):
+    modality = (
+        Dataset.objects.filter(uuid=uuid)
+        .exclude(modality__isnull=True)
+        .first()
+        .modality.modality_name
+    )
+    if modality == "rna":
+        df = rna_percentages
+    elif modality == "atac":
+        df = atac_percentages
+    elif modality == "codex":
+        df = codex_percentages
+
+    if isinstance(include_values, list):
+        set_split = split_at_comparator(include_values[0])
+    else:
+        set_split = split_at_comparator(include_values)
+
+    set_split = [item.strip() for item in set_split]
+    var_id = set_split[0]
+    cutoff = float(set_split[2])
+
+    if var_id in list(df["var_id"].unique()) and cutoff in list(df["cutoff"].unique()):
+        df = df[df["var_id"] == var_id]
+        df = df[df["cutoff"] == cutoff]
+        df = df[df["dataset"] == uuid]
+        return list(df["percentage"])[0]
+
+    return None
 
 
 def get_percentage(uuid, values_type, include_values):
+
+    precomputed_percentage = get_precomputed_percentage(uuid, values_type, include_values)
+    if precomputed_percentage:
+        print("Precomputed percentage found")
+        return precomputed_percentage
+
+    print("Precomputed percentage not found")
     query_params = {
         "input_type": values_type,
         "input_set": include_values,
@@ -102,41 +142,30 @@ def get_percentage(uuid, values_type, include_values):
     return percentage
 
 
+def get_modality_pval(pval_df, identifier, set_type, var_id):
+    if set_type in ["organ", "cluster"]:
+        df = pval_df[pval_df["grouping_name"] == identifier]
+        df = df[df["gene_id"] == var_id]
+
+    elif set_type in ["gene"]:
+        df = pval_df[pval_df["gene_id"] == identifier]
+        df = df[df["grouping_name"] == var_id]
+
+    value = list(df["value"])[0] if len(list(df["value"])) >= 1 else None
+    return value
+
+
 def get_p_values(identifier, set_type, var_id, var_type, statistic="mean"):
 
-    filter_kwargs_one_dict = {
-        "gene": {f"p_{var_type}__grouping_name": var_id},
-        "organ": {"p_gene__gene_symbol": var_id},
-        "cluster": {"p_gene__gene_symbol": var_id},
-    }
-    filter_kwargs_two_dict = {
-        "gene": {"p_gene__gene_symbol": identifier},
-        "organ": {"p_organ__grouping_name": identifier},
-        "cluster": {"p_cluster__grouping_name": identifier},
-    }
-    values_list_args_dict = {
-        "gene": {
-            "organ": ["p_organ__grouping_name", "value"],
-            "cluster": ["p_cluster__grouping_name", "value"],
-        },
-        "organ": {"gene": ["p_gene__gene_symbol", "value"]},
-        "cluster": {"gene": ["p_gene__gene_symbol", "value"]},
-    }
+    rna_value = get_modality_pval(rna_pvals, identifier, set_type, var_id)
+    atac_value = get_modality_pval(atac_pvals, identifier, set_type, var_id)
 
-    filter_kwargs_one = filter_kwargs_one_dict[set_type]
-    filter_kwargs_two = filter_kwargs_two_dict[set_type]
-    values_list_args = values_list_args_dict[set_type][var_type]
-
-    pval = (
-        PVal.objects.filter(**filter_kwargs_one)
-        .filter(**filter_kwargs_two)
-        .order_by("value")
-        .values_list(*values_list_args)
-    )
-
-    value = pval[0][1]
-
-    return value
+    if rna_value is not None and atac_value is not None:
+        return min(rna_value, atac_value)
+    elif rna_value is not None:
+        return rna_value
+    elif atac_value is not None:
+        return atac_value
 
 
 class ModalitySerializer(serializers.ModelSerializer):
@@ -315,24 +344,3 @@ class StatReportSerializer(serializers.ModelSerializer):
             "codex_value",
             "num_cells_excluded",
         ]
-
-
-class CellValuesSerializer(serializers.ModelSerializer):
-
-    values = serializers.SerializerMethodField(method_name="get_values")
-
-    class Meta:
-        model = Cell
-        #        fields = ['cell', 'values']
-        fields = [
-            "values",
-        ]
-
-    def get_values(self, obj):
-        request = self.context["request"]
-        var_ids = request.POST.getlist("values_included")
-        values_dict = {
-            var_id: get_quant_value(obj.cell_id, var_id, obj.modality.modality_name)
-            for var_id in var_ids
-        }
-        return json.dumps(values_dict)

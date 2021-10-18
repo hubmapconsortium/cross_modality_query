@@ -48,7 +48,6 @@ class PaginationClass(PageNumberPagination):
 def get_generic_response(self, callable, request):
     try:
         return HttpResponse(callable(self, request))
-
     except Exception as e:
         tb = traceback.format_exc()
         json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
@@ -257,7 +256,6 @@ class ValueBoundsViewSet(viewsets.GenericViewSet):
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
             print(json_error_response)
             return HttpResponse(json_error_response)
-        return get_generic_response(self, get_app_status, request)
 
 
 class LandingPageView(viewsets.GenericViewSet):

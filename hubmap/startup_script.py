@@ -55,49 +55,6 @@ def set_up_cell_cluster_relationships(hdf_file):
             cluster.cells.add(*cell_pks)
 
 
-def make_quants_csv(hdf_file):
-    modality = hdf_file.stem
-
-    csv_file = hdf_file.parent / Path(modality + ".csv")
-
-    drop_quant_index(modality)
-
-    if modality in ["atac", "rna"]:
-        sql = (
-            "COPY query_app_"
-            + modality
-            + "quant(id, q_cell_id, q_var_id, value)  FROM '"
-            + fspath(csv_file)
-            + "' CSV HEADER;"
-        )
-
-    else:
-        sql = (
-            "COPY query_app_"
-            + modality
-            + "quant(id, q_var_id, q_cell_id, statistic, value)  FROM '"
-            + fspath(csv_file)
-            + "' CSV HEADER;"
-        )
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql)
-
-    create_quant_index(modality)
-
-
-def create_quant_index(modality: str):
-    sql = "CREATE INDEX " + modality + "_value_idx ON query_app_" + modality + "quant (value);"
-    with connection.cursor() as cursor:
-        cursor.execute(sql)
-
-
-def drop_quant_index(modality: str):
-    sql = "DROP INDEX IF EXISTS " + modality + "_value_idx;"
-    with connection.cursor() as cursor:
-        cursor.execute(sql)
-
-
 def sanitize_string(string: str) -> str:
     return "".join([char for char in string if char.isalnum() or char in ".-"])
 
@@ -111,8 +68,6 @@ def create_model(model_name: str, kwargs: dict):
         obj = Organ(**kwargs)
     elif model_name == "protein":
         obj = Protein(**kwargs)
-    elif model_name == "pvalue":
-        obj = PVal(**kwargs)
     elif model_name == "cluster":
         obj = Cluster(**kwargs)
     else:
@@ -174,28 +129,6 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
     return sanitized_records
 
 
-def process_pval_args(kwargs: dict, modality: str, grouping_type: str):
-    kwargs["p_gene"] = Gene.objects.filter(
-        gene_symbol__iexact=sanitize_string(kwargs["gene_id"])[:64]
-    ).first()
-    kwargs.pop("gene_id")
-
-    if grouping_type == "organ":
-        kwargs["p_organ"] = Organ.objects.filter(
-            grouping_name__iexact=kwargs["grouping_type"]
-        ).first()
-
-    elif grouping_type == "cluster":
-        kwargs["p_cluster"] = Cluster.objects.filter(
-            grouping_name__iexact=kwargs["grouping_type"]
-        ).first()
-
-    kwargs.pop("grouping_type")
-
-    kwargs["modality"] = Modality.objects.filter(modality_name__icontains=modality).first()
-    return kwargs
-
-
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None, grouping_type: str = None):
     if model_name == "cell":
@@ -209,14 +142,6 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None, grouping_type: st
         )
         ids_dict = {id[1]: id[0] for id in ids_list}
         cache.set_many(ids_dict, None)
-
-    elif model_name == "pvalue":
-        kwargs_list = df.to_dict("records")
-        processed_kwargs_list = [
-            process_pval_args(kwargs, modality, grouping_type) for kwargs in kwargs_list
-        ]
-        objs = [create_model("pvalue", kwargs) for kwargs in processed_kwargs_list]
-        PVal.objects.bulk_create(objs)
 
 
 def create_cells(hdf_file: Path):
@@ -250,15 +175,6 @@ def create_organs(hdf_file: Path):
     return
 
 
-def create_pvals(hdf_file: Path):
-    modality = hdf_file.stem
-
-    for grouping_type in ["organ", "cluster"]:
-        with pd.HDFStore(hdf_file) as store:
-            pval_df = store.get(grouping_type)
-            df_to_db(pval_df, "pvalue", modality, grouping_type)
-
-
 def create_clusters(hdf_file: Path):
 
     if hdf_file.stem in ["atac", "rna"]:
@@ -277,6 +193,7 @@ def create_clusters(hdf_file: Path):
                     cluster_data=cluster_data,
                     dataset=dset,
                 )
+                cluster.save()
 
     elif hdf_file.stem == "codex":
         cell_df = pd.read_hdf(hdf_file, "cell")
@@ -349,13 +266,10 @@ def load_data(hdf_file: Path):
     print("Cells created")
     set_up_cell_cluster_relationships(hdf_file)
     print("Cell cluster relationships established")
-    make_quants_csv(hdf_file)
     print("Quants created")
     if hdf_file.stem in ["atac", "rna"]:
         create_genes(hdf_file)
         print("Genes created")
-        create_pvals(hdf_file)
-        print("Pvals created")
     elif hdf_file.stem in ["codex"]:
         create_proteins(hdf_file)
         print("Proteins created")
