@@ -14,7 +14,6 @@ from .models import (
     Organ,
     Protein,
     PVal,
-    QuerySet,
     RnaQuant,
 )
 from .serializers import (
@@ -30,9 +29,14 @@ from .serializers import (
     OrganAndValuesSerializer,
     OrganSerializer,
     ProteinSerializer,
-    QuerySetCountSerializer,
 )
-from .utils import infer_values_type, split_at_comparator, unpickle_query_set
+from .utils import (
+    get_response_from_query_handle,
+    get_response_with_count_from_query_handle,
+    infer_values_type,
+    split_at_comparator,
+    unpickle_query_set,
+)
 from .validation import (
     process_evaluation_args,
     validate_detail_evaluation_args,
@@ -140,32 +144,13 @@ def get_percentages(query_set, include_values, values_type):
 
 def get_qs_count(query_params):
     pickle_hash = query_params["key"]
-    set_type = query_params["set_type"]
-
-    qs = unpickle_query_set(pickle_hash, set_type)
-    query_set = QuerySet.objects.filter(query_handle=pickle_hash).first()
-    query_set.count = qs.count()
-    query_set.save()
-
-    qs_count = QuerySet.objects.filter(query_handle=pickle_hash).filter(count__gte=0)
-    return qs_count
+    return get_response_with_count_from_query_handle(pickle_hash)
 
 
 def query_set_count(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
-
-    qs_count = get_qs_count(query_params)
-
-    self.queryset = qs_count
-    # Set context
-    context = {
-        "request": request,
-    }
-
-    response = QuerySetCountSerializer(qs_count, many=True, context=context).data
-
-    return response
+        return get_qs_count(query_params)
 
 
 def evaluate_qs(set_type, key, limit, offset):
@@ -239,56 +224,7 @@ def evaluation_detail(self, request):
         return response
 
 
-def get_cell_values(request):
-    query_params = request.data.dict()
-    set_token = query_params["key"]
-    var_ids = request.POST.getlist("var_ids")
-    modality = query_params["modality"]
-    cell_set = unpickle_query_set(set_token, "cell")
-    cell_ids = cell_set.values_list("cell_id", flat=True)
-
-    values_dict = {cell_id: {var_id: [0] for var_id in var_ids} for cell_id in cell_ids}
-
-    for var_id in var_ids:
-        if modality == "rna":
-            quants_list = list(
-                RnaQuant.objects.filter(q_cell_id__in=cell_ids)
-                .filter(q_var_id__iexact=var_id)
-                .values_list("q_cell_id", "value")
-            )
-            for tup in quants_list:
-                values_dict[tup[0]][var_id] = tup[1]
-
-        elif modality == "atac":
-            quants_list = list(
-                AtacQuant.objects.filter(q_cell_id__in=cell_ids)
-                .filter(q_var_id=var_id)
-                .values_list("value", flat=True)
-            )
-        elif modality == "codex":
-            quants_list = list(
-                CodexQuant.objects.filter(q_cell_id__in=cell_ids)
-                .filter(q_var_id=var_id)
-                .values_list("value", flat=True)
-            )
-
-    return json.dumps(values_dict)
-
-
-def get_cell_values_b(self, request):
-    if request.method == "POST":
-        query_params = request.data.dict()
-        set_type = query_params["set_type"]
-        validate_detail_evaluation_args(query_params)
-        key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
-        eval_qs = evaluate_qs(set_type, key, limit, offset)
-        self.queryset = eval_qs
-        # Set context
-        context = {
-            "request": request,
-        }
-
-        if set_type == "cell":
-            response = CellValuesSerializer(eval_qs, many=True, context=context).data
-
-        return response
+def evaluate_qs(set_type, key, limit, offset):
+    evaluated_set, set_type = unpickle_query_set(query_handle=key)
+    evaluated_set = evaluated_set[offset:limit]
+    return evaluated_set

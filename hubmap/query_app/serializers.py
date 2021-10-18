@@ -16,7 +16,6 @@ from .models import (
     Organ,
     Protein,
     PVal,
-    QuerySet,
     RnaQuant,
     StatReport,
 )
@@ -302,18 +301,6 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
         else:
             values_type = infer_values_type(conditions)
             return get_percentage(obj.uuid, values_type, conditions[0])
-
-
-class QuerySetSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuerySet
-        fields = ["query_handle", "set_type"]
-
-
-class QuerySetCountSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuerySet
-        fields = ["query_handle", "set_type", "count"]
 
 
 class StatReportSerializer(serializers.ModelSerializer):

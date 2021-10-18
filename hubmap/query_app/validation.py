@@ -3,7 +3,7 @@ from typing import Dict, List, Set
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
-from .models import Gene, Modality, Protein
+from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
@@ -30,6 +30,9 @@ def check_parameter_types_and_values(query_params):
             raise ValueError(f"p_value {p_value} should be in [0,1]")
 
     check_input_set(query_params["input_set"], query_params["input_type"])
+    input_type = query_params["input_type"]
+    input_set = query_params["input_set"]
+    validate_input_terms(input_type, input_set)
 
 
 def check_input_set(input_set, input_type):
@@ -400,3 +403,36 @@ def validate_bounds_args(query_params: Dict):
             and Gene.objects.filter(gene_symbol=query_params["var_id"]).first() is None
         ):
             raise ValueError(f"{query_params['var_id']} is not in gene index")
+
+
+def validate_input_terms(input_type: str, input_set: List[str]):
+
+    input_set = [
+        split_at_comparator(item) if len(split_at_comparator(item)) > 0 else item
+        for item in input_set
+    ]
+
+    identifiers_not_found = []
+    if input_type == "gene":
+        identifiers_not_found = [
+            item for item in input_set if not Gene.objects.filter(gene_symbol__iexact=item)
+        ]
+    if input_type == "protein":
+        identifiers_not_found = [
+            item for item in input_set if not Protein.objects.filter(protein_id__iexact=item)
+        ]
+    if input_type == "organ":
+        identifiers_not_found = [
+            item for item in input_set if not Organ.objects.filter(grouping_name__iexact=item)
+        ]
+    if input_type == "cluster":
+        identifiers_not_found = [
+            item for item in input_set if not Cluster.objects.filter(grouping_name__iexact=item)
+        ]
+    if input_type == "cell":
+        identifiers_not_found = [
+            item for item in input_set if not Cell.objects.filter(cell_id__iexact=item)
+        ]
+    if len(identifiers_not_found) > 0:
+        identifiers_string = ", ".join(identifiers_not_found)
+        raise ValueError(f"No {input_type} found with identifiers: {identifiers_string}")
