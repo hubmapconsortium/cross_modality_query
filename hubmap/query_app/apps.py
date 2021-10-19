@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 MONGO_USERNAME = "root"
 MONGO_PASSWORD = settings.MONGO_PASSWORD
-MONGO_HOSTNAME = "18.207.164.186"
+MONGO_HOSTNAME = "44.193.115.220"
 MONGO_PORT = "27017"
 MONGO_HOST_AND_PORT = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:{MONGO_PORT}/"
 MONGO_DB_NAME = "token_store"
@@ -20,7 +20,8 @@ def set_up_mongo():
     print(type(client[MONGO_DB_NAME]))
     print(type(client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]))
     db = client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]
-    db.log_events.createIndex({"created_at": 1}, {"expireAfterSeconds": TOKEN_EXPIRATION_TIME})
+    db.create_index("created_at", expireAfterSeconds=TOKEN_EXPIRATION_TIME)
+    #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
     return
 
 
@@ -45,7 +46,7 @@ def compute_dataset_hashes():
     for uuid in Dataset.objects.all().values_list("uuid", flat=True):
         input_set = [uuid]
         query_params = {"input_type": "dataset", "input_set": input_set}
-        hash = get_cells_list(query_params, input_set).first().query_handle
+        hash = get_cells_list(query_params, input_set)
         hash_dict[hash] = uuid
 
     return hash_dict
