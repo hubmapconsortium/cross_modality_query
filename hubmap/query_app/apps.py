@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import anndata
 import pandas as pd
 from django.apps import AppConfig
@@ -15,17 +17,17 @@ def set_up_mongo():
     #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
 
 
-PATH_TO_H5AD_FILES = "/opt/"
+PATH_TO_H5AD_FILES = Path("/opt")
 
-PATH_TO_CODEX_H5AD = PATH_TO_H5AD_FILES + "codex.h5ad"
-PATH_TO_RNA_H5AD = PATH_TO_H5AD_FILES + "rna.h5ad"
-PATH_TO_ATAC_H5AD = PATH_TO_H5AD_FILES + "atac.h5ad"
-PATH_TO_RNA_PVALS = PATH_TO_H5AD_FILES + "rna.hdf5"
-PATH_TO_ATAC_PVALS = PATH_TO_H5AD_FILES + "atac.hdf5"
-PATH_TO_CODEX_PVALS = PATH_TO_H5AD_FILES + "codex.hdf5"
-PATH_TO_RNA_PERCENTAGES = PATH_TO_H5AD_FILES + "rna_precompute.hdf5"
-PATH_TO_ATAC_PERCENTAGES = PATH_TO_H5AD_FILES + "atac_precompute.hdf5"
-PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES + "codex_precompute.hdf5"
+PATH_TO_CODEX_H5AD = PATH_TO_H5AD_FILES / "codex.h5ad"
+PATH_TO_RNA_H5AD = PATH_TO_H5AD_FILES / "rna.h5ad"
+PATH_TO_ATAC_H5AD = PATH_TO_H5AD_FILES / "atac.h5ad"
+PATH_TO_RNA_PVALS = PATH_TO_H5AD_FILES / "rna.hdf5"
+PATH_TO_ATAC_PVALS = PATH_TO_H5AD_FILES / "atac.hdf5"
+PATH_TO_CODEX_PVALS = PATH_TO_H5AD_FILES / "codex.hdf5"
+PATH_TO_RNA_PERCENTAGES = PATH_TO_H5AD_FILES / "rna_precompute.hdf5"
+PATH_TO_ATAC_PERCENTAGES = PATH_TO_H5AD_FILES / "atac_precompute.hdf5"
+PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
 
 def compute_dataset_hashes():
@@ -88,4 +90,3 @@ class QueryAppConfig(AppConfig):
         codex_cell_df = pd.read_hdf(PATH_TO_CODEX_PVALS, "cell")
         codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
         hash_dict = compute_dataset_hashes()
-        return
