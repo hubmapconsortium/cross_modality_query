@@ -5,12 +5,12 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import List
 
+from django.conf import settings
 from django.db import connections
 from django.db.utils import OperationalError
 from django.http import HttpResponse
 from pymongo import MongoClient
 
-from .apps import MONGO_COLLECTION_NAME, MONGO_DB_NAME, MONGO_HOST_AND_PORT
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 
 
@@ -23,8 +23,8 @@ def set_union(query_set_1, query_set_2):
 
 
 def make_pickle_and_hash(qs, set_type):
-    client = MongoClient(MONGO_HOST_AND_PORT)
-    collection = client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]
+    client = MongoClient(settings.MONGO_HOST_AND_PORT)
+    collection = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
 
     qry = qs.query
     query_pickle = pickle.dumps(qry)
@@ -42,8 +42,8 @@ def make_pickle_and_hash(qs, set_type):
 
 
 def unpickle_query_set(query_handle):
-    client = MongoClient(MONGO_HOST_AND_PORT)
-    collection = client[MONGO_DB_NAME][MONGO_COLLECTION_NAME]
+    client = MongoClient(settings.MONGO_HOST_AND_PORT)
+    collection = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
 
     query_object = collection.find_one({"query_handle": query_handle})
     if query_object is None:
