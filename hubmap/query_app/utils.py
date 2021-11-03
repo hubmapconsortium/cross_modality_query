@@ -95,8 +95,6 @@ def get_app_status():
 
 def infer_values_type(values: List) -> str:
 
-    print(values)
-
     values = [
         split_at_comparator(item)[0].strip()
         if len(split_at_comparator(item)) > 0
@@ -104,12 +102,8 @@ def infer_values_type(values: List) -> str:
         for item in values
     ]
 
-    print(values)
-
     values_up = [value.upper() for value in values]
     values = values + values_up
-
-    print(values)
 
     """Assumes a non-empty list of one one type of entity, and no identifier collisions across entity types"""
     if Gene.objects.filter(gene_symbol__in=values).count() > 0:
