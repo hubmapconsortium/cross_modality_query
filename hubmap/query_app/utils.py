@@ -89,7 +89,7 @@ def get_app_status():
     json_file_path = "/opt/cross-modality-query/version.json"
     with open(json_file_path) as file:
         json_dict = json.load(file)
-        json_dict["Postgres connection"] = get_database_status()
+        json_dict["postgres_connection"] = get_database_status()
         return json.dumps(json_dict)
 
 
