@@ -94,7 +94,7 @@ def get_app_status():
             return json.dumps(json_dict)
     except:
         # Debug mode
-        json_file_path = "/opt/cross-modality-query/hubmap/version.json"
+        json_file_path = "/opt/project/hubmap/version.json"
         with open(json_file_path) as file:
             json_dict = json.load(file)
             json_dict["postgres_connection"] = get_database_status()
@@ -161,7 +161,7 @@ def get_response_with_count_from_query_handle(query_handle: str):
     query_dict["query_handle"] = query_handle
     query_set, set_type = unpickle_query_set(query_handle)
     query_dict["set_type"] = set_type
-    query_dict["count"] = query_set.count
+    query_dict["count"] = query_set.count()
     response_dict = OrderedDict()
     response_dict["count"] = 1
     response_dict["next"] = None
