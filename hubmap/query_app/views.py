@@ -2,7 +2,7 @@ import json
 import traceback
 from typing import Callable
 
-from django.core import serializers
+import django.core.serializers
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from rest_framework import viewsets
@@ -34,10 +34,9 @@ from .serializers import (
 )
 from .set_evaluators import evaluation_detail, evaluation_list, query_set_count
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
-from .utils import get_app_status, unpickle_query_set
+from .utils import get_app_status
 
-JSONSerializer = serializers.get_serializer("json")
-json_serializer = JSONSerializer()
+JSONSerializer = django.core.serializers.get_serializer("json")
 
 
 class PaginationClass(PageNumberPagination):
@@ -95,6 +94,7 @@ def get_response(self, request, callable: Callable):
 
 class QueryViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
         return query(self, request)
@@ -102,6 +102,7 @@ class QueryViewSet(viewsets.GenericViewSet):
 
 class OperationViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
         return operation(self, request)
@@ -216,7 +217,7 @@ class SetCountViewSet(viewsets.ModelViewSet):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        return get_response(self, request, query_set_count)
+        return get_generic_response(self, query_set_count, request)
 
 
 class StatisticViewSet(viewsets.ModelViewSet):
@@ -230,7 +231,7 @@ class StatisticViewSet(viewsets.ModelViewSet):
 
 class StatusViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    serializer_class = json_serializer
+    serializer_class = JSONSerializer
 
     def get(self, request, format=None):
         try:
@@ -244,7 +245,7 @@ class StatusViewSet(viewsets.GenericViewSet):
 
 class ValueBoundsViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    serializer_class = json_serializer
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
         try:
@@ -259,5 +260,7 @@ class ValueBoundsViewSet(viewsets.GenericViewSet):
 
 
 class LandingPageView(viewsets.GenericViewSet):
+    serializer_class = CellSerializer
+
     def get(self, request):
         return redirect("/api/openapi/")
