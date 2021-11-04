@@ -54,7 +54,6 @@ def get_genes_list(query_params: Dict, input_set=None):
 def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
-    print("Filter gotten")
 
     query_set = Cell.objects.filter(filter)
 
@@ -171,7 +170,6 @@ def cluster_query(self, request):
 
     else:
         query_params = request.data.dict()
-        print(query_params.keys())
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cluster_query_params(query_params)
         pickle_hash = get_clusters_list(query_params, input_set=request.POST.getlist("input_set"))

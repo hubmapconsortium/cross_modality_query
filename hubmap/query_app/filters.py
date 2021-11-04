@@ -21,7 +21,6 @@ from .validation import process_query_parameters, split_at_comparator
 
 
 def get_precomputed_datasets(modality, min_cell_percentage, input_set):
-    print(f"Len input set: {len(input_set)}")
     if len(input_set) > 1:
         return None
 
@@ -49,15 +48,12 @@ def get_precomputed_datasets(modality, min_cell_percentage, input_set):
 def get_cells_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_cell_filter(query_params)
-    print("Filter gotten")
 
     query_set = Cell.objects.filter(filter)
 
     pks = query_set.values_list("pk", flat=True)
     query_set = Cell.objects.filter(pk__in=pks)
     query_set = query_set.distinct("cell_id")
-
-    print("Query set found")
 
     return query_set
 
