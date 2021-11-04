@@ -86,11 +86,19 @@ def get_database_status():
 
 
 def get_app_status():
-    json_file_path = "/opt/cross-modality-query/version.json"
-    with open(json_file_path) as file:
-        json_dict = json.load(file)
-        json_dict["postgres_connection"] = get_database_status()
-        return json.dumps(json_dict)
+    try:
+        json_file_path = "/opt/cross-modality-query/version.json"
+        with open(json_file_path) as file:
+            json_dict = json.load(file)
+            json_dict["postgres_connection"] = get_database_status()
+            return json.dumps(json_dict)
+    except:
+        # Debug mode
+        json_file_path = "/opt/cross-modality-query/hubmap/version.json"
+        with open(json_file_path) as file:
+            json_dict = json.load(file)
+            json_dict["postgres_connection"] = get_database_status()
+            return json.dumps(json_dict)
 
 
 def infer_values_type(values: List) -> str:
