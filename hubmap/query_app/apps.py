@@ -9,9 +9,6 @@ from pymongo import MongoClient
 
 def set_up_mongo():
     client = MongoClient(settings.MONGO_HOST_AND_PORT)
-    print(type(client))
-    print(type(client[settings.MONGO_DB_NAME]))
-    print(type(client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]))
     db = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
     db.create_index("created_at", expireAfterSeconds=settings.TOKEN_EXPIRATION_TIME)
     #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
@@ -31,14 +28,13 @@ PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
 
 def compute_dataset_hashes():
-    from .models import Dataset
-    from .queries import get_cells_list
+    from .models import Cell, Dataset
+    from .utils import make_pickle_and_hash
 
     hash_dict = {}
     for uuid in Dataset.objects.all().values_list("uuid", flat=True):
-        input_set = [uuid]
-        query_params = {"input_type": "dataset", "input_set": input_set}
-        hash = get_cells_list(query_params, input_set)
+        query_set = Cell.objects.filter(dataset__uuid=uuid)
+        hash = make_pickle_and_hash(query_set, "cell")
         hash_dict[hash] = uuid
 
     return hash_dict
@@ -73,6 +69,9 @@ class QueryAppConfig(AppConfig):
         codex_adata = anndata.read(PATH_TO_CODEX_H5AD)
         rna_adata = anndata.read(PATH_TO_RNA_H5AD)
         rna_adata.var_names_make_unique()
+
+        hash_dict = compute_dataset_hashes()
+
         atac_adata = anndata.read(PATH_TO_ATAC_H5AD)
         atac_adata.var_names_make_unique()
         print("Quant adatas read in")
@@ -91,4 +90,9 @@ class QueryAppConfig(AppConfig):
         atac_cell_df = pd.read_hdf(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = pd.read_hdf(PATH_TO_CODEX_PVALS, "cell")
         codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
-        hash_dict = compute_dataset_hashes()
+        # rna_cell_df = pd.DataFrame()
+        # atac_cell_df = pd.DataFrame()
+        # codex_cell_df = pd.DataFrame()
+
+
+#        hash_dict = {}
