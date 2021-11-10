@@ -1,3 +1,4 @@
+from os import fspath
 from pathlib import Path
 
 import anndata
@@ -47,6 +48,36 @@ def get_pval_df(path_to_pvals):
         return pd.concat(grouping_dfs)
 
 
+def attempt_to_open_file(file_path, key=None):
+    if key is None:
+        assert ".h5ad" in fspath(file_path)
+        try:
+            adata = anndata.read(file_path)
+            adata.var_names_make_unique()
+        except:
+            print(f"File path: {file_path} not found")
+            adata = anndata.AnnData()
+        return adata
+
+    elif key in ["cell", "percentages"]:
+        assert ".hdf5" in fspath(file_path)
+        try:
+            df = pd.read_hdf(file_path, key)
+        except:
+            print(f"File path: {file_path} not found")
+            df = pd.DataFrame()
+        return df
+
+    elif key == "pval":
+        assert ".hdf5" in fspath(file_path)
+        try:
+            df = get_pval_df(file_path)
+        except:
+            print(f"File path: {file_path} not found")
+            df = pd.DataFrame()
+        return df
+
+
 class QueryAppConfig(AppConfig):
     name = "query_app"
 
@@ -66,33 +97,25 @@ class QueryAppConfig(AppConfig):
 
         set_up_mongo()
 
-        codex_adata = anndata.read(PATH_TO_CODEX_H5AD)
-        rna_adata = anndata.read(PATH_TO_RNA_H5AD)
-        rna_adata.var_names_make_unique()
+        codex_adata = attempt_to_open_file(PATH_TO_CODEX_H5AD)
+        rna_adata = attempt_to_open_file(PATH_TO_RNA_H5AD)
+        atac_adata = attempt_to_open_file(PATH_TO_ATAC_H5AD)
 
         hash_dict = compute_dataset_hashes()
 
-        atac_adata = anndata.read(PATH_TO_ATAC_H5AD)
-        atac_adata.var_names_make_unique()
         print("Quant adatas read in")
         if settings.SKIP_LOADING_PVALUES:
             atac_pvals = pd.DataFrame()
             rna_pvals = pd.DataFrame()
         else:
-            rna_pvals = get_pval_df(PATH_TO_RNA_PVALS)
-            atac_pvals = get_pval_df(PATH_TO_ATAC_PVALS)
+            rna_pvals = attempt_to_open_file(PATH_TO_RNA_PVALS, "pval")
+            atac_pvals = attempt_to_open_file(PATH_TO_ATAC_PVALS, "pval")
         print("Pvals read in")
-        rna_percentages = pd.read_hdf(PATH_TO_RNA_PERCENTAGES, "percentages")
-        atac_percentages = pd.read_hdf(PATH_TO_ATAC_PERCENTAGES, "percentages")
-        codex_percentages = pd.read_hdf(PATH_TO_CODEX_PERCENTAGES, "percentages")
+        rna_percentages = attempt_to_open_file(PATH_TO_RNA_PERCENTAGES, "percentages")
+        atac_percentages = attempt_to_open_file(PATH_TO_ATAC_PERCENTAGES, "percentages")
+        codex_percentages = attempt_to_open_file(PATH_TO_CODEX_PERCENTAGES, "percentages")
         print("Percentages read in")
-        rna_cell_df = pd.read_hdf(PATH_TO_RNA_PVALS, "cell")
-        atac_cell_df = pd.read_hdf(PATH_TO_ATAC_PVALS, "cell")
-        codex_cell_df = pd.read_hdf(PATH_TO_CODEX_PVALS, "cell")
+        rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
+        atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
+        codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
-        # rna_cell_df = pd.DataFrame()
-        # atac_cell_df = pd.DataFrame()
-        # codex_cell_df = pd.DataFrame()
-
-
-#        hash_dict = {}
