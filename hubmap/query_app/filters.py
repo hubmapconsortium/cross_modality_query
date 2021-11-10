@@ -234,16 +234,10 @@ def get_organ_filter(query_params: Dict) -> Q:
         elif genomic_modality == "atac":
             df = atac_pvals
 
-        print(input_set)
-        print(len(df.index))
         df = df[df["gene_id"].isin(input_set)]
-        print(len(df.index))
         df = df[df["value"] <= p_value]
-        print(len(df.index))
 
         grouping_names = list(df["grouping_name"].unique())
-
-        print(len(grouping_names))
 
         return Q(grouping_name__in=grouping_names)
 
@@ -300,10 +294,7 @@ def get_percentage_and_cache(params_tuple):
     query_handle = cache.get(f"{uuid}_cells_set")
     dataset_cells = unpickle_query_set(query_handle, "dataset")
     dataset_count = cache.get(f"{uuid}_cells_count")
-    print(uuid)
-    print("Dataset cells found")
     dataset_and_var_cells = dataset_cells.intersection(var_cells)
-    print("Intersection taken")
     percentage = dataset_and_var_cells.count() / dataset_count
     cache.set(f"{uuid}-{include_values}", percentage)
 

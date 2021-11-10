@@ -408,7 +408,9 @@ def validate_bounds_args(query_params: Dict):
 def validate_input_terms(input_type: str, input_set: List[str]):
 
     input_set = [
-        split_at_comparator(item) if len(split_at_comparator(item)) > 0 else item
+        split_at_comparator(item)[0].strip()
+        if len(split_at_comparator(item)) > 0
+        else item.strip()
         for item in input_set
     ]
 
