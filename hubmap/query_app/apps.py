@@ -9,6 +9,7 @@ from pymongo import MongoClient
 
 
 def set_up_mongo():
+    print(settings.MONGO_HOST_AND_PORT)
     client = MongoClient(settings.MONGO_HOST_AND_PORT)
     db = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
     db.create_index("created_at", expireAfterSeconds=settings.TOKEN_EXPIRATION_TIME)

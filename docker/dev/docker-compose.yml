@@ -9,6 +9,16 @@ services:
       - POSTGRES_PASSWORD=postgres
     volumes:
       - ../../data/postgres:/var/lib/postgresql/data
+  mongo:
+    image: mongo:latest
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+      - MONGO_INITDB_DATABASE=token_store
+    volumes:
+      - ../../data/mongo:/data/db
+    command:
+      - mongod
   memcached:
     image: memcached:latest
   redis:
@@ -26,6 +36,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - mongo
   worker:
     image: "hubmap/cross-modality-query-dev:latest"
     command: /code/wait-for-it.sh --timeout=0 db:5432 -- celery -A hubmap_query worker
@@ -34,3 +45,4 @@ services:
     depends_on:
       - db
       - redis
+      - mongo
