@@ -17,8 +17,6 @@ services:
       - MONGO_INITDB_DATABASE=token_store
     volumes:
       - ../../data/mongo:/data/db
-    command:
-      - mongod
   memcached:
     image: memcached:latest
   redis:

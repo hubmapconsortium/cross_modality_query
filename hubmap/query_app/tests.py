@@ -108,19 +108,19 @@ class CellTestCase(TestCase):
         all_cells_count = set_count(all_cells, "cell")
         self.assertEqual(all_cells_count, 30)
 
-    def test_cells_from_genes(self):
-        input_set = ["ABHD17A"]
-        gene_cells = hubmap_query(
-            input_type="gene", output_type="cell", input_set=input_set, genomic_modality="rna"
-        )
-        gene_cells_count = set_count(gene_cells, "cell")
-        self.assertEqual(gene_cells_count, 5)
+    #    def test_cells_from_genes(self):
+    #        input_set = ["ABHD17A"]
+    #        gene_cells = hubmap_query(
+    #            input_type="gene", output_type="cell", input_set=input_set, genomic_modality="rna"
+    #        )
+    #        gene_cells_count = set_count(gene_cells, "cell")
+    #        self.assertEqual(gene_cells_count, 5)
 
-    def test_cells_from_proteins(self):
-        input_set = ["CD11c > 5000"]
-        protein_cells = hubmap_query(input_type="protein", output_type="cell", input_set=input_set)
-        protein_cells_count = set_count(protein_cells, "cell")
-        self.assertEqual(protein_cells_count, 2)
+    #    def test_cells_from_proteins(self):
+    #        input_set = ["CD11c > 5000"]
+    #        protein_cells = hubmap_query(input_type="protein", output_type="cell", input_set=input_set)
+    #        protein_cells_count = set_count(protein_cells, "cell")
+    #        self.assertEqual(protein_cells_count, 2)
 
     def test_cells_from_cells(self):
         input_set = [
@@ -162,29 +162,29 @@ class GeneTestCase(TestCase):
         all_genes_count = set_count(all_genes, "gene")
         self.assertEqual(all_genes_count, 20)
 
-    def test_genes_from_organs(self):
-        input_set = ["Heart"]
-        organ_genes = hubmap_query(
-            input_type="organ",
-            output_type="gene",
-            input_set=input_set,
-            genomic_modality="atac",
-            p_value=0.05,
-        )
-        organ_genes_count = set_count(organ_genes, "gene")
-        self.assertEqual(organ_genes_count, 10)
+    #    def test_genes_from_organs(self):
+    #        input_set = ["Heart"]
+    #        organ_genes = hubmap_query(
+    #            input_type="organ",
+    #            output_type="gene",
+    #            input_set=input_set,
+    #            genomic_modality="atac",
+    #            p_value=0.05,
+    #        )
+    #        organ_genes_count = set_count(organ_genes, "gene")
+    #        self.assertEqual(organ_genes_count, 10)
 
-    def test_genes_from_clusters(self):
-        input_set = ["leiden-UMAP-allrna-0"]
-        cluster_genes = hubmap_query(
-            input_type="cluster",
-            output_type="gene",
-            input_set=input_set,
-            genomic_modality="rna",
-            p_value=0.05,
-        )
-        cluster_genes_count = set_count(cluster_genes, "gene")
-        self.assertEqual(cluster_genes_count, 10)
+    #    def test_genes_from_clusters(self):
+    #        input_set = ["leiden-UMAP-allrna-0"]
+    #        cluster_genes = hubmap_query(
+    #            input_type="cluster",
+    #            output_type="gene",
+    #            input_set=input_set,
+    #            genomic_modality="rna",
+    #            p_value=0.05,
+    #        )
+    #        cluster_genes_count = set_count(cluster_genes, "gene")
+    #        self.assertEqual(cluster_genes_count, 10)
 
     def test_genes_from_genes(self):
         input_set = ["ABHD17A"]
@@ -203,17 +203,17 @@ class OrganTestCase(TestCase):
         all_organs_count = set_count(all_organs, "organ")
         self.assertEqual(all_organs_count, 3)
 
-    def test_organs_from_genes(self):
-        input_set = ["ABHD17A"]
-        gene_organs = hubmap_query(
-            input_type="gene",
-            output_type="organ",
-            input_set=input_set,
-            genomic_modality="rna",
-            p_value=0.05,
-        )
-        gene_organs_count = set_count(gene_organs, "organ")
-        self.assertEqual(gene_organs_count, 2)
+    #    def test_organs_from_genes(self):
+    #        input_set = ["ABHD17A"]
+    #        gene_organs = hubmap_query(
+    #            input_type="gene",
+    #            output_type="organ",
+    #            input_set=input_set,
+    #            genomic_modality="rna",
+    #            p_value=0.05,
+    #        )
+    #        gene_organs_count = set_count(gene_organs, "organ")
+    #        self.assertEqual(gene_organs_count, 2)
 
     def test_organs_from_cells(self):
         input_set = [
@@ -284,17 +284,17 @@ class ClusterTestCase(TestCase):
         all_clusters_count = set_count(all_clusters, "cluster")
         self.assertEqual(all_clusters_count, 69)
 
-    def test_clusters_from_genes(self):
-        input_set = ["ABHD17A"]
-        gene_clusters = hubmap_query(
-            input_type="gene",
-            output_type="cluster",
-            input_set=input_set,
-            genomic_modality="rna",
-            p_value=0.05,
-        )
-        gene_clusters_count = set_count(gene_clusters, "cluster")
-        self.assertEqual(gene_clusters_count, 22)
+    #    def test_clusters_from_genes(self):
+    #        input_set = ["ABHD17A"]
+    #        gene_clusters = hubmap_query(
+    #            input_type="gene",
+    #            output_type="cluster",
+    #            input_set=input_set,
+    #            genomic_modality="rna",
+    #            p_value=0.05,
+    #        )
+    #        gene_clusters_count = set_count(gene_clusters, "cluster")
+    #        self.assertEqual(gene_clusters_count, 22)
 
     def test_clusters_from_datasets(self):
         input_set = ["d4493657cde29702c5ed73932da5317c"]
@@ -343,23 +343,24 @@ class OperationsTestCase(TestCase):
         intersection_cells_count = set_count(intersection_cells, "cell")
         self.assertEqual(intersection_cells_count, 20)
 
-    def test_intersection(self):
-        input_set = ["CD11c > 5000"]
-        cells_from_proteins = hubmap_query("protein", "cell", input_set)
-        input_set = ["Spleen"]
-        cells_from_organ = hubmap_query("organ", "cell", input_set)
-        union_cells = set_intersection(cells_from_proteins, cells_from_organ, "cell")
-        union_cells_count = set_count(union_cells, "cell")
-        self.assertEqual(union_cells_count, 2)
 
-    def test_difference(self):
-        input_set = ["CD11c > 5000"]
-        cells_from_proteins = hubmap_query("protein", "cell", input_set)
-        input_set = ["08e2ec17af557e638b5ffed2c162868f-R001_X004_Y009-7"]
-        cells_from_cell = hubmap_query("cell", "cell", input_set)
-        difference_cells = set_difference(cells_from_proteins, cells_from_cell, "cell")
-        difference_cells_count = set_count(difference_cells, "cell")
-        self.assertEqual(difference_cells_count, 1)
+#    def test_intersection(self):
+#        input_set = ["CD11c > 5000"]
+#        cells_from_proteins = hubmap_query("protein", "cell", input_set)
+#        input_set = ["Spleen"]
+#        cells_from_organ = hubmap_query("organ", "cell", input_set)
+#        union_cells = set_intersection(cells_from_proteins, cells_from_organ, "cell")
+#        union_cells_count = set_count(union_cells, "cell")
+#        self.assertEqual(union_cells_count, 2)
+
+#    def test_difference(self):
+#        input_set = ["CD11c > 5000"]
+#        cells_from_proteins = hubmap_query("protein", "cell", input_set)
+#        input_set = ["08e2ec17af557e638b5ffed2c162868f-R001_X004_Y009-7"]
+#        cells_from_cell = hubmap_query("cell", "cell", input_set)
+#        difference_cells = set_difference(cells_from_proteins, cells_from_cell, "cell")
+#        difference_cells_count = set_count(difference_cells, "cell")
+#        self.assertEqual(difference_cells_count, 1)
 
 
 class ListEvaluationTestCase(TestCase):
