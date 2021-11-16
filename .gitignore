@@ -1,5 +1,6 @@
+*.h5ad
+*.hdf5
 .idea
 __pycache__
 data
-.h5ad
-.hdf5
+hubmap/version.json
