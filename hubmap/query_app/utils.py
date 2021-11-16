@@ -3,6 +3,7 @@ import json
 import pickle
 from collections import OrderedDict
 from datetime import datetime
+from pathlib import Path
 from typing import List
 
 from django.conf import settings
@@ -86,19 +87,23 @@ def get_database_status():
 
 
 def get_app_status():
-    try:
-        json_file_path = "/opt/cross-modality-query/version.json"
-        with open(json_file_path) as file:
-            json_dict = json.load(file)
-            json_dict["postgres_connection"] = get_database_status()
-            return json.dumps(json_dict)
-    except:
-        # Debug mode
-        json_file_path = "/opt/project/hubmap/version.json"
-        with open(json_file_path) as file:
-            json_dict = json.load(file)
-            json_dict["postgres_connection"] = get_database_status()
-            return json.dumps(json_dict)
+    paths = [
+        Path("/opt/cross-modality-query/version.json"),
+        Path("/opt/project/hubmap/version.json"),
+        Path("/code/version.json"),
+    ]
+    for path in paths:
+        try:
+            with open(path) as f:
+                json_dict = json.load(f)
+                json_dict["postgres_connection"] = get_database_status()
+                return json.dumps(json_dict)
+        except FileNotFoundError:
+            pass
+
+    message_pieces = ["Couldn't find version.json. Tried:"]
+    message_pieces.extend(f"\t{path}" for path in paths)
+    raise FileNotFoundError("".join(message_pieces))
 
 
 def infer_values_type(values: List) -> str:
