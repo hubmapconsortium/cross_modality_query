@@ -5,6 +5,7 @@ import anndata
 import pandas as pd
 from django.apps import AppConfig
 from django.conf import settings
+from django.db.utils import ProgrammingError
 from pymongo import MongoClient
 
 
@@ -34,11 +35,14 @@ def compute_dataset_hashes():
     from .utils import make_pickle_and_hash
 
     hash_dict = {}
-    for uuid in Dataset.objects.all().values_list("uuid", flat=True):
-        query_set = Cell.objects.filter(dataset__uuid=uuid)
-        hash = make_pickle_and_hash(query_set, "cell")
-        hash_dict[hash] = uuid
-
+    try:
+        for uuid in Dataset.objects.all().values_list("uuid", flat=True):
+            query_set = Cell.objects.filter(dataset__uuid=uuid)
+            hash = make_pickle_and_hash(query_set, "cell")
+            hash_dict[hash] = uuid
+    except ProgrammingError:
+        # empty database, most likely
+        pass
     return hash_dict
 
 
@@ -119,4 +123,5 @@ class QueryAppConfig(AppConfig):
         rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
-        codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
+        if "clusters" in codex_cell_df.columns:
+            codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
