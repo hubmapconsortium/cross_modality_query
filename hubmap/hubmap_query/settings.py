@@ -179,8 +179,6 @@ if override_settings_file.is_file():
 
 MONGO_HOST_AND_PORT = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:{MONGO_PORT}/"
 
-print(MONGO_HOST_AND_PORT)
-
 # /!!! overrides that depend on other (including local) settings
 
 # Do not add anything after this
