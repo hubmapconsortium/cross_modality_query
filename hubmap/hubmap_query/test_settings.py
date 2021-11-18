@@ -14,7 +14,7 @@ DATABASES = {
     },
 }
 
-MONGO_HOSTNAME = "mongo"
+MONGO_HOSTNAME = "127.0.0.1"
 
 # /!!! for development, overridden in `production_settings.py` by Docker container build
 
