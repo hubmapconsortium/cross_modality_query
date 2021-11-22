@@ -257,10 +257,3 @@ class ValueBoundsViewSet(viewsets.GenericViewSet):
             json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
             print(json_error_response)
             return HttpResponse(json_error_response)
-
-
-class LandingPageView(viewsets.GenericViewSet):
-    serializer_class = CellSerializer
-
-    def get(self, request):
-        return redirect("/api/openapi/")
