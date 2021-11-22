@@ -14,6 +14,20 @@ DATABASES = {
     },
 }
 
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "query_app",
+    "rest_framework",
+    "bootstrap4",
+    "django_tables2",
+    "corsheaders",
+]
+
 MONGO_HOSTNAME = "127.0.0.1"
 
 # /!!! for development, overridden in `production_settings.py` by Docker container build
