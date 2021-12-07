@@ -27,18 +27,22 @@ def hubmap_query(
     request_dict = {
         key: request_dict[key] for key in request_dict if request_dict[key] is not None
     }
-    return c.post(request_url, request_dict).json()["results"][0]["query_handle"]
+    response = c.post(request_url, request_dict)
+    return response.json()["results"][0]["query_handle"]
 
 
 def get_all(output_type: str):
     request_url = base_url + output_type + "/"
-    return c.post(request_url).json()["results"][0]["query_handle"]
+    request_dict = {}
+    response = c.post(request_url, request_dict)
+    return response.json()["results"][0]["query_handle"]
 
 
 def set_count(set_key: str, set_type: str) -> str:
     request_url = base_url + "count/"
     request_dict = {"key": set_key, "set_type": set_type}
-    return c.post(request_url, request_dict).json()["results"][0]["count"]
+    response = c.post(request_url, request_dict)
+    return response.json()["results"][0]["count"]
 
 
 def set_intersection(set_key_one: str, set_key_two: str, set_type: str) -> str:
@@ -130,6 +134,40 @@ class CellTestCase(TestCase):
         cells = hubmap_query(input_type="cell", output_type="cell", input_set=input_set)
         cells_count = set_count(cells, "cell")
         self.assertEqual(cells_count, 2)
+
+    def test_cells_from_organs(self):
+        input_set = ["Heart"]
+        organ_cells = hubmap_query(input_type="organ", output_type="cell", input_set=input_set)
+        organ_cells_count = set_count(organ_cells, "cell")
+        self.assertEqual(organ_cells_count, 10)
+
+    def test_cells_from_datasets(self):
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
+        dataset_cells = hubmap_query(input_type="dataset", output_type="cell", input_set=input_set)
+        dataset_cells_count = set_count(dataset_cells, "cell")
+        self.assertEqual(dataset_cells_count, 10)
+
+    def test_cells_from_modalitiess(self):
+        input_set = ["rna"]
+        modality_cells = hubmap_query(
+            input_type="modality", output_type="cell", input_set=input_set
+        )
+        modality_cells_count = set_count(modality_cells, "cell")
+        self.assertEqual(modality_cells_count, 10)
+
+    #    def test_cells_from_genes(self):
+    #        input_set = ["ABHD17A"]
+    #        gene_cells = hubmap_query(
+    #            input_type="gene", output_type="cell", input_set=input_set, genomic_modality="rna"
+    #        )
+    #        gene_cells_count = set_count(gene_cells, "cell")
+    #        self.assertEqual(gene_cells_count, 5)
+
+    #    def test_cells_from_proteins(self):
+    #        input_set = ["CD11c > 5000"]
+    #        protein_cells = hubmap_query(input_type="protein", output_type="cell", input_set=input_set)
+    #        protein_cells_count = set_count(protein_cells, "cell")
+    #        self.assertEqual(protein_cells_count, 2)
 
     def test_cells_from_organs(self):
         input_set = ["Heart"]

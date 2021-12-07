@@ -46,12 +46,12 @@ class PaginationClass(PageNumberPagination):
 
 def get_generic_response(self, callable, request):
     try:
-        return HttpResponse(callable(self, request))
+        return JsonResponse(callable(self, request), safe=False)
     except Exception as e:
         tb = traceback.format_exc()
-        json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
+        json_error_response = {"error": {"stack_trace": tb}, "message": str(e)}
         print(json_error_response)
-        return HttpResponse(json_error_response)
+        return JsonResponse(json_error_response)
 
 
 def query(self, request):

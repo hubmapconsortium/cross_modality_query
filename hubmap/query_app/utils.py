@@ -157,8 +157,7 @@ def get_response_from_query_handle(query_handle: str, set_type: str):
     response_dict["next"] = None
     response_dict["previous"] = None
     response_dict["results"] = [query_dict]
-    response_string = json.dumps(response_dict)
-    return HttpResponse(response_string)
+    return response_dict
 
 
 def get_response_with_count_from_query_handle(query_handle: str):
@@ -172,5 +171,4 @@ def get_response_with_count_from_query_handle(query_handle: str):
     response_dict["next"] = None
     response_dict["previous"] = None
     response_dict["results"] = [query_dict]
-    response_string = json.dumps(response_dict)
-    return HttpResponse(response_string)
+    return response_dict

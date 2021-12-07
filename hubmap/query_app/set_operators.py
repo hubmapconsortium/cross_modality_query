@@ -33,8 +33,8 @@ def qs_intersect(params):
     pickle_hash_1 = params["key_one"]
     pickle_hash_2 = params["key_two"]
     set_type = params["set_type"]
-    qs1 = unpickle_query_set(pickle_hash_1)
-    qs2 = unpickle_query_set(pickle_hash_2)
+    qs1 = unpickle_query_set(pickle_hash_1)[0]
+    qs2 = unpickle_query_set(pickle_hash_2)[0]
     qs = qs1 & qs2
     pickle_hash = make_pickle_and_hash(qs, set_type)
     return pickle_hash
@@ -44,8 +44,8 @@ def qs_union(params):
     pickle_hash_1 = params["key_one"]
     pickle_hash_2 = params["key_two"]
     set_type = params["set_type"]
-    qs1 = unpickle_query_set(pickle_hash_1)
-    qs2 = unpickle_query_set(pickle_hash_2)
+    qs1 = unpickle_query_set(pickle_hash_1)[0]
+    qs2 = unpickle_query_set(pickle_hash_2)[0]
     qs = qs1 | qs2
     pickle_hash = make_pickle_and_hash(qs, set_type)
     return pickle_hash
@@ -55,8 +55,8 @@ def qs_subtract(params):
     pickle_hash_1 = params["key_one"]
     pickle_hash_2 = params["key_two"]
     set_type = params["set_type"]
-    qs1 = unpickle_query_set(pickle_hash_1)
-    qs2 = unpickle_query_set(pickle_hash_2)
+    qs1 = unpickle_query_set(pickle_hash_1)[0]
+    qs2 = unpickle_query_set(pickle_hash_2)[0]
     qs = qs1.difference(qs2)
     pickle_hash = make_pickle_and_hash(qs, set_type)
     return pickle_hash
