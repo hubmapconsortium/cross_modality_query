@@ -64,7 +64,7 @@ def attempt_to_open_file(file_path, key=None):
             adata = anndata.AnnData()
         return adata
 
-    elif key in ["cell", "percentages"]:
+    elif key in {"cell", "percentages"}:
         assert ".hdf5" in fspath(file_path)
         try:
             df = pd.read_hdf(file_path, key)

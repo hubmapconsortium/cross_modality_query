@@ -66,7 +66,7 @@ def annotate_with_values(cell_df, include_values, modality):
 
     cell_df = cell_df.set_index("cell_id", inplace=False, drop=False)
 
-    cell_ids = list(cell_df["cell_id"])
+    cell_ids = set(cell_df["cell_id"])
     quant_df = adata.to_df()
     quant_df["cell_id"] = quant_df.index
     quant_df = quant_df[quant_df["cell_id"].isin(cell_ids)]
@@ -118,7 +118,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     if len(include_values) > 0 and modality == "codex":
         cell_df = annotate_with_values(cell_df, include_values, modality)
 
-    if type(list(cell_df["clusters"])[0]) == str:
+    if isinstance(cell_df["clusters"].iloc[0], str):
         clusters_list = [clusters.split(",") for clusters in cell_df["clusters"]]
         cell_df["clusters"] = pd.Series(clusters_list, index=cell_df.index)
 
@@ -283,8 +283,6 @@ def evaluation_detail(self, request):
 
         if key in hash_dict:
             cell_dict_list = get_dataset_cells(hash_dict[key], include_values, offset, limit)
-            print(len(cell_dict_list))
-            print(type(cell_dict_list))
             return cell_dict_list
         eval_qs = evaluate_qs(set_type, key, limit, offset)
 
