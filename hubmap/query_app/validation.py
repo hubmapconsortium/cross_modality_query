@@ -414,27 +414,20 @@ def validate_input_terms(input_type: str, input_set: List[str]):
         for item in input_set
     ]
 
-    identifiers_not_found = []
-    if input_type == "gene":
-        identifiers_not_found = [
-            item for item in input_set if not Gene.objects.filter(gene_symbol__iexact=item)
-        ]
-    if input_type == "protein":
-        identifiers_not_found = [
-            item for item in input_set if not Protein.objects.filter(protein_id__iexact=item)
-        ]
-    if input_type == "organ":
-        identifiers_not_found = [
-            item for item in input_set if not Organ.objects.filter(grouping_name__iexact=item)
-        ]
-    if input_type == "cluster":
-        identifiers_not_found = [
-            item for item in input_set if not Cluster.objects.filter(grouping_name__iexact=item)
-        ]
-    if input_type == "cell":
-        identifiers_not_found = [
-            item for item in input_set if not Cell.objects.filter(cell_id__iexact=item)
-        ]
+    input_type_model_mapping = {
+        "gene": (Gene, "gene_symbol"),
+        "protein": (Protein, "protein_id"),
+        "organ": (Organ, "grouping_name"),
+        "cluster": (Cluster, "grouping_name"),
+        "cell": (Cell, "cell_id"),
+        "dataset": (Dataset, "uuid"),
+    }
+
+    model, kwarg_piece = input_type_model_mapping[input_type]
+    identifiers_not_found = [
+        item for item in input_set if not model.objects.filter(**{f"{kwarg_piece}__iexact": item})
+    ]
+
     if len(identifiers_not_found) > 0:
         identifiers_string = ", ".join(identifiers_not_found)
         raise ValueError(f"No {input_type} found with identifiers: {identifiers_string}")
