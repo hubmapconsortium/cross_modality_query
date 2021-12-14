@@ -421,6 +421,7 @@ def validate_input_terms(input_type: str, input_set: List[str]):
         "cluster": (Cluster, "grouping_name"),
         "cell": (Cell, "cell_id"),
         "dataset": (Dataset, "uuid"),
+        "modality": (Modality, "modality_name"),
     }
 
     model, kwarg_piece = input_type_model_mapping[input_type]
