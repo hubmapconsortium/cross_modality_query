@@ -149,10 +149,10 @@ def split_at_comparator(item: str) -> List:
 
 
 def get_response_from_query_handle(query_handle: str, set_type: str):
-    query_dict = OrderedDict()
+    query_dict = {}
     query_dict["query_handle"] = query_handle
     query_dict["set_type"] = set_type
-    response_dict = OrderedDict()
+    response_dict = {}
     response_dict["count"] = 1
     response_dict["next"] = None
     response_dict["previous"] = None
@@ -161,12 +161,12 @@ def get_response_from_query_handle(query_handle: str, set_type: str):
 
 
 def get_response_with_count_from_query_handle(query_handle: str):
-    query_dict = OrderedDict()
+    query_dict = {}
     query_dict["query_handle"] = query_handle
     query_set, set_type = unpickle_query_set(query_handle)
     query_dict["set_type"] = set_type
     query_dict["count"] = query_set.count()
-    response_dict = OrderedDict()
+    response_dict = {}
     response_dict["count"] = 1
     response_dict["next"] = None
     response_dict["previous"] = None
