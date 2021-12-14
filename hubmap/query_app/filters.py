@@ -136,12 +136,8 @@ def get_gene_filter(query_params: Dict) -> Q:
         elif genomic_modality == "atac":
             df = atac_pvals
 
-        print(input_set)
-        print(len(df.index))
         df = df[df["grouping_name"].isin(input_set)]
-        print(len(df.index))
         df = df[df["value"] <= p_value]
-        print(len(df.index))
 
         gene_symbols = list(df["gene_id"].unique())
 
@@ -337,10 +333,8 @@ def get_dataset_filter(query_params: dict):
             modality = "codex"
         precomputed_datasets = get_precomputed_datasets(modality, min_cell_percentage, input_set)
         if precomputed_datasets:
-            print("Precomputed datasets found")
             return precomputed_datasets
 
-        print("Precomputed datasets not found")
         var_cell_pks = list(get_cells_list(query_params).values_list("pk", flat=True))
         var_cells = (
             Cell.objects.filter(pk__in=var_cell_pks)

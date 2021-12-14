@@ -59,7 +59,7 @@ def attempt_to_open_file(file_path, key=None):
         try:
             adata = anndata.read(file_path)
             adata.var_names_make_unique()
-        except:
+        except FileNotFoundError:
             print(f"File path: {file_path} not found")
             adata = anndata.AnnData()
         return adata
@@ -68,7 +68,7 @@ def attempt_to_open_file(file_path, key=None):
         assert ".hdf5" in fspath(file_path)
         try:
             df = pd.read_hdf(file_path, key)
-        except:
+        except FileNotFoundError:
             print(f"File path: {file_path} not found")
             df = pd.DataFrame()
         return df
@@ -77,7 +77,7 @@ def attempt_to_open_file(file_path, key=None):
         assert ".hdf5" in fspath(file_path)
         try:
             df = get_pval_df(file_path)
-        except:
+        except FileNotFoundError:
             print(f"File path: {file_path} not found")
             df = pd.DataFrame()
         return df

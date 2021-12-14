@@ -48,7 +48,7 @@ jobs:
         cd hubmap/hubmap_query
         mv test_settings.py local_settings.py
         cd -
-    - name: Run Testsq
+    - name: Run Tests
       env:
         DB: postgres
         DB_HOST: 127.0.0.1
