@@ -22,6 +22,14 @@ jobs:
             --health-retries 5
         ports:
           - 5432:5432
+      mongo:
+        image: mongo
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: rootpassword
+          MONGO_INITDB_DATABASE: token_store
+        ports:
+          - 27017:27017
       memcached:
         image: memcached
 

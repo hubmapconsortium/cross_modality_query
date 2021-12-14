@@ -8,19 +8,25 @@ admin.autodiscover()
 # first we define the serializers
 
 urlpatterns = [
-    path("gene/", views.GeneViewSet.as_view({"post": "post"}), name="gene_query"),
-    path("cell/", views.CellViewSet.as_view({"post": "post"}), name="cell_query"),
-    path("organ/", views.OrganViewSet.as_view({"post": "post"}), name="organ_query"),
-    path("protein/", views.ProteinViewSet.as_view({"post": "post"}), name="protein_query"),
-    path("cluster/", views.ClusterViewSet.as_view({"post": "post"}), name="cluster_query"),
-    path("dataset/", views.DatasetViewSet.as_view({"post": "post"}), name="dataset_query"),
     path(
-        "difference/", views.SetDifferenceViewSet.as_view({"post": "post"}), name="set_difference"
+        "",
+        get_schema_view(
+            title="HuBMAP cell indexing",
+            version="0.1-dev",
+        ),
+        name="openapi-schema",
     ),
-    path("union/", views.SetUnionViewSet.as_view({"post": "post"}), name="set_union"),
+    path("gene/", views.QueryViewSet.as_view({"post": "post"}), name="gene_query"),
+    path("cell/", views.QueryViewSet.as_view({"post": "post"}), name="cell_query"),
+    path("organ/", views.QueryViewSet.as_view({"post": "post"}), name="organ_query"),
+    path("protein/", views.QueryViewSet.as_view({"post": "post"}), name="protein_query"),
+    path("cluster/", views.QueryViewSet.as_view({"post": "post"}), name="cluster_query"),
+    path("dataset/", views.QueryViewSet.as_view({"post": "post"}), name="dataset_query"),
+    path("difference/", views.OperationViewSet.as_view({"post": "post"}), name="set_difference"),
+    path("union/", views.OperationViewSet.as_view({"post": "post"}), name="set_union"),
     path(
         "intersection/",
-        views.SetIntersectionViewSet.as_view({"post": "post"}),
+        views.OperationViewSet.as_view({"post": "post"}),
         name="set_intersection",
     ),
     path("count/", views.SetCountViewSet.as_view({"post": "post"}), name="set_count"),
@@ -87,11 +93,6 @@ urlpatterns = [
         "proteindetailevaluation/",
         views.ProteinListEvaluationViewSet.as_view({"post": "post"}),
         name="protein_detail_evaluation",
-    ),
-    path(
-        "cellvaluesevaluation/",
-        views.CellValuesViewSet.as_view({"post": "post"}),
-        name="cell_values_evaluation",
     ),
     path(
         "bounds/",

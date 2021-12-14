@@ -1,3 +1,5 @@
+bson
+anndata
 celery
 Django>=3.2
 django-bootstrap4
@@ -8,6 +10,7 @@ numpy
 pandas
 psycopg2-binary>=2.8.6
 pylibmc
+pymongo >= 3.0
 pyyaml
 redis
 scikit-learn

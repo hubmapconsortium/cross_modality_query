@@ -13,5 +13,6 @@ RUN apt-get update \
 
 ## Python packages
 COPY requirements.txt /opt/requirements.txt
+COPY data /opt
 RUN pip3 install --no-binary annoylib -r /opt/requirements.txt \
  && rm -rf /root/.cache/pip

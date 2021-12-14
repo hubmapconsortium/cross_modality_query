@@ -25,7 +25,16 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+MONGO_HOSTNAME = "mongo"
+MONGO_USERNAME = "root"
+MONGO_PASSWORD = "rootpassword"
+
 # /!!! for development, overridden in `production_settings.py` by Docker container build
+
+MONGO_PORT = "27017"
+MONGO_DB_NAME = "token_store"
+MONGO_COLLECTION_NAME = "pickles_and_hashes"
+TOKEN_EXPIRATION_TIME = 14400  # 4 hours in seconds
 
 CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_TIMEZONE = "America/New_York"
@@ -33,6 +42,9 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
 QUERY_TOKEN_EXPIRATION = timedelta(days=1)
+
+# Faster app startup for testing
+SKIP_LOADING_PVALUES = False
 
 # database is local to each web app instance, not worth overriding
 # credentials for production deployment at the moment
@@ -165,7 +177,7 @@ if override_settings_file.is_file():
 
 # !!! overrides that depend on other (including local) settings
 
-#  (none yet)
+MONGO_HOST_AND_PORT = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:{MONGO_PORT}/"
 
 # /!!! overrides that depend on other (including local) settings
 

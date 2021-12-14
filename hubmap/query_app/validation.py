@@ -3,7 +3,7 @@ from typing import Dict, List, Set
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
-from .models import Gene, Modality, Protein
+from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
@@ -30,6 +30,9 @@ def check_parameter_types_and_values(query_params):
             raise ValueError(f"p_value {p_value} should be in [0,1]")
 
     check_input_set(query_params["input_set"], query_params["input_type"])
+    input_type = query_params["input_type"]
+    input_set = query_params["input_set"]
+    validate_input_terms(input_type, input_set)
 
 
 def check_input_set(input_set, input_type):
@@ -110,7 +113,7 @@ def check_parameter_fields(query_params: Dict, required_fields: Set, permitted_f
 
 
 def validate_gene_query_params(query_params):
-    permitted_input_types = ["organ", "cluster", "gene"]
+    permitted_input_types = ["organ", "cluster", "gene", "modality"]
     input_type = query_params["input_type"]
 
     check_input_type(input_type, permitted_input_types)
@@ -400,3 +403,32 @@ def validate_bounds_args(query_params: Dict):
             and Gene.objects.filter(gene_symbol=query_params["var_id"]).first() is None
         ):
             raise ValueError(f"{query_params['var_id']} is not in gene index")
+
+
+def validate_input_terms(input_type: str, input_set: List[str]):
+
+    input_set = [
+        split_at_comparator(item)[0].strip()
+        if len(split_at_comparator(item)) > 0
+        else item.strip()
+        for item in input_set
+    ]
+
+    input_type_model_mapping = {
+        "gene": (Gene, "gene_symbol"),
+        "protein": (Protein, "protein_id"),
+        "organ": (Organ, "grouping_name"),
+        "cluster": (Cluster, "grouping_name"),
+        "cell": (Cell, "cell_id"),
+        "dataset": (Dataset, "uuid"),
+        "modality": (Modality, "modality_name"),
+    }
+
+    model, kwarg_piece = input_type_model_mapping[input_type]
+    identifiers_not_found = [
+        item for item in input_set if not model.objects.filter(**{f"{kwarg_piece}__iexact": item})
+    ]
+
+    if len(identifiers_not_found) > 0:
+        identifiers_string = ", ".join(identifiers_not_found)
+        raise ValueError(f"No {input_type} found with identifiers: {identifiers_string}")

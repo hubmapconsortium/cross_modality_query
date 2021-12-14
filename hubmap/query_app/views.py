@@ -2,13 +2,14 @@ import json
 import traceback
 from typing import Callable
 
-from django.core import serializers
+import django.core.serializers
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 
 from .analysis import calculate_statistics, get_bounds
-from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, QuerySet, StatReport
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, StatReport
 from .queries import (
     cell_query,
     cluster_query,
@@ -20,7 +21,6 @@ from .queries import (
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
-    CellValuesSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
     DatasetAndValuesSerializer,
@@ -30,27 +30,53 @@ from .serializers import (
     OrganAndValuesSerializer,
     OrganSerializer,
     ProteinSerializer,
-    QuerySetCountSerializer,
-    QuerySetSerializer,
     StatReportSerializer,
 )
-from .set_evaluators import (
-    evaluation_detail,
-    evaluation_list,
-    get_cell_values,
-    get_cell_values_b,
-    query_set_count,
-)
+from .set_evaluators import evaluation_detail, evaluation_list, query_set_count
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
-from .utils import get_app_status, unpickle_query_set
+from .utils import get_app_status
 
-JSONSerializer = serializers.get_serializer("json")
-json_serializer = JSONSerializer()
+JSONSerializer = django.core.serializers.get_serializer("json")
 
 
 class PaginationClass(PageNumberPagination):
     page_size = 100000
     max_page_size = 100000
+
+
+def get_generic_response(self, callable, request):
+    try:
+        return JsonResponse(callable(self, request), safe=False)
+    except Exception as e:
+        tb = traceback.format_exc()
+        json_error_response = {"error": {"stack_trace": tb}, "message": str(e)}
+        print(json_error_response)
+        return JsonResponse(json_error_response)
+
+
+def query(self, request):
+    endpoints_dict = {
+        "gene": gene_query,
+        "organ": organ_query,
+        "cell": cell_query,
+        "dataset": dataset_query,
+        "cluster": cluster_query,
+        "protein": protein_query,
+    }
+    endpoint = request.path.split("/")[-2]
+    callable = endpoints_dict[endpoint]
+    return get_generic_response(self, callable, request)
+
+
+def operation(self, request):
+    endpoints_dict = {
+        "union": query_set_union,
+        "intersection": query_set_intersection,
+        "difference": query_set_difference,
+    }
+    endpoint = request.path.split("/")[-2]
+    callable = endpoints_dict[endpoint]
+    return get_generic_response(self, callable, request)
 
 
 def get_response(self, request, callable: Callable):
@@ -66,81 +92,20 @@ def get_response(self, request, callable: Callable):
         return HttpResponse(json_error_response)
 
 
-class CellViewSet(viewsets.ModelViewSet):
-    query_set = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
+class QueryViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, cell_query)
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
-        return get_response(self, request, cell_query)
+        return query(self, request)
 
 
-class OrganViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
+class OperationViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, organ_query)
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
-        return get_response(self, request, organ_query)
-
-
-class GeneViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, gene_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, gene_query)
-
-
-class ProteinViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def get(self, request, format=None):
-        return get_response(self, request, protein_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, protein_query)
-
-
-class ClusterViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, cluster_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, cluster_query)
-
-
-class DatasetViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-    model = QuerySet
-
-    def get(self, request, format=None):
-        return get_response(self, request, dataset_query)
-
-    def post(self, request, format=None):
-        return get_response(self, request, dataset_query)
+        return operation(self, request)
 
 
 class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
@@ -248,40 +213,11 @@ class ProteinListEvaluationViewSet(viewsets.ModelViewSet):
         return get_response(self, request, evaluation_list)
 
 
-class SetIntersectionViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_intersection)
-
-
-class SetUnionViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_union)
-
-
-class SetDifferenceViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetSerializer
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        return get_response(self, request, query_set_difference)
-
-
 class SetCountViewSet(viewsets.ModelViewSet):
-    queryset = QuerySet.objects.all()
-    serializer_class = QuerySetCountSerializer
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
-        return get_response(self, request, query_set_count)
+        return get_generic_response(self, query_set_count, request)
 
 
 class StatisticViewSet(viewsets.ModelViewSet):
@@ -295,7 +231,7 @@ class StatisticViewSet(viewsets.ModelViewSet):
 
 class StatusViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    serializer_class = json_serializer
+    serializer_class = JSONSerializer
 
     def get(self, request, format=None):
         try:
@@ -307,32 +243,9 @@ class StatusViewSet(viewsets.GenericViewSet):
             return HttpResponse(json_error_response)
 
 
-class CellValuesViewSet(viewsets.GenericViewSet):
-    pagination_class = PaginationClass
-
-    def post(self, request, format=None):
-        try:
-            return HttpResponse(get_cell_values(request))
-        except Exception as e:
-            tb = traceback.format_exc()
-            json_error_response = json.dumps({"error": {"stack_trace": tb, "message": str(e)}})
-            print(json_error_response)
-            return HttpResponse(json_error_response)
-
-
-class CellValuesEvaluationViewSet(viewsets.ModelViewSet):
-    query_set = Cell.objects.all()
-    serializer_class = CellValuesSerializer
-    pagination_class = PaginationClass
-    model = Cell
-
-    def post(self, request, format=None):
-        return get_response(self, request, get_cell_values_b)
-
-
 class ValueBoundsViewSet(viewsets.GenericViewSet):
     pagination_class = PaginationClass
-    serializer_class = json_serializer
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
         try:

@@ -13,3 +13,16 @@ DATABASES = {
         "PORT": "",
     },
 }
+
+MONGO_HOSTNAME = "127.0.0.1"
+
+# /!!! for development, overridden in `production_settings.py` by Docker container build
+
+MONGO_USERNAME = "root"
+MONGO_PASSWORD = "rootpassword"
+MONGO_PORT = "27017"
+MONGO_DB_NAME = "token_store"
+MONGO_COLLECTION_NAME = "pickles_and_hashes"
+TOKEN_EXPIRATION_TIME = 14400  # 4 hours in seconds
+
+MONGO_HOST_AND_PORT = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:{MONGO_PORT}/"

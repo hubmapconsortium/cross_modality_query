@@ -1,6 +1,5 @@
 import json
 
-import django.utils.timezone
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
@@ -143,19 +142,6 @@ class PVal(models.Model):
 
     def __repr__(self):
         return self.value
-
-
-class QuerySet(models.Model):
-    query_pickle = models.BinaryField()
-    query_handle = models.TextField()
-    created = models.DateTimeField(null=True, auto_now_add=True)
-    set_type = models.CharField(max_length=16)
-    count = models.IntegerField(null=True)
-
-    @property
-    def is_expired(self):
-        age = django.utils.timezone.now() - self.created
-        return age.total_seconds() > EXPIRATION_TIME
 
 
 class StatReport(models.Model):
