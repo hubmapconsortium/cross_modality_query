@@ -26,11 +26,11 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 MONGO_HOSTNAME = "mongo"
+MONGO_USERNAME = "root"
+MONGO_PASSWORD = "rootpassword"
 
 # /!!! for development, overridden in `production_settings.py` by Docker container build
 
-MONGO_USERNAME = "root"
-MONGO_PASSWORD = "rootpassword"
 MONGO_PORT = "27017"
 MONGO_DB_NAME = "token_store"
 MONGO_COLLECTION_NAME = "pickles_and_hashes"

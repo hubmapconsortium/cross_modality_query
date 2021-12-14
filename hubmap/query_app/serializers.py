@@ -99,7 +99,7 @@ def get_precomputed_percentage(uuid, values_type, include_values):
     var_id = set_split[0]
     cutoff = float(set_split[2])
 
-    if var_id in list(df["var_id"].unique()) and cutoff in list(df["cutoff"].unique()):
+    if var_id in df["var_id"].values and cutoff in df["cutoff"].values:
         df = df[df["var_id"] == var_id]
         df = df[df["cutoff"] == cutoff]
         df = df[df["dataset"] == uuid]
@@ -151,11 +151,11 @@ def get_modality_pval(pval_df, identifier, set_type, var_id):
         df = pval_df[pval_df["gene_id"] == identifier]
         df = df[df["grouping_name"] == var_id]
 
-    value = list(df["value"])[0] if len(list(df["value"])) >= 1 else None
+    value = df["value"].iloc[0] if df.shape[0] else None
     return value
 
 
-def get_p_values(identifier, set_type, var_id, var_type, statistic="mean"):
+def get_p_values(identifier: str, set_type: str, var_id: str, var_type, statistic="mean"):
 
     rna_value = get_modality_pval(rna_pvals, identifier, set_type, var_id)
     atac_value = get_modality_pval(atac_pvals, identifier, set_type, var_id)

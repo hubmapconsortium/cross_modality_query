@@ -55,7 +55,7 @@ def get_pval_df(path_to_pvals):
 
 def attempt_to_open_file(file_path, key=None):
     if key is None:
-        assert ".h5ad" in fspath(file_path)
+        assert file_path.suffix == ".h5ad"
         try:
             adata = anndata.read(file_path)
             adata.var_names_make_unique()
@@ -65,7 +65,7 @@ def attempt_to_open_file(file_path, key=None):
         return adata
 
     elif key in {"cell", "percentages"}:
-        assert ".hdf5" in fspath(file_path)
+        assert file_path.suffix == ".hdf5"
         try:
             df = pd.read_hdf(file_path, key)
         except (FileNotFoundError, KeyError):
@@ -74,7 +74,7 @@ def attempt_to_open_file(file_path, key=None):
         return df
 
     elif key == "pval":
-        assert ".hdf5" in fspath(file_path)
+        assert file_path.suffix == ".hdf5"
         try:
             df = get_pval_df(file_path)
         except (FileNotFoundError, KeyError):

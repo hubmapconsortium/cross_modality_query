@@ -36,7 +36,7 @@ def get_precomputed_datasets(modality, min_cell_percentage, input_set):
     var_id = input_set_split[0]
     cutoff = float(input_set_split[2])
 
-    if var_id in list(df["var_id"].unique()) and float(cutoff) in list(df["cutoff"].unique()):
+    if var_id in df["var_id"].values and float(cutoff) in df["cutoff"].values:
         df = df[df["var_id"] == var_id]
         df = df[df["cutoff"] == cutoff]
         df = df[df["percentage"] >= float(min_cell_percentage)]
@@ -122,9 +122,9 @@ def get_gene_filter(query_params: Dict) -> Q:
     elif input_type == "modality":
         genes_list = []
         if "rna" in input_set:
-            genes_list.extend(list(rna_adata.var.index))
+            genes_list.extend(rna_adata.var.index)
         if "atac" in input_set:
-            genes_list.extend(list(atac_adata.var.index))
+            genes_list.extend(atac_adata.var.index)
         return Q(gene_symbol__in=genes_list)
 
     genomic_modality = query_params["genomic_modality"]
