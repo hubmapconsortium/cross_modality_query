@@ -246,8 +246,6 @@ def evaluation_list(self, request):
 
         if key in hash_dict:
             cell_dict_list = get_dataset_cells(hash_dict[key], include_values, offset, limit)
-            print(len(cell_dict_list))
-            print(type(cell_dict_list))
             return cell_dict_list
 
         eval_qs = evaluate_qs(set_type, key, limit, offset)
