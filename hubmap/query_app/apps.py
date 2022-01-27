@@ -37,7 +37,7 @@ def compute_dataset_hashes():
     hash_dict = {}
     try:
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
-            query_set = Cell.objects.filter(dataset__uuid=uuid)
+            query_set = Cell.objects.filter(dataset__uuid__in=[uuid]).distinct("cell_id")
             hash = make_pickle_and_hash(query_set, "cell")
             hash_dict[hash] = uuid
     except ProgrammingError:
