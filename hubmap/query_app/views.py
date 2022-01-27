@@ -8,6 +8,7 @@ from django.shortcuts import redirect
 from django.views import View
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
 
 from .analysis import calculate_statistics, get_bounds
 from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, StatReport
@@ -93,7 +94,7 @@ def get_response(self, request, callable: Callable):
         return HttpResponse(json_error_response)
 
 
-class QueryViewSet(View):
+class QueryViewSet(APIView):
     pagination_class = PaginationClass
     serializer_class = JSONSerializer
 
@@ -101,7 +102,7 @@ class QueryViewSet(View):
         return query(self, request)
 
 
-class OperationViewSet(View):
+class OperationViewSet(APIView):
     pagination_class = PaginationClass
     serializer_class = JSONSerializer
 
@@ -214,7 +215,7 @@ class ProteinListEvaluationViewSet(viewsets.ModelViewSet):
         return get_response(self, request, evaluation_list)
 
 
-class SetCountViewSet(View):
+class SetCountViewSet(APIView):
     pagination_class = PaginationClass
 
     def post(self, request, format=None):
@@ -230,7 +231,7 @@ class StatisticViewSet(viewsets.ModelViewSet):
         return get_response(self, request, calculate_statistics)
 
 
-class StatusViewSet(View):
+class StatusViewSet(APIView):
     pagination_class = PaginationClass
     serializer_class = JSONSerializer
 
@@ -244,7 +245,7 @@ class StatusViewSet(View):
             return HttpResponse(json_error_response)
 
 
-class ValueBoundsViewSet(View):
+class ValueBoundsViewSet(APIView):
     pagination_class = PaginationClass
     serializer_class = JSONSerializer
 
