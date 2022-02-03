@@ -5,6 +5,7 @@ import pandas as pd
 from django.db.models import Case, IntegerField, Q, Sum, When
 
 from query_app.apps import (
+    PATH_TO_RNA_PERCENTAGES,
     atac_adata,
     atac_cell_df,
     codex_adata,
@@ -113,21 +114,31 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
 
-    cell_df = cell_df[offset:limit]
+    if len(include_values) > 0 and modality == "rna":
+        try:
+            values_series = pd.read_hdf(PATH_TO_RNA_PERCENTAGES, f"{uuid}+{include_values[0]}")
+            cell_df["values"] = values_series
+            cell_df = cell_df[offset:limit]
+            cell_dict_list = cell_df.to_dict(orient="records")
+            return cell_dict_list
+        except:
+            cell_df = cell_df[offset:limit]
 
-    if len(include_values) > 0 and modality == "codex":
-        cell_df = annotate_with_values(cell_df, include_values, modality)
+            if len(include_values) > 0 and modality == "codex":
+                cell_df = annotate_with_values(cell_df, include_values, modality)
 
-    if isinstance(cell_df["clusters"].iloc[0], str):
-        clusters_list = [clusters.split(",") for clusters in cell_df["clusters"]]
-        cell_df["clusters"] = pd.Series(clusters_list, index=cell_df.index)
+            if isinstance(cell_df["clusters"].iloc[0], str):
+                clusters_list = [clusters.split(",") for clusters in cell_df["clusters"]]
+                cell_df["clusters"] = pd.Series(clusters_list, index=cell_df.index)
 
-    cell_dict_list = cell_df.to_dict(orient="records")
+            cell_dict_list = cell_df.to_dict(orient="records")
 
-    if len(include_values) > 0 and modality in ["atac", "rna"]:
-        cell_dict_list = annotate_list_with_values(cell_dict_list, include_values, modality)
+            if len(include_values) > 0 and modality in ["atac", "rna"]:
+                cell_dict_list = annotate_list_with_values(
+                    cell_dict_list, include_values, modality
+                )
 
-    return cell_dict_list
+            return cell_dict_list
 
 
 def get_max_value_items(query_set, limit, values_dict, offset):
