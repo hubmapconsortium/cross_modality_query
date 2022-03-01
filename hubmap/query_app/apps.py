@@ -37,8 +37,11 @@ def compute_dataset_hashes():
     hash_dict = {}
     try:
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
+            print(uuid)
             query_set = Cell.objects.filter(dataset__uuid__in=[uuid]).distinct("cell_id")
+            print(query_set.query)
             hash = make_pickle_and_hash(query_set, "cell")
+            print(hash)
             hash_dict[hash] = uuid
     except ProgrammingError:
         # empty database, most likely
@@ -121,6 +124,9 @@ class QueryAppConfig(AppConfig):
         codex_percentages = attempt_to_open_file(PATH_TO_CODEX_PERCENTAGES, "percentages")
         print("Percentages read in")
         rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
+        for i in rna_cell_df.index:
+            if isinstance(rna_cell_df.at[i, "clusters"], str):
+                rna_cell_df.at[i, "clusters"] = rna_cell_df.at[i, "clusters"].split(",")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:

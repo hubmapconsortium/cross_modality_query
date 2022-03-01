@@ -1,4 +1,5 @@
 import json
+from time import perf_counter
 from typing import List
 
 import pandas as pd
@@ -94,8 +95,7 @@ def annotate_list_with_values(dict_list, include_values, modality):
 
 
 def get_dataset_cells(uuid, include_values, offset, limit):
-    print("hash found")
-    print(uuid)
+    time_one = perf_counter()
     modality = (
         Dataset.objects.filter(uuid=uuid)
         .exclude(modality__isnull=True)
@@ -114,14 +114,25 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
 
+    time_two = perf_counter()
+    print(f"Time to get cell df subset: {time_two - time_one}")
+
     if len(include_values) > 0 and modality == "rna":
         try:
             values_series = pd.read_hdf(PATH_TO_RNA_PERCENTAGES, f"{uuid}+{include_values[0]}")
+            time_three = perf_counter()
+            print(f"Time to get values series: {time_three - time_two}")
             cell_df["values"] = values_series
+            time_four = perf_counter()
+            print(f"Time to insert values_series: {time_four - time_three}")
             cell_df = cell_df[offset:limit]
             cell_dict_list = cell_df.to_dict(orient="records")
+            time_five = perf_counter()
+            print(f"Time to convert to list: {time_five - time_four}")
+            print(f"Try succeeded")
             return cell_dict_list
         except:
+            print(f"Try failed")
             cell_df = cell_df[offset:limit]
 
             if len(include_values) > 0 and modality == "codex":
@@ -293,6 +304,10 @@ def evaluation_detail(self, request):
         if key in hash_dict:
             cell_dict_list = get_dataset_cells(hash_dict[key], include_values, offset, limit)
             return cell_dict_list
+
+        print(key)
+        print(hash_dict)
+
         eval_qs = evaluate_qs(set_type, key, limit, offset)
 
         self.queryset = eval_qs

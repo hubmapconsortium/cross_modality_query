@@ -57,7 +57,9 @@ def get_cells_list(query_params: Dict, input_set=None):
 
     query_set = Cell.objects.filter(filter).distinct("cell_id")
 
+    print(query_set.query)
     query_handle = make_pickle_and_hash(query_set, "cell")
+    print(query_handle)
     return query_handle
 
 
