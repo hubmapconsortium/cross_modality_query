@@ -96,6 +96,8 @@ def annotate_list_with_values(dict_list, include_values, modality):
 
 
 def get_dataset_cells(uuid, include_values, offset, limit):
+    print(f"Key found")
+
     modality = (
         Dataset.objects.filter(uuid=uuid)
         .exclude(modality__isnull=True)
@@ -115,6 +117,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     cell_df = cell_df[keep_columns]
 
     if len(include_values) > 0:
+        print("Include values")
         try:
             if len(include_values) == 1:
                 values_array = zarr_root[f"{modality}/{uuid}/{include_values[0]}"]
@@ -123,6 +126,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
                 cell_df["values"] = values_series
                 cell_df = cell_df[offset:limit]
                 cell_dict_list = cell_df.to_dict(orient="records")
+                print("Try succeeded")
                 return cell_dict_list
             else:
                 cell_df = cell_df[offset:limit]
@@ -144,7 +148,8 @@ def get_dataset_cells(uuid, include_values, offset, limit):
                 return cell_dict_list
 
         except Exception as e:
-
+            print("Try failed")
+            print(str(e))
             cell_df = cell_df[offset:limit]
 
             if len(include_values) > 0 and modality == "codex":

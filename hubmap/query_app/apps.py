@@ -41,6 +41,7 @@ def compute_dataset_hashes():
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
             print(uuid)
             query_set = Cell.objects.filter(dataset__uuid__in=[uuid]).distinct("cell_id")
+            print(query_set.query)
             hash = make_pickle_and_hash(query_set, "cell")
             print(hash)
             hash_dict[hash] = uuid

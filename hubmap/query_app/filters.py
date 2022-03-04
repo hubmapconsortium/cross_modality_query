@@ -95,7 +95,7 @@ def process_single_condition(
         raise ValueError(f"{var_id} not present in {modality} index")
 
     adata = adata[:, [var_id]]
-    bool_series = adata.X >= value
+    bool_series = adata.X > value
     adata = adata[bool_series, :]
     cell_ids = list(adata.obs.index)
 
