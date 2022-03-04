@@ -8,6 +8,7 @@ from django.apps import AppConfig
 from django.conf import settings
 from django.db.utils import ProgrammingError
 from pymongo import MongoClient
+from zarr.errors import PathNotFoundError
 
 
 def set_up_mongo():
@@ -40,7 +41,6 @@ def compute_dataset_hashes():
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
             print(uuid)
             query_set = Cell.objects.filter(dataset__uuid__in=[uuid]).distinct("cell_id")
-            print(query_set.query)
             hash = make_pickle_and_hash(query_set, "cell")
             print(hash)
             hash_dict[hash] = uuid
@@ -134,5 +134,7 @@ class QueryAppConfig(AppConfig):
         if "clusters" in codex_cell_df.columns:
             codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
             codex_cell_df = codex_cell_df.drop_duplicates()
-
-        zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
+        try:
+            zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
+        except PathNotFoundError:
+            zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="a")
