@@ -3,6 +3,7 @@ from pathlib import Path
 
 import anndata
 import pandas as pd
+import zarr
 from django.apps import AppConfig
 from django.conf import settings
 from django.db.utils import ProgrammingError
@@ -102,6 +103,7 @@ class QueryAppConfig(AppConfig):
         global rna_cell_df
         global atac_cell_df
         global hash_dict
+        global zarr_root
 
         set_up_mongo()
 
@@ -131,3 +133,6 @@ class QueryAppConfig(AppConfig):
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:
             codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
+            codex_cell_df = codex_cell_df.drop_duplicates()
+
+        zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
