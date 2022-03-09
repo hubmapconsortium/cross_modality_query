@@ -3,10 +3,12 @@ from pathlib import Path
 
 import anndata
 import pandas as pd
+import zarr
 from django.apps import AppConfig
 from django.conf import settings
 from django.db.utils import ProgrammingError
 from pymongo import MongoClient
+from zarr.errors import PathNotFoundError
 
 
 def set_up_mongo():
@@ -37,8 +39,11 @@ def compute_dataset_hashes():
     hash_dict = {}
     try:
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
+            print(uuid)
             query_set = Cell.objects.filter(dataset__uuid__in=[uuid]).distinct("cell_id")
+            print(query_set.query)
             hash = make_pickle_and_hash(query_set, "cell")
+            print(hash)
             hash_dict[hash] = uuid
     except ProgrammingError:
         # empty database, most likely
@@ -99,6 +104,7 @@ class QueryAppConfig(AppConfig):
         global rna_cell_df
         global atac_cell_df
         global hash_dict
+        global zarr_root
 
         set_up_mongo()
 
@@ -121,7 +127,15 @@ class QueryAppConfig(AppConfig):
         codex_percentages = attempt_to_open_file(PATH_TO_CODEX_PERCENTAGES, "percentages")
         print("Percentages read in")
         rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
+        for i in rna_cell_df.index:
+            if isinstance(rna_cell_df.at[i, "clusters"], str):
+                rna_cell_df.at[i, "clusters"] = rna_cell_df.at[i, "clusters"].split(",")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:
             codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
+            codex_cell_df = codex_cell_df.drop_duplicates()
+        try:
+            zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
+        except PathNotFoundError:
+            zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="a")
