@@ -222,13 +222,12 @@ class SetCountViewSet(APIView):
         return get_generic_response(self, query_set_count, request)
 
 
-class StatisticViewSet(viewsets.ModelViewSet):
-    queryset = StatReport.objects.all()
-    serializer_class = StatReportSerializer
+class StatisticViewSet(APIView):
     pagination_class = PaginationClass
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
-        return get_response(self, request, calculate_statistics)
+        return get_generic_response(self, calculate_statistics, request)
 
 
 class StatusViewSet(APIView):

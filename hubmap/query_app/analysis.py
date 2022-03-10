@@ -1,125 +1,123 @@
-import numpy as np
-from django.db.models import Avg, Max, Min, StdDev, Sum
+from statistics import mean, stdev
 
-from .models import AtacQuant, Cell, CodexQuant, RnaQuant, StatReport
-from .serializers import StatReportSerializer
+import numpy as np
+
+from .apps import atac_adata, codex_adata, rna_adata
 from .utils import unpickle_query_set
 from .validation import validate_bounds_args, validate_statistic_args
 
-
-def get_num_zeros(cell_set, quant_set):
-    num_zeroes = cell_set.count() - quant_set.count()
-    print("num_zeroes found")
-    return num_zeroes
+adatas = [codex_adata, rna_adata, atac_adata]
 
 
-def query_set_to_numpy(cell_set, quant_set):
-    quant_values = quant_set.values_list("value", flat=True)
-    num_zeroes = get_num_zeros(cell_set, quant_set)
-    zero_values = [0] * num_zeroes
-    quant_values = quant_values + zero_values
-    return np.ndarray(quant_values)
+def check_list(vals_list):
+    good_vals = []
+    bad_vals = []
+    for val in vals_list:
+        little_list = [val]
+        try:
+            if mean(little_list) >= 0:
+                good_vals.append(val)
+            else:
+                bad_vals.append(val)
+        except:
+            bad_vals.append(val)
+    return good_vals
+
+
+def get_adata_subset(adata, var_id, cell_ids):
+    adata = adata[cell_ids, :]
+    if len(adata.obs.index) == 0 or var_id not in adata.var.index:
+        return None
+    else:
+        return adata[:, [var_id]]
+
+
+def get_statistic_value(adata, stat_type):
+    if not adata:
+        return None
+    else:
+        if stat_type == "mean":
+            value = adata.X.mean()
+            if not value >= 0 and not isinstance(adata.X, np.ndarray):
+                data_list = adata.X.todense().flatten().tolist()
+                if isinstance(data_list[0], list):
+                    data_list = data_list[0]
+                data_list = check_list(data_list)
+                #                value = adata.X.todense().mean()
+                value = mean(data_list)
+        elif stat_type == "min":
+            value = adata.X.min()
+            if not value >= 0 and not isinstance(adata.X, np.ndarray):
+                data_list = adata.X.data.tolist()
+                value = min(data_list)
+        elif stat_type == "max":
+            value = adata.X.max()
+            if not value >= 0 and not isinstance(adata.X, np.ndarray):
+                data_list = adata.X.data.tolist()
+                value = max(data_list)
+        elif stat_type == "stddev":
+            if not isinstance(adata.X, np.ndarray):
+                value = adata.X.todense().std()
+            else:
+                value = adata.X.std()
+            if not value >= 0 and not isinstance(adata.X, np.ndarray):
+                data_list = adata.X.todense().flatten().tolist()
+                if isinstance(data_list[0], list):
+                    data_list = data_list[0]
+                data_list = check_list(data_list)
+                value = stdev(data_list)
+
+        return float(value)
 
 
 def get_stat_values(query_set, var_id, stat_type):
-    codex_cells = query_set.filter(modality__modality_name="codex")
-    rna_cells = query_set.filter(modality__modality_name="rna")
-    atac_cells = query_set.filter(modality__modality_name="atac")
+
+    codex_cells = list(
+        query_set.filter(modality__modality_name="codex").values_list("cell_id", flat=True)
+    )
+    rna_cells = list(
+        query_set.filter(modality__modality_name="rna").values_list("cell_id", flat=True)
+    )
+    atac_cells = list(
+        query_set.filter(modality__modality_name="atac").values_list("cell_id", flat=True)
+    )
 
     print("Cells for each modality found")
 
-    codex_quants = CodexQuant.objects.filter(q_var_id=var_id).filter(
-        q_cell_id__in=codex_cells.values_list("cell_id", flat=True)
-    )
-    rna_quants = RnaQuant.objects.filter(q_var_id=var_id).filter(
-        q_cell_id__in=rna_cells.values_list("cell_id", flat=True)
-    )
-    atac_quants = AtacQuant.objects.filter(q_var_id=var_id).filter(
-        q_cell_id__in=atac_cells.values_list("cell_id", flat=True)
-    )
+    codex_adata = get_adata_subset(adatas[0], var_id, codex_cells)
+    rna_adata = get_adata_subset(adatas[1], var_id, rna_cells)
+    atac_adata = get_adata_subset(adatas[2], var_id, atac_cells)
 
     print("Quants for each modality found")
 
-    if stat_type == "mean":
-        if get_num_zeros(rna_cells, rna_quants) > 0:
-            rna_value = rna_quants.aggregate(Sum("value"))["value__avg"]
-            rna_value = rna_value / rna_cells.count()
-        else:
-            rna_value = rna_quants.aggregate(Avg("value"))["value__avg"]
+    codex_value = get_statistic_value(codex_adata, stat_type)
+    rna_value = get_statistic_value(rna_adata, stat_type)
+    atac_value = get_statistic_value(atac_adata, stat_type)
 
-        print("RNA value found")
-
-        if get_num_zeros(atac_cells, atac_quants) > 0:
-            atac_value = atac_quants.aggregate(Sum("value"))["value__avg"]
-            atac_value = atac_value / atac_cells.count()
-        else:
-            atac_value = atac_quants.aggregate(Avg("value"))["value__avg"]
-
-        print("Atac value found")
-
-        codex_value = codex_quants.aggregate(Avg("value"))["value__avg"]
-
-        print("Codex value found")
-
-    elif stat_type == "min":
-        codex_value = codex_quants.aggregate(Min("value"))
-        if get_num_zeros(rna_cells, rna_quants) > 0:
-            rna_value = 0
-        else:
-            rna_value = rna_quants.aggregate(Min("value"))
-        if get_num_zeros(atac_cells, atac_quants) > 0:
-            atac_value = 0
-        else:
-            atac_value = atac_quants.aggregate(Min("value"))
-
-    elif stat_type == "max":
-        codex_value = codex_quants.aggregate(Max("value"))
-        rna_value = rna_quants.aggregate(Max("value"))
-        atac_value = atac_quants.aggregate(Max("value"))
-
-    elif stat_type == "stddev":
-        codex_value = codex_quants.aggregate(StdDev("value"))
-        if get_num_zeros(rna_cells, rna_quants) > 0:
-            rna_value = query_set_to_numpy(rna_cells, rna_quants).std()
-        else:
-            rna_value = rna_quants.aggregate(StdDev("value"))
-        if get_num_zeros(atac_cells, atac_quants) > 0:
-            atac_value = query_set_to_numpy(atac_cells, atac_quants).std()
-        else:
-            atac_value = atac_quants.aggregate(StdDev("value"))
-
-    codex_cells_excluded = get_num_zeros(codex_cells, codex_quants)
-
-    if not codex_cells_excluded:
-        codex_cells_excluded = 0
-
-    return codex_value, rna_value, atac_value, codex_cells_excluded
+    return codex_value, rna_value, atac_value
 
 
 def calc_stats(query_handle, set_type, var_id, stat_type):
     print(f"Calc stats called")
-    query_set = unpickle_query_set(query_handle, set_type)
-    codex_value, rna_value, atac_value, codex_cells_excluded = get_stat_values(
-        query_set, var_id, stat_type
-    )
-    stat_report = StatReport(
-        query_handle=query_handle,
-        var_id=var_id,
-        statistic_type=stat_type,
-        rna_value=rna_value,
-        atac_value=atac_value,
-        codex_value=codex_value,
-        num_cells_excluded=codex_cells_excluded,
-    )
-    stat_report.save()
-    stat_reports = (
-        StatReport.objects.filter(query_handle=query_handle)
-        .filter(var_id=var_id)
-        .filter(statistic_type=stat_type)
-        .order_by("pk")
-    )
-    print(f"Stat reports count: {stat_reports.count()}")
-    return stat_reports
+    query_set = unpickle_query_set(query_handle)[0]
+    codex_value, rna_value, atac_value = get_stat_values(query_set, var_id, stat_type)
+    stat_report_dict = {
+        "query_handle": query_handle,
+        "var_id": var_id,
+        "statistic_type": stat_type,
+        "rna_value": rna_value,
+        "atac_value": atac_value,
+        "codex_value": codex_value,
+    }
+
+    response_dict = {}
+
+    response_dict["count"] = 1
+    response_dict["next"] = None
+    response_dict["previous"] = None
+    response_dict["results"] = [stat_report_dict]
+
+    return response_dict
 
 
 def calculate_statistics(self, request):
@@ -133,63 +131,32 @@ def calculate_statistics(self, request):
 
     query_handle, set_type, var_id, stat_type = validate_statistic_args(query_params)
 
-    existing_stat_reports = (
-        StatReport.objects.filter(query_handle=query_handle)
-        .filter(var_id=var_id)
-        .filter(statistic_type=stat_type)
-        .order_by("pk")
-    )
+    stat_report_dict = calc_stats(query_handle, set_type, var_id, stat_type)
 
-    if existing_stat_reports.first() is not None:
-        print(f"Existing stat reports found")
-        query_set = existing_stat_reports
-
-    else:
-        query_set = calc_stats(query_handle, set_type, var_id, stat_type)
-
-    self.queryset = query_set
-    # Set context
-    context = {
-        "request": request,
-    }
-
-    response = StatReportSerializer(query_set, many=True, context=context).data
-
-    return response
+    return stat_report_dict
 
 
 def get_bounds(self, request):
     query_params = request.data.dict()
     validate_bounds_args(query_params)
     modality = query_params["modality"]
-    if modality == "codex":
-        query_set = CodexQuant.objects.all()
-    elif modality == "rna":
-        query_set = RnaQuant.objects.all()
-    elif modality == "atac":
-        query_set = AtacQuant.objects.all()
+
+    modalities_dict = {"rna": rna_adata, "atac": atac_adata, "codex": codex_adata}
+    adata = modalities_dict[modality]
+
     if "var_id" in query_params.keys():
-        query_set = query_set.filter(q_var_id__iexact=query_params["var_id"])
-        if modality == "rna":
-            rna_cells_count = Cell.objects.filter(dataset__modality__modality_name="rna").count()
-            if rna_cells_count > query_set.count():
-                min_value = 0.0
-            else:
-                min_value = query_set.aggregate(Min("value"))["value__min"]
-        if modality == "atac":
-            atac_cells_count = Cell.objects.filter(dataset__modality__modality_name="atac").count()
-            if atac_cells_count > query_set.count():
-                min_value = 0.0
-            else:
-                min_value = query_set.aggregate(Min("value"))["value__min"]
+        adata = adata[:, [query_params["var_id"]]]
 
-    else:
-        if modality in ["atac", "rna"]:
-            min_value = 0.0
+    x = adata.X
+    #    if not isinstance(x, np.ndarray):
+    #        x = x.todense()
 
-    if modality == "codex":
-        min_value = query_set.aggregate(Min("value"))["value__min"]
+    min_value = float(x.min())
+    max_value = float(x.max())
 
-    max_value = query_set.aggregate(Max("value"))["value__max"]
+    if not min_value >= 0 and not isinstance(adata.X, np.ndarray):
+        data_list = adata.X.data.tolist()
+        min_value = min(data_list)
+        max_value = max(data_list)
 
     return {"results": {"minimum_value": min_value, "maximum_value": max_value}}
