@@ -134,7 +134,6 @@ class QueryAppConfig(AppConfig):
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:
             codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
-            codex_cell_df = codex_cell_df.drop_duplicates()
         try:
             zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
         except PathNotFoundError:
