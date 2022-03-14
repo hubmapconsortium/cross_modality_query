@@ -38,6 +38,7 @@ def compute_dataset_hashes():
 
     hash_dict = {}
     uuid_dict = {}
+    count_dict = {}
     try:
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
             print(uuid)
@@ -51,7 +52,7 @@ def compute_dataset_hashes():
     except ProgrammingError:
         # empty database, most likely
         pass
-    return hash_dict, uuid_dict
+    return hash_dict, uuid_dict, count_dict
 
 
 def get_pval_df(path_to_pvals):
