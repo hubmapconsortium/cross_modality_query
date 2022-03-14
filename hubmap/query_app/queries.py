@@ -143,10 +143,13 @@ def cell_query(self, request):
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
-        if query_params["input_type"] == "dataset" and len(query_params["input_set"]) == 1:
-            if query_params["input_set"][0] in uuid_dict:
-                print(f"Found handle in uuid dict")
-                pickle_hash = uuid_dict[query_params["input_set"][0]]
+        if (
+            query_params["input_type"] == "dataset"
+            and len(query_params["input_set"]) == 1
+            and query_params["input_set"][0] in uuid_dict
+        ):
+            print(f"Found handle in uuid dict")
+            pickle_hash = uuid_dict[query_params["input_set"][0]]
         else:
             pickle_hash = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
 
