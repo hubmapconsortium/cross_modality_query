@@ -59,6 +59,17 @@ from .validation import (
 )
 
 
+def copy_pagination_format(results_json: str) -> str:
+    response_dict = {}
+    response_dict["count"] = 1
+    response_dict["next"] = None
+    response_dict["previous"] = None
+    response_dict["results"] = []
+    response_json = json.dumps(response_dict)
+    response_json = response_json.replace(json.dumps([]), results_json)
+    return response_json
+
+
 def annotate_with_values(cell_df, include_values, modality):
     if modality == "atac":
         adata = atac_adata
@@ -132,7 +143,8 @@ def get_dataset_cells(uuid, include_values, offset, limit):
                 cell_df["values"] = values_series
                 times.append(perf_counter())
                 cell_df = cell_df[offset:limit]
-                cell_dict_list = cell_df.to_dict(orient="records")
+                cell_dict_list = cell_df.to_json(orient="records")
+                #                cell_dict_json = cell_df.to_json()
                 times.append(perf_counter())
                 print("Try succeeded")
 
@@ -141,9 +153,9 @@ def get_dataset_cells(uuid, include_values, offset, limit):
                 print(f"Time to make values dict list: {times[3] - times[2]}")
                 print(f"Time to get values series: {times[4] - times[3]}")
                 print(f"Time to insert values series: {times[5] - times[4]}")
-                print(f"Time to convert df to records: {times[6] - times[5]}")
+                print(f"Time to convert df to json: {times[6] - times[5]}")
 
-                return cell_dict_list
+                return copy_pagination_format(cell_dict_list)
             else:
                 cell_df = cell_df[offset:limit]
 

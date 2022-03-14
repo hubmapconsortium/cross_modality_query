@@ -37,6 +37,7 @@ def compute_dataset_hashes():
     from .utils import make_pickle_and_hash
 
     hash_dict = {}
+    uuid_dict = {}
     try:
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
             print(uuid)
@@ -45,10 +46,11 @@ def compute_dataset_hashes():
             hash = make_pickle_and_hash(query_set, "cell")
             print(hash)
             hash_dict[hash] = uuid
+            uuid_dict[uuid] = hash
     except ProgrammingError:
         # empty database, most likely
         pass
-    return hash_dict
+    return hash_dict, uuid_dict
 
 
 def get_pval_df(path_to_pvals):
@@ -104,6 +106,7 @@ class QueryAppConfig(AppConfig):
         global rna_cell_df
         global atac_cell_df
         global hash_dict
+        global uuid_dict
         global zarr_root
 
         set_up_mongo()
@@ -112,7 +115,7 @@ class QueryAppConfig(AppConfig):
         rna_adata = attempt_to_open_file(PATH_TO_RNA_H5AD)
         atac_adata = attempt_to_open_file(PATH_TO_ATAC_H5AD)
 
-        hash_dict = compute_dataset_hashes()
+        hash_dict, uuid_dict = compute_dataset_hashes()
 
         print("Quant adatas read in")
         if settings.SKIP_LOADING_PVALUES:

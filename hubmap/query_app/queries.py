@@ -2,6 +2,7 @@ from typing import Dict
 
 from django.core.cache import cache
 
+from .apps import uuid_dict
 from .filters import (
     get_cell_filter,
     get_cluster_filter,
@@ -142,7 +143,12 @@ def cell_query(self, request):
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
-        pickle_hash = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
+        if query_params["input_type"] == "dataset" and len(query_params["input_set"]) == 1:
+            if query_params["input_set"][0] in uuid_dict:
+                print(f"Found handle in uuid dict")
+                pickle_hash = uuid_dict[query_params["input_set"][0]]
+        else:
+            pickle_hash = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
 
     return get_response_from_query_handle(pickle_hash, "cell")
 

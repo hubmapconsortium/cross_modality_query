@@ -1,5 +1,6 @@
 import json
 import traceback
+from time import perf_counter
 from typing import Callable
 
 import django.core.serializers
@@ -84,6 +85,8 @@ def operation(self, request):
 def get_response(self, request, callable: Callable):
     try:
         response = callable(self, request)
+        if isinstance(response, str):
+            return HttpResponse(response)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
