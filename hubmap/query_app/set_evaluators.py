@@ -96,6 +96,7 @@ def annotate_list_with_values(dict_list, include_values, modality):
 
 
 def get_dataset_cells(uuid, include_values, offset, limit):
+    times = []
     print(f"Key found")
 
     modality = (
@@ -111,22 +112,37 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     elif modality == "codex":
         cell_df = codex_cell_df
 
+    times.append(perf_counter())
     cell_df = cell_df[cell_df["dataset"] == uuid]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
+    times.append(perf_counter())
 
     if len(include_values) > 0:
         print("Include values")
         try:
             if len(include_values) == 1:
                 values_array = zarr_root[f"{modality}/{uuid}/{include_values[0]}"]
+                times.append(perf_counter())
                 values_dict_list = [{include_values[0]: float(val)} for val in values_array]
+                times.append(perf_counter())
                 values_series = pd.Series(values_dict_list, index=cell_df.index)
+                times.append(perf_counter())
                 cell_df["values"] = values_series
+                times.append(perf_counter())
                 cell_df = cell_df[offset:limit]
                 cell_dict_list = cell_df.to_dict(orient="records")
+                times.append(perf_counter())
                 print("Try succeeded")
+
+                print(f"Time to get cell df subset: {times[1] - times[0]}")
+                print(f"Time to get values array from zarr: {times[2] - times[1]}")
+                print(f"Time to make values dict list: {times[3] - times[2]}")
+                print(f"Time to get values series: {times[4] - times[3]}")
+                print(f"Time to insert values series: {times[5] - times[4]}")
+                print(f"Time to convert df to records: {times[6] - times[5]}")
+
                 return cell_dict_list
             else:
                 cell_df = cell_df[offset:limit]
