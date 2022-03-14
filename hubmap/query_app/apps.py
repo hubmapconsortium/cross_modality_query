@@ -1,3 +1,6 @@
+import hashlib
+import pickle
+from datetime import datetime
 from os import fspath
 from pathlib import Path
 
@@ -10,17 +13,7 @@ from django.db.utils import ProgrammingError
 from pymongo import MongoClient
 from zarr.errors import PathNotFoundError
 
-
-def set_up_mongo():
-    print(settings.MONGO_HOST_AND_PORT)
-    client = MongoClient(settings.MONGO_HOST_AND_PORT)
-    db = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
-    db.create_index("created_at", expireAfterSeconds=settings.TOKEN_EXPIRATION_TIME)
-    #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
-
-
 PATH_TO_H5AD_FILES = Path("/opt")
-
 PATH_TO_CODEX_H5AD = PATH_TO_H5AD_FILES / "codex.h5ad"
 PATH_TO_RNA_H5AD = PATH_TO_H5AD_FILES / "rna.h5ad"
 PATH_TO_ATAC_H5AD = PATH_TO_H5AD_FILES / "atac.h5ad"
@@ -32,9 +25,35 @@ PATH_TO_ATAC_PERCENTAGES = PATH_TO_H5AD_FILES / "atac_precompute.hdf5"
 PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
 
+def make_pickle_and_hash(qs, set_type):
+    client = MongoClient(settings.MONGO_HOST_AND_PORT)
+    collection = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
+
+    qry = qs.query
+    query_pickle = pickle.dumps(qry)
+    query_handle = str(hashlib.sha256(query_pickle).hexdigest())
+
+    doc = {
+        "query_handle": query_handle,
+        "query_pickle": query_pickle,
+        "set_type": set_type,
+        "created_at": datetime.utcnow(),
+    }
+    collection.insert_one(doc)
+
+    return query_handle
+
+
+def set_up_mongo():
+    print(settings.MONGO_HOST_AND_PORT)
+    client = MongoClient(settings.MONGO_HOST_AND_PORT)
+    db = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
+    db.create_index("created_at", expireAfterSeconds=settings.TOKEN_EXPIRATION_TIME)
+    #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
+
+
 def compute_dataset_hashes():
     from .models import Cell, Dataset
-    from .utils import make_pickle_and_hash
 
     hash_dict = {}
     uuid_dict = {}
