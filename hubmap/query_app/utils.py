@@ -167,7 +167,7 @@ def get_response_with_count_from_query_handle(query_handle: str):
     query_set, set_type = unpickle_query_set(query_handle)
     query_dict["set_type"] = set_type
     count = count_dict[query_handle] if query_handle in count_dict else query_set.count()
-    query_dict["count"] = coount
+    query_dict["count"] = count
     response_dict = {}
     response_dict["count"] = 1
     response_dict["next"] = None
