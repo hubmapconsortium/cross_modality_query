@@ -42,8 +42,8 @@ JSONSerializer = django.core.serializers.get_serializer("json")
 
 
 class PaginationClass(PageNumberPagination):
-    page_size = 100000
-    max_page_size = 100000
+    page_size = 200000
+    max_page_size = 200000
 
 
 def get_generic_response(self, callable, request):
