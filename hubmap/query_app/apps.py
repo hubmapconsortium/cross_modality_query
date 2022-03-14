@@ -47,6 +47,7 @@ def compute_dataset_hashes():
             print(hash)
             hash_dict[hash] = uuid
             uuid_dict[uuid] = hash
+            count_dict[hash] = query_set.count()
     except ProgrammingError:
         # empty database, most likely
         pass
@@ -107,6 +108,7 @@ class QueryAppConfig(AppConfig):
         global atac_cell_df
         global hash_dict
         global uuid_dict
+        global count_dict
         global zarr_root
 
         set_up_mongo()
@@ -115,7 +117,7 @@ class QueryAppConfig(AppConfig):
         rna_adata = attempt_to_open_file(PATH_TO_RNA_H5AD)
         atac_adata = attempt_to_open_file(PATH_TO_ATAC_H5AD)
 
-        hash_dict, uuid_dict = compute_dataset_hashes()
+        hash_dict, uuid_dict, count_dict = compute_dataset_hashes()
 
         print("Quant adatas read in")
         if settings.SKIP_LOADING_PVALUES:
