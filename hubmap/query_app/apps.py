@@ -53,7 +53,7 @@ def set_up_mongo():
 
 
 def compute_dataset_hashes():
-    from .models import Cell, Dataset
+    from .models import Cell, Dataset, Modality
 
     hash_dict = {}
     uuid_dict = {}
@@ -67,6 +67,18 @@ def compute_dataset_hashes():
             print(hash)
             hash_dict[hash] = uuid
             uuid_dict[uuid] = hash
+            count_dict[hash] = query_set.count()
+
+        for modality in Modality.objects.all().values_list("modality_name", flat=True):
+            print(modality)
+            query_set = Cell.objects.filter(modality__modality_name__in=[modality]).distinct(
+                "cell_id"
+            )
+            print(query_set.query)
+            hash = make_pickle_and_hash(query_set, "cell")
+            print(hash)
+            hash_dict[hash] = modality
+            uuid_dict[modality] = hash
             count_dict[hash] = query_set.count()
     except ProgrammingError:
         # empty database, most likely

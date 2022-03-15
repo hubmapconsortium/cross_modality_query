@@ -358,9 +358,6 @@ def evaluation_detail(self, request):
             cell_dict_list = get_dataset_cells(hash_dict[key], include_values, offset, limit)
             return cell_dict_list
 
-        print(key)
-        print(hash_dict)
-
         eval_qs = evaluate_qs(set_type, key, limit, offset)
 
         self.queryset = eval_qs

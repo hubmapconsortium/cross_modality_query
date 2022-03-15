@@ -1,3 +1,4 @@
+from time import perf_counter
 from typing import Dict
 
 from django.core.cache import cache
@@ -57,11 +58,7 @@ def get_cells_list(query_params: Dict, input_set=None):
     filter = get_cell_filter(query_params)
 
     query_set = Cell.objects.filter(filter).distinct("cell_id")
-
-    if query_set:
-        print(query_set.query)
     query_handle = make_pickle_and_hash(query_set, "cell")
-    print(query_handle)
     return query_handle
 
 
@@ -144,7 +141,7 @@ def cell_query(self, request):
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
         if (
-            query_params["input_type"] == "dataset"
+            query_params["input_type"] in ["dataset", "modality"]
             and len(query_params["input_set"]) == 1
             and query_params["input_set"][0] in uuid_dict
         ):
