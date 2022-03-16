@@ -176,7 +176,6 @@ class QueryAppConfig(AppConfig):
         for i in rna_cell_df.index:
             if isinstance(rna_cell_df.at[i, "clusters"], str):
                 rna_cell_df.at[i, "clusters"] = rna_cell_df.at[i, "clusters"].split(",")
-        rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:
