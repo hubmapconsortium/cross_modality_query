@@ -31,16 +31,21 @@ def get_precomputed_datasets(modality, min_cell_percentage, input_set):
     elif modality == "codex":
         df = codex_percentages
 
+    print(input_set)
     input_set_split = split_at_comparator(input_set[0])
+    print(input_set_split)
     input_set_split = [item.strip() for item in input_set_split]
+    print(input_set_split)
     var_id = input_set_split[0]
     cutoff = float(input_set_split[2])
 
-    if var_id in df["var_id"].values and float(cutoff) in df["cutoff"].values:
-        df = df[df["var_id"] == var_id]
-        df = df[df["cutoff"] == cutoff]
-        df = df[df["percentage"] >= float(min_cell_percentage)]
-        return Q(uuid__in=list(df["dataset"].unique()))
+    if var_id in df["var_id"].values and cutoff in df["cutoff"].values:
+        try:
+            df = df.loc[(var_id, cutoff, slice(None))]
+            df = df[df["percentage"] >= float(min_cell_percentage)]
+            return Q(uuid__in=list(df["dataset"].unique()))
+        except:
+            print((var_id, cutoff, slice(None)))
 
     return None
 

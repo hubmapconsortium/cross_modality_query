@@ -1,4 +1,5 @@
 import json
+from time import perf_counter
 from typing import List
 
 import numpy as np
@@ -77,6 +78,7 @@ def get_quant_value(cell_id, gene_symbol, modality):
 
 
 def get_precomputed_percentage(uuid, values_type, include_values):
+    time_one = perf_counter()
     modality = (
         Dataset.objects.filter(uuid=uuid)
         .exclude(modality__isnull=True)
@@ -100,10 +102,13 @@ def get_precomputed_percentage(uuid, values_type, include_values):
     cutoff = float(set_split[2])
 
     if var_id in df["var_id"].values and cutoff in df["cutoff"].values:
-        df = df[df["var_id"] == var_id]
-        df = df[df["cutoff"] == cutoff]
-        df = df[df["dataset"] == uuid]
-        return list(df["percentage"])[0]
+        try:
+            df = df.loc[(var_id, cutoff, uuid)]
+            return df["percentage"].iat[0]
+
+        except:
+            print((var_id, cutoff, uuid))
+    #        print(f"Time for triple subset {time_six - time_five}")
 
     return None
 

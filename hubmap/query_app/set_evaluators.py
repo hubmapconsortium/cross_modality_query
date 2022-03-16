@@ -124,7 +124,9 @@ def get_dataset_cells(uuid, include_values, offset, limit):
         cell_df = codex_cell_df
 
     times.append(perf_counter())
+    print(cell_df.index)
     cell_df = cell_df[cell_df["dataset"] == uuid]
+    #    cell_df = cell_df[(uuid)]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
