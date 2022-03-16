@@ -108,18 +108,17 @@ def attempt_to_open_file(file_path, key=None):
         assert file_path.suffix == ".hdf5"
         try:
             df = pd.read_hdf(file_path, key)
+
+            columns_dict = {"percentages": ["var_id", "cutoff", "dataset"], "cell": ["dataset"]}
+            df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
+
         except (FileNotFoundError, KeyError):
             print(f"File path: {file_path} not found")
-            df = pd.DataFrame()
-
-        if key == "percentages":
-            df = df.set_index(
-                ["var_id", "cutoff", "dataset"], drop=False, inplace=False
-            ).sort_index()
-
-        elif key == "cell":
-            df = df.set_index(["dataset"], drop=False, inplace=False).sort_index()
-            print(df.index)
+            columns_dict = {
+                "percentages": ["var_id", "cutoff", "dataset", "percentage"],
+                "cell": ["cell_id", "dataset", "organ", "modality", "clusters"],
+            }
+            df = pd.DataFrame(columns=columns_dict[key])
 
         return df
 
@@ -129,7 +128,7 @@ def attempt_to_open_file(file_path, key=None):
             df = get_pval_df(file_path)
         except (FileNotFoundError, KeyError):
             print(f"File path: {file_path} not found")
-            df = pd.DataFrame()
+            df = pd.DataFrame(columns=["grouping_name", "gene_id", "value"])
         return df
 
 
@@ -178,7 +177,6 @@ class QueryAppConfig(AppConfig):
             if isinstance(rna_cell_df.at[i, "clusters"], str):
                 rna_cell_df.at[i, "clusters"] = rna_cell_df.at[i, "clusters"].split(",")
         rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
-        print(rna_cell_df.index)
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:
