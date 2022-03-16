@@ -343,9 +343,9 @@ def process_evaluation_args(query_params):
     if (
         "limit" not in query_params.keys()
         or not query_params["limit"].isdigit()
-        or int(query_params["limit"]) > 100000
+        or int(query_params["limit"]) > 200000
     ):
-        query_params["limit"] = 100000
+        query_params["limit"] = 200000
     else:
         query_params["limit"] = int(query_params["limit"])
 

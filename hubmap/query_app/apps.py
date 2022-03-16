@@ -1,3 +1,6 @@
+import hashlib
+import pickle
+from datetime import datetime
 from os import fspath
 from pathlib import Path
 
@@ -10,17 +13,7 @@ from django.db.utils import ProgrammingError
 from pymongo import MongoClient
 from zarr.errors import PathNotFoundError
 
-
-def set_up_mongo():
-    print(settings.MONGO_HOST_AND_PORT)
-    client = MongoClient(settings.MONGO_HOST_AND_PORT)
-    db = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
-    db.create_index("created_at", expireAfterSeconds=settings.TOKEN_EXPIRATION_TIME)
-    #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
-
-
 PATH_TO_H5AD_FILES = Path("/opt")
-
 PATH_TO_CODEX_H5AD = PATH_TO_H5AD_FILES / "codex.h5ad"
 PATH_TO_RNA_H5AD = PATH_TO_H5AD_FILES / "rna.h5ad"
 PATH_TO_ATAC_H5AD = PATH_TO_H5AD_FILES / "atac.h5ad"
@@ -32,11 +25,39 @@ PATH_TO_ATAC_PERCENTAGES = PATH_TO_H5AD_FILES / "atac_precompute.hdf5"
 PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
 
+def make_pickle_and_hash(qs, set_type):
+    client = MongoClient(settings.MONGO_HOST_AND_PORT)
+    collection = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
+
+    qry = qs.query
+    query_pickle = pickle.dumps(qry)
+    query_handle = str(hashlib.sha256(query_pickle).hexdigest())
+
+    doc = {
+        "query_handle": query_handle,
+        "query_pickle": query_pickle,
+        "set_type": set_type,
+        "created_at": datetime.utcnow(),
+    }
+    collection.insert_one(doc)
+
+    return query_handle
+
+
+def set_up_mongo():
+    print(settings.MONGO_HOST_AND_PORT)
+    client = MongoClient(settings.MONGO_HOST_AND_PORT)
+    db = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
+    db.create_index("created_at", expireAfterSeconds=settings.TOKEN_EXPIRATION_TIME)
+    #    db.log_events.createIndex({"created_at": 1}, {expireAfterSeconds: TOKEN_EXPIRATION_TIME})
+
+
 def compute_dataset_hashes():
-    from .models import Cell, Dataset
-    from .utils import make_pickle_and_hash
+    from .models import Cell, Dataset, Modality
 
     hash_dict = {}
+    uuid_dict = {}
+    count_dict = {}
     try:
         for uuid in Dataset.objects.all().values_list("uuid", flat=True):
             print(uuid)
@@ -45,10 +66,24 @@ def compute_dataset_hashes():
             hash = make_pickle_and_hash(query_set, "cell")
             print(hash)
             hash_dict[hash] = uuid
+            uuid_dict[uuid] = hash
+            count_dict[hash] = query_set.count()
+
+        for modality in Modality.objects.all().values_list("modality_name", flat=True):
+            print(modality)
+            query_set = Cell.objects.filter(modality__modality_name__in=[modality]).distinct(
+                "cell_id"
+            )
+            print(query_set.query)
+            hash = make_pickle_and_hash(query_set, "cell")
+            print(hash)
+            hash_dict[hash] = modality
+            uuid_dict[modality] = hash
+            count_dict[hash] = query_set.count()
     except ProgrammingError:
         # empty database, most likely
         pass
-    return hash_dict
+    return hash_dict, uuid_dict, count_dict
 
 
 def get_pval_df(path_to_pvals):
@@ -73,9 +108,18 @@ def attempt_to_open_file(file_path, key=None):
         assert file_path.suffix == ".hdf5"
         try:
             df = pd.read_hdf(file_path, key)
+
+            columns_dict = {"percentages": ["var_id", "cutoff", "dataset"], "cell": ["dataset"]}
+            df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
+
         except (FileNotFoundError, KeyError):
             print(f"File path: {file_path} not found")
-            df = pd.DataFrame()
+            columns_dict = {
+                "percentages": ["var_id", "cutoff", "dataset", "percentage"],
+                "cell": ["cell_id", "dataset", "organ", "modality", "clusters"],
+            }
+            df = pd.DataFrame(columns=columns_dict[key])
+
         return df
 
     elif key == "pval":
@@ -84,7 +128,7 @@ def attempt_to_open_file(file_path, key=None):
             df = get_pval_df(file_path)
         except (FileNotFoundError, KeyError):
             print(f"File path: {file_path} not found")
-            df = pd.DataFrame()
+            df = pd.DataFrame(columns=["grouping_name", "gene_id", "value"])
         return df
 
 
@@ -104,6 +148,8 @@ class QueryAppConfig(AppConfig):
         global rna_cell_df
         global atac_cell_df
         global hash_dict
+        global uuid_dict
+        global count_dict
         global zarr_root
 
         set_up_mongo()
@@ -112,7 +158,7 @@ class QueryAppConfig(AppConfig):
         rna_adata = attempt_to_open_file(PATH_TO_RNA_H5AD)
         atac_adata = attempt_to_open_file(PATH_TO_ATAC_H5AD)
 
-        hash_dict = compute_dataset_hashes()
+        hash_dict, uuid_dict, count_dict = compute_dataset_hashes()
 
         print("Quant adatas read in")
         if settings.SKIP_LOADING_PVALUES:
@@ -130,11 +176,11 @@ class QueryAppConfig(AppConfig):
         for i in rna_cell_df.index:
             if isinstance(rna_cell_df.at[i, "clusters"], str):
                 rna_cell_df.at[i, "clusters"] = rna_cell_df.at[i, "clusters"].split(",")
+        rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
         if "clusters" in codex_cell_df.columns:
             codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
-            codex_cell_df = codex_cell_df.drop_duplicates()
         try:
             zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
         except PathNotFoundError:

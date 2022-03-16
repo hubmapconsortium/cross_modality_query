@@ -1,5 +1,6 @@
 import json
 import traceback
+from time import perf_counter
 from typing import Callable
 
 import django.core.serializers
@@ -42,8 +43,8 @@ JSONSerializer = django.core.serializers.get_serializer("json")
 
 
 class PaginationClass(PageNumberPagination):
-    page_size = 100000
-    max_page_size = 100000
+    page_size = 200000
+    max_page_size = 200000
 
 
 def get_generic_response(self, callable, request):
@@ -84,6 +85,8 @@ def operation(self, request):
 def get_response(self, request, callable: Callable):
     try:
         response = callable(self, request)
+        if isinstance(response, str):
+            return HttpResponse(response)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
@@ -222,13 +225,12 @@ class SetCountViewSet(APIView):
         return get_generic_response(self, query_set_count, request)
 
 
-class StatisticViewSet(viewsets.ModelViewSet):
-    queryset = StatReport.objects.all()
-    serializer_class = StatReportSerializer
+class StatisticViewSet(APIView):
     pagination_class = PaginationClass
+    serializer_class = JSONSerializer
 
     def post(self, request, format=None):
-        return get_response(self, request, calculate_statistics)
+        return get_generic_response(self, calculate_statistics, request)
 
 
 class StatusViewSet(APIView):
