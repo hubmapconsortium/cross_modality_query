@@ -110,6 +110,15 @@ def attempt_to_open_file(file_path, key=None):
             df = pd.read_hdf(file_path, key)
 
             columns_dict = {"percentages": ["var_id", "cutoff", "dataset"], "cell": ["dataset"]}
+
+            if key == "cell":
+                if "clusters" in df.columns:
+                    df = df[~df["clusters"].isna()]
+
+                for i in df.index:
+                    if isinstance(df.at[i, "clusters"], str):
+                        df.at[i, "clusters"] = df.at[i, "clusters"].split(",")
+
             df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
 
         except (FileNotFoundError, KeyError):
@@ -151,6 +160,7 @@ class QueryAppConfig(AppConfig):
         global uuid_dict
         global count_dict
         global zarr_root
+        global codex_store
 
         set_up_mongo()
 
@@ -173,14 +183,13 @@ class QueryAppConfig(AppConfig):
         codex_percentages = attempt_to_open_file(PATH_TO_CODEX_PERCENTAGES, "percentages")
         print("Percentages read in")
         rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
-        for i in rna_cell_df.index:
-            if isinstance(rna_cell_df.at[i, "clusters"], str):
-                rna_cell_df.at[i, "clusters"] = rna_cell_df.at[i, "clusters"].split(",")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
-        if "clusters" in codex_cell_df.columns:
-            codex_cell_df = codex_cell_df[~codex_cell_df["clusters"].isna()]
         try:
             zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
         except PathNotFoundError:
             zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="a")
+        try:
+            codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="r")
+        except:
+            codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="a")

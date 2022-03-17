@@ -11,6 +11,7 @@ from query_app.apps import (
     atac_cell_df,
     codex_adata,
     codex_cell_df,
+    codex_store,
     hash_dict,
     rna_adata,
     rna_cell_df,
@@ -118,12 +119,18 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     )
     if modality == "rna":
         cell_df = rna_cell_df
+        cell_df = cell_df.loc[(uuid)]
+
     elif modality == "atac":
         cell_df = atac_cell_df
-    elif modality == "codex":
-        cell_df = codex_cell_df
+        cell_df = cell_df.loc[(uuid)]
 
-    cell_df = cell_df.loc[(uuid)]
+    elif modality == "codex":
+        if uuid in codex_store.keys():
+            cell_df = codex_store.get(uuid)
+        else:
+            cell_df = codex_cell_df
+            cell_df = cell_df.loc[(uuid)]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
