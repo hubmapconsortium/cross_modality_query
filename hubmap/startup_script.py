@@ -154,13 +154,11 @@ def create_genes(hdf_file: Path):
 
 def create_organs(hdf_file: Path):
     if hdf_file.stem == "codex":
-        organs_set = set({})
+        organs_set = set()
         store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
             cell_df = pd.read_hdf(hdf_file, key)
-            organs = list(cell_df["organ"].unique())
-            for organ in organs:
-                organs_set.add(organ)
+            organs_set.update(cell_df["organ"])
 
         organs = list(organs_set)
     else:
@@ -256,7 +254,7 @@ def delete_old_data(modality: str):
     Cluster.objects.filter(dataset__in=modality_datasets).delete()
     Modality.objects.filter(modality_name__icontains=modality).delete()
 
-    if modality in ["codex"]:
+    if modality in {"codex"}:
         Protein.objects.all().delete()
 
 
