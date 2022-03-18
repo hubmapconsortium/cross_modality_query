@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import Callable
 
 import django.core.serializers
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.views import View
@@ -43,8 +44,8 @@ JSONSerializer = django.core.serializers.get_serializer("json")
 
 
 class PaginationClass(PageNumberPagination):
-    page_size = 200000
-    max_page_size = 200000
+    page_size = settings.MAX_PAGE_SIZE
+    max_page_size = settings.MAX_PAGE_SIZE
 
 
 def get_generic_response(self, callable, request):

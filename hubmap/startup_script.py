@@ -23,7 +23,7 @@ from query_app.models import Cell, Cluster, Dataset, Gene, Modality, Organ, Prot
 
 def set_up_cell_cluster_relationships(hdf_file):
     if hdf_file.stem == "codex":
-        store = pd.HDFStore(hdf_file)
+        store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
             cell_df = store.get(key)
             for i in cell_df.index:
@@ -130,7 +130,7 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None, grouping_type: st
 
 def create_cells(hdf_file: Path):
     if hdf_file.stem == "codex":
-        store = pd.HDFStore(hdf_file)
+        store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
             cell_df = pd.read_hdf(hdf_file, key)
             df_to_db(cell_df, "cell")
@@ -155,7 +155,7 @@ def create_genes(hdf_file: Path):
 def create_organs(hdf_file: Path):
     if hdf_file.stem == "codex":
         organs_set = set({})
-        store = pd.HDFStore(hdf_file)
+        store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
             cell_df = pd.read_hdf(hdf_file, key)
             organs = list(cell_df["organ"].unique())
@@ -196,7 +196,7 @@ def create_clusters(hdf_file: Path):
                 cluster.save()
 
     elif hdf_file.stem == "codex":
-        store = pd.HDFStore(hdf_file)
+        store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
             cell_df = pd.read_hdf(hdf_file, key)
             cluster_lists = cell_df["clusters"].tolist()
@@ -230,11 +230,21 @@ def create_modality_and_datasets(hdf_file: Path):
     if modality is None:
         modality = Modality(modality_name=modality_name)
         modality.save()
-    with pd.HDFStore(hdf_file) as store:
-        cell_df = store.get("cell")
-        for uuid in cell_df["dataset"].unique():
-            dataset = Dataset(uuid=uuid[:32], modality=modality)
-            dataset.save()
+
+    if modality_name == "codex":
+        store = pd.HDFStore(hdf_file, mode="r")
+        for key in store.keys():
+            cell_df = store.get(key)
+            for uuid in cell_df["dataset"].unique():
+                dataset = Dataset(uuid=uuid[:32], modality=modality)
+                dataset.save()
+
+    else:
+        with pd.HDFStore(hdf_file) as store:
+            cell_df = store.get("cell")
+            for uuid in cell_df["dataset"].unique():
+                dataset = Dataset(uuid=uuid[:32], modality=modality)
+                dataset.save()
 
 
 def delete_old_data(modality: str):

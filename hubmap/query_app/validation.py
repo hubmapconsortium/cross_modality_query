@@ -1,5 +1,6 @@
 from typing import Dict, List, Set
 
+from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
@@ -343,9 +344,9 @@ def process_evaluation_args(query_params):
     if (
         "limit" not in query_params.keys()
         or not query_params["limit"].isdigit()
-        or int(query_params["limit"]) > 200000
+        or int(query_params["limit"]) > settings.MAX_PAGE_SIZE
     ):
-        query_params["limit"] = 200000
+        query_params["limit"] = settings.MAX_PAGE_SIZE
     else:
         query_params["limit"] = int(query_params["limit"])
 
