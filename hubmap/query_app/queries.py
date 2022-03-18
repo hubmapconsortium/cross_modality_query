@@ -141,7 +141,7 @@ def cell_query(self, request):
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
         if (
-            query_params["input_type"] in ["dataset", "modality"]
+            query_params["input_type"] in {"dataset", "modality"}
             and len(query_params["input_set"]) == 1
             and query_params["input_set"][0] in uuid_dict
         ):
