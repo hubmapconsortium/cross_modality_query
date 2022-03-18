@@ -61,6 +61,11 @@ from .validation import (
 
 
 def copy_pagination_format(results_json: str) -> str:
+    # We save time by bypassing Postgres and the Django ORM, including serializers
+    # But we want to return a response in the same format as those paginated responses
+    # So this function inserts the string we get from serializing a Pandas dataframe
+    # into the structure expected by client code
+
     response_dict = {}
     response_dict["count"] = 1
     response_dict["next"] = None
