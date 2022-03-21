@@ -250,7 +250,7 @@ def delete_old_data(modality: str):
     modality_datasets = Dataset.objects.filter(
         modality__modality_name__icontains=modality
     ).values_list("pk", flat=True)
-    Dataset.objects.filter(modality__modality_name__icontains="rna").delete()
+    Dataset.objects.filter(modality__modality_name__icontains=modality).delete()
     Cluster.objects.filter(dataset__in=modality_datasets).delete()
     Modality.objects.filter(modality_name__icontains=modality).delete()
 
