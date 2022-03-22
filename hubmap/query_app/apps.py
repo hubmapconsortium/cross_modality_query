@@ -107,7 +107,13 @@ def attempt_to_open_file(file_path, key=None):
     elif key in {"cell", "percentages"}:
         assert file_path.suffix == ".hdf5"
         try:
-            df = pd.read_hdf(file_path, key)
+            if file_path.stem == "codex" and key == "cell":
+                store = pd.HDFStore(file_path)
+                dfs = [store.get(key) for key in store.keys()]
+                df = pd.concat(dfs)
+
+            else:
+                df = pd.read_hdf(file_path, key)
 
             columns_dict = {"percentages": ["var_id", "cutoff", "dataset"], "cell": ["dataset"]}
 

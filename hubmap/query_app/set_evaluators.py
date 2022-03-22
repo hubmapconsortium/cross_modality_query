@@ -113,7 +113,6 @@ def annotate_list_with_values(dict_list, include_values, modality):
 
 
 def get_dataset_cells(uuid, include_values, offset, limit):
-    times = []
     print(f"Key found")
 
     modality = (
@@ -124,22 +123,17 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     )
     if modality == "rna":
         cell_df = rna_cell_df
-        cell_df = cell_df.loc[(uuid)]
 
     elif modality == "atac":
         cell_df = atac_cell_df
-        cell_df = cell_df.loc[(uuid)]
 
     elif modality == "codex":
-        if "/" + uuid in codex_store.keys():
-            cell_df = codex_store.get("/" + uuid)
-        else:
-            cell_df = codex_cell_df
-            cell_df = cell_df.loc[(uuid)]
+        cell_df = codex_cell_df
+
+    cell_df = cell_df.loc[(uuid)]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
-    times.append(perf_counter())
 
     if len(include_values) > 0:
         print("Include values")
