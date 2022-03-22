@@ -126,7 +126,7 @@ def attempt_to_open_file(file_path, key=None):
 
             df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
 
-        except (FileNotFoundError, KeyError):
+        except (FileNotFoundError, KeyError, ValueError):
             print(f"File path: {file_path} not found")
             columns_dict = {
                 "percentages": ["var_id", "cutoff", "dataset", "percentage"],
