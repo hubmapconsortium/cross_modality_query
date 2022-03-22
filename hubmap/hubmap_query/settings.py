@@ -45,6 +45,7 @@ QUERY_TOKEN_EXPIRATION = timedelta(days=1)
 
 # Faster app startup for testing
 SKIP_LOADING_PVALUES = False
+MAX_PAGE_SIZE = 200000
 
 # database is local to each web app instance, not worth overriding
 # credentials for production deployment at the moment

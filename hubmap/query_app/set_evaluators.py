@@ -11,6 +11,7 @@ from query_app.apps import (
     atac_cell_df,
     codex_adata,
     codex_cell_df,
+    codex_store,
     hash_dict,
     rna_adata,
     rna_cell_df,
@@ -57,6 +58,22 @@ from .validation import (
     validate_list_evaluation_args,
     validate_values_types,
 )
+
+
+def copy_pagination_format(results_json: str) -> str:
+    # We save time by bypassing Postgres and the Django ORM, including serializers
+    # But we want to return a response in the same format as those paginated responses
+    # So this function inserts the string we get from serializing a Pandas dataframe
+    # into the structure expected by client code
+
+    response_dict = {}
+    response_dict["count"] = 1
+    response_dict["next"] = None
+    response_dict["previous"] = None
+    response_dict["results"] = []
+    response_json = json.dumps(response_dict)
+    response_json = response_json.replace(json.dumps([]), results_json)
+    return response_json
 
 
 def annotate_with_values(cell_df, include_values, modality):
@@ -106,12 +123,14 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     )
     if modality == "rna":
         cell_df = rna_cell_df
+
     elif modality == "atac":
         cell_df = atac_cell_df
+
     elif modality == "codex":
         cell_df = codex_cell_df
 
-    cell_df = cell_df[cell_df["dataset"] == uuid]
+    cell_df = cell_df.loc[(uuid)]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
     cell_df = cell_df[keep_columns]
@@ -125,9 +144,10 @@ def get_dataset_cells(uuid, include_values, offset, limit):
                 values_series = pd.Series(values_dict_list, index=cell_df.index)
                 cell_df["values"] = values_series
                 cell_df = cell_df[offset:limit]
-                cell_dict_list = cell_df.to_dict(orient="records")
+                cell_dict_list = cell_df.to_json(orient="records")
                 print("Try succeeded")
-                return cell_dict_list
+
+                return copy_pagination_format(cell_dict_list)
             else:
                 cell_df = cell_df[offset:limit]
 
@@ -329,9 +349,6 @@ def evaluation_detail(self, request):
         if key in hash_dict:
             cell_dict_list = get_dataset_cells(hash_dict[key], include_values, offset, limit)
             return cell_dict_list
-
-        print(key)
-        print(hash_dict)
 
         eval_qs = evaluate_qs(set_type, key, limit, offset)
 

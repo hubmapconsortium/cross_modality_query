@@ -1,8 +1,10 @@
 import json
 import traceback
+from time import perf_counter
 from typing import Callable
 
 import django.core.serializers
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.views import View
@@ -42,8 +44,8 @@ JSONSerializer = django.core.serializers.get_serializer("json")
 
 
 class PaginationClass(PageNumberPagination):
-    page_size = 100000
-    max_page_size = 100000
+    page_size = settings.MAX_PAGE_SIZE
+    max_page_size = settings.MAX_PAGE_SIZE
 
 
 def get_generic_response(self, callable, request):
@@ -84,6 +86,8 @@ def operation(self, request):
 def get_response(self, request, callable: Callable):
     try:
         response = callable(self, request)
+        if isinstance(response, str):
+            return HttpResponse(response)
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response

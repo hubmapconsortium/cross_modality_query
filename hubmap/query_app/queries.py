@@ -1,7 +1,9 @@
+from time import perf_counter
 from typing import Dict
 
 from django.core.cache import cache
 
+from .apps import uuid_dict
 from .filters import (
     get_cell_filter,
     get_cluster_filter,
@@ -56,11 +58,7 @@ def get_cells_list(query_params: Dict, input_set=None):
     filter = get_cell_filter(query_params)
 
     query_set = Cell.objects.filter(filter).distinct("cell_id")
-
-    if query_set:
-        print(query_set.query)
     query_handle = make_pickle_and_hash(query_set, "cell")
-    print(query_handle)
     return query_handle
 
 
@@ -142,7 +140,15 @@ def cell_query(self, request):
         query_params = request.data.dict()
         query_params["input_set"] = request.POST.getlist("input_set")
         validate_cell_query_params(query_params)
-        pickle_hash = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
+        if (
+            query_params["input_type"] in {"dataset", "modality"}
+            and len(query_params["input_set"]) == 1
+            and query_params["input_set"][0] in uuid_dict
+        ):
+            print(f"Found handle in uuid dict")
+            pickle_hash = uuid_dict[query_params["input_set"][0]]
+        else:
+            pickle_hash = get_cells_list(query_params, input_set=request.POST.getlist("input_set"))
 
     return get_response_from_query_handle(pickle_hash, "cell")
 

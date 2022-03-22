@@ -7,6 +7,7 @@ from os import fspath
 from pathlib import Path
 from typing import List
 
+import anndata
 import numpy as np
 import pandas as pd
 from django.core.cache import cache
@@ -17,30 +18,20 @@ if __name__ == "__main__":
 
     django.setup()
 
-from query_app.models import (
-    AtacQuant,
-    Cell,
-    Cluster,
-    Dataset,
-    Gene,
-    Modality,
-    Organ,
-    Protein,
-    PVal,
-    QuerySet,
-    RnaQuant,
-)
+from query_app.models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein
 
 
 def set_up_cell_cluster_relationships(hdf_file):
     if hdf_file.stem == "codex":
-        cell_df = pd.read_hdf(hdf_file, "cell")
-        for i in cell_df.index:
-            cell_id = cell_df["cell_id"][i]
-            cluster_ids = cell_df["clusters"][i]
-            cell = Cell.objects.filter(cell_id=cell_id).first()
-            clusters = Cluster.objects.filter(grouping_name__in=cluster_ids)
-            cell.clusters.add(clusters)
+        store = pd.HDFStore(hdf_file, mode="r")
+        for key in store.keys():
+            cell_df = store.get(key)
+            for i in cell_df.index:
+                cell_id = cell_df["cell_id"][i]
+                cluster_ids = cell_df["clusters"][i]
+                cell = Cell.objects.filter(cell_id=cell_id).first()
+                clusters = Cluster.objects.filter(grouping_name__in=cluster_ids)
+                cell.clusters.add(clusters)
 
     elif hdf_file.stem in ["atac", "rna"]:
         all_clusters = pd.read_hdf(hdf_file, "cluster")["grouping_name"].unique()
@@ -77,9 +68,9 @@ def create_model(model_name: str, kwargs: dict):
 
 @transaction.atomic
 def create_proteins(hdf_file):
-    csv_file = hdf_file.parent / Path(hdf_file.stem + ".csv")
-    quant_df = pd.read_csv(csv_file)
-    protein_ids = [protein for protein in quant_df["q_var_id"].unique() if ":" not in protein]
+    h5ad_file = hdf_file.parent / Path(hdf_file.stem + ".h5ad")
+    adata = anndata.read(h5ad_file)
+    protein_ids = [protein for protein in adata.var.index if ":" not in protein]
 
     proteins = [
         Protein(protein_id=protein)
@@ -132,22 +123,20 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
 @transaction.atomic
 def df_to_db(df: pd.DataFrame, model_name: str, modality=None, grouping_type: str = None):
     if model_name == "cell":
-
         kwargs_list = process_cell_records(df)
         objs = [create_model("cell", kwargs) for kwargs in kwargs_list]
         Cell.objects.bulk_create(objs)
 
-        ids_list = Cell.objects.filter(modality__modality_name__iexact=modality).values_list(
-            "id", "cell_id"
-        )
-        ids_dict = {id[1]: id[0] for id in ids_list}
-        cache.set_many(ids_dict, None)
-
 
 def create_cells(hdf_file: Path):
-    cell_df = pd.read_hdf(hdf_file, "cell")
-
-    df_to_db(cell_df, "cell")
+    if hdf_file.stem == "codex":
+        store = pd.HDFStore(hdf_file, mode="r")
+        for key in store.keys():
+            cell_df = pd.read_hdf(hdf_file, key)
+            df_to_db(cell_df, "cell")
+    else:
+        cell_df = pd.read_hdf(hdf_file, "cell")
+        df_to_db(cell_df, "cell")
 
 
 def create_genes(hdf_file: Path):
@@ -164,8 +153,17 @@ def create_genes(hdf_file: Path):
 
 
 def create_organs(hdf_file: Path):
-    cell_df = pd.read_hdf(hdf_file, "cell")
-    organs = list(cell_df["organ"].unique())
+    if hdf_file.stem == "codex":
+        organs_set = set()
+        store = pd.HDFStore(hdf_file, mode="r")
+        for key in store.keys():
+            cell_df = pd.read_hdf(hdf_file, key)
+            organs_set.update(cell_df["organ"])
+
+        organs = list(organs_set)
+    else:
+        cell_df = pd.read_hdf(hdf_file, "cell")
+        organs = list(cell_df["organ"].unique())
 
     for organ_name in organs:
         if Organ.objects.filter(grouping_name__icontains=organ_name).first() is None:
@@ -196,26 +194,30 @@ def create_clusters(hdf_file: Path):
                 cluster.save()
 
     elif hdf_file.stem == "codex":
-        cell_df = pd.read_hdf(hdf_file, "cell")
-        cluster_lists = cell_df["clusters"].tolist()
-        cluster_set = set([cluster for cluster_list in cluster_lists for cluster in cluster_list])
-        cluster_set_splits = [cluster.split("-") + [cluster] for cluster in cluster_set]
-        cluster_kwargs = [
-            {
-                "cluster_method": cluster_split[0],
-                "cluster_data": cluster_split[1],
-                "dataset": cluster_split[2],
-                "grouping_name": cluster_split[-1],
-            }
-            for cluster_split in cluster_set_splits
-        ]
-        for cluster_kwarg_set in cluster_kwargs:
-            cluster_kwarg_set["dataset"] = Dataset.objects.filter(
-                uuid=cluster_kwarg_set["dataset"]
-            ).first()
+        store = pd.HDFStore(hdf_file, mode="r")
+        for key in store.keys():
+            cell_df = pd.read_hdf(hdf_file, key)
+            cluster_lists = cell_df["clusters"].tolist()
+            cluster_set = set(
+                [cluster for cluster_list in cluster_lists for cluster in cluster_list]
+            )
+            cluster_set_splits = [cluster.split("-") + [cluster] for cluster in cluster_set]
+            cluster_kwargs = [
+                {
+                    "cluster_method": cluster_split[0],
+                    "cluster_data": cluster_split[1],
+                    "dataset": cluster_split[2],
+                    "grouping_name": cluster_split[-1],
+                }
+                for cluster_split in cluster_set_splits
+            ]
+            for cluster_kwarg_set in cluster_kwargs:
+                cluster_kwarg_set["dataset"] = Dataset.objects.filter(
+                    uuid=cluster_kwarg_set["dataset"]
+                ).first()
 
-        objs = [create_model("cluster", kwargs) for kwargs in cluster_kwargs]
-        Cluster.objects.bulk_create(objs)
+            objs = [create_model("cluster", kwargs) for kwargs in cluster_kwargs]
+            Cluster.objects.bulk_create(objs)
 
         return
 
@@ -226,11 +228,21 @@ def create_modality_and_datasets(hdf_file: Path):
     if modality is None:
         modality = Modality(modality_name=modality_name)
         modality.save()
-    with pd.HDFStore(hdf_file) as store:
-        cell_df = store.get("cell")
-        for uuid in cell_df["dataset"].unique():
-            dataset = Dataset(uuid=uuid[:32], modality=modality)
-            dataset.save()
+
+    if modality_name == "codex":
+        store = pd.HDFStore(hdf_file, mode="r")
+        for key in store.keys():
+            cell_df = store.get(key)
+            for uuid in cell_df["dataset"].unique():
+                dataset = Dataset(uuid=uuid[:32], modality=modality)
+                dataset.save()
+
+    else:
+        with pd.HDFStore(hdf_file) as store:
+            cell_df = store.get("cell")
+            for uuid in cell_df["dataset"].unique():
+                dataset = Dataset(uuid=uuid[:32], modality=modality)
+                dataset.save()
 
 
 def delete_old_data(modality: str):
@@ -238,17 +250,11 @@ def delete_old_data(modality: str):
     modality_datasets = Dataset.objects.filter(
         modality__modality_name__icontains=modality
     ).values_list("pk", flat=True)
-    Dataset.objects.filter(modality__modality_name__icontains="rna").delete()
+    Dataset.objects.filter(modality__modality_name__icontains=modality).delete()
     Cluster.objects.filter(dataset__in=modality_datasets).delete()
     Modality.objects.filter(modality_name__icontains=modality).delete()
 
-    if modality in ["atac", "rna"]:
-        PVal.objects.filter(modality__modality_name__icontains=modality).delete()
-        if modality == "atac":
-            AtacQuant.objects.all().delete()
-        elif modality == "rna":
-            RnaQuant.objects.all().delete()
-    elif modality in ["codex"]:
+    if modality in {"codex"}:
         Protein.objects.all().delete()
 
 
@@ -274,18 +280,6 @@ def load_data(hdf_file: Path):
         create_proteins(hdf_file)
         print("Proteins created")
     return
-
-
-def make_pickle_and_hash(qs, set_type):
-    qry = qs.query
-    query_pickle = pickle.dumps(qry)
-    query_handle = str(hashlib.sha256(query_pickle).hexdigest())
-    if QuerySet.objects.filter(query_handle=query_handle).first() is None:
-        query_set = QuerySet(
-            query_pickle=query_pickle, query_handle=query_handle, set_type=set_type
-        )
-        query_set.save()
-    return query_handle
 
 
 def main(hdf_files: List[Path]):
