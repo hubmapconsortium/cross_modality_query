@@ -133,6 +133,8 @@ def attempt_to_open_file(file_path, key=None):
                 "cell": ["cell_id", "dataset", "organ", "modality", "clusters"],
             }
             df = pd.DataFrame(columns=columns_dict[key])
+        except BaseException as e:
+            print(type(e))
 
         return df
 
@@ -143,6 +145,8 @@ def attempt_to_open_file(file_path, key=None):
         except (FileNotFoundError, KeyError):
             print(f"File path: {file_path} not found")
             df = pd.DataFrame(columns=["grouping_name", "gene_id", "value"])
+        except BaseException as e:
+            print(type(e))
         return df
 
 

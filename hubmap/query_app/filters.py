@@ -161,6 +161,7 @@ def get_cell_filter(query_params: Dict) -> Q:
     groupings_dict = {
         "organ": "grouping_name",
         "cluster": "grouping_name",
+        "cell_type": "grouping_name",
         "dataset": "uuid",
         "modality": "modality_name",
     }

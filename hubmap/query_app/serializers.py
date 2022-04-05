@@ -197,6 +197,7 @@ class CellSerializer(serializers.ModelSerializer):
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
+    cell_type = serializers.CharField(read_only=True, source="cell_type.grouping_name")
     clusters = serializers.StringRelatedField(many=True)
 
     class Meta:
@@ -206,6 +207,7 @@ class CellSerializer(serializers.ModelSerializer):
             "modality",
             "dataset",
             "organ",
+            "cell_type",
             "clusters",
         ]
 
@@ -233,6 +235,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
+    cell_type = serializers.CharField(read_only=True, source="cell_type.grouping_name")
     clusters = serializers.StringRelatedField(many=True)
     values = serializers.SerializerMethodField(method_name="get_values")
 
@@ -243,6 +246,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             "modality",
             "dataset",
             "organ",
+            "cell_type",
             "clusters",
             "values",
         ]

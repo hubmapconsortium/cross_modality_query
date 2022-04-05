@@ -198,7 +198,16 @@ def validate_protein_query_params(query_params):
 
 
 def validate_cell_query_params(query_params):
-    permitted_input_types = ["organ", "gene", "dataset", "cluster", "protein", "cell", "modality"]
+    permitted_input_types = [
+        "organ",
+        "gene",
+        "dataset",
+        "cluster",
+        "protein",
+        "cell",
+        "modality",
+        "cell_type",
+    ]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
