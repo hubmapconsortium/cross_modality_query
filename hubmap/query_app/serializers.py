@@ -190,9 +190,11 @@ class ModalitySerializer(serializers.ModelSerializer):
 
 
 class DatasetSerializer(serializers.ModelSerializer):
+    annotation_metadata = serializers.JSONField()
+
     class Meta:
         model = Dataset
-        fields = ["uuid"]
+        fields = ["uuid", "annotation_metadata"]
 
 
 class ClusterSerializer(serializers.ModelSerializer):
@@ -341,11 +343,12 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
 
 
 class DatasetAndValuesSerializer(serializers.ModelSerializer):
+    annotation_metadata = serializers.JSONField()
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
         model = Dataset
-        fields = ["uuid", "values"]
+        fields = ["uuid", "annotation_metadata", "values"]
 
     def get_values(self, obj):
         request = self.context["request"]

@@ -283,6 +283,21 @@ def create_modality_and_datasets(hdf_file: Path, new_datasets):
                     dataset = Dataset(uuid=uuid[:32], modality=modality)
                     dataset.save()
 
+    elif modality_name == "rna":
+        adata_path = hdf_file.parent / Path("rna.h5ad")
+        adata = anndata.read(adata_path)
+        annotation_metadata = adata.uns["annotation_metadata"]
+        with pd.HDFStore(hdf_file) as store:
+            cell_df = store.get("cell")
+            for uuid in cell_df["dataset"].unique():
+                if uuid in new_datasets:
+                    metadata = annotation_metadata[uuid]["annotation_metadata"]
+                    metadata["is_annotated"] = bool(metadata["is_annotated"])
+                    dataset = Dataset(
+                        uuid=uuid[:32], modality=modality, annotation_metadata=metadata
+                    )
+                    dataset.save()
+
     else:
         with pd.HDFStore(hdf_file) as store:
             cell_df = store.get("cell")
