@@ -224,8 +224,8 @@ def protein_query(self, request):
 
 def cell_type_query(self, request):
     if request.data == {}:
-        all_cell_types = CellType.objects.all().distinct("protein_id")
-        pickle_hash = make_pickle_and_hash(all_cell_types, "protein")
+        all_cell_types = CellType.objects.all().distinct("grouping_name")
+        pickle_hash = make_pickle_and_hash(all_cell_types, "cell_type")
 
     else:
         query_params = request.data.dict()

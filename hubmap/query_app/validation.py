@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
-from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein
+from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
@@ -444,6 +444,7 @@ def validate_input_terms(input_type: str, input_set: List[str]):
         "cell": (Cell, "cell_id"),
         "dataset": (Dataset, "uuid"),
         "modality": (Modality, "modality_name"),
+        "cell_type": (CellType, "grouping_name"),
     }
 
     model, kwarg_piece = input_type_model_mapping[input_type]

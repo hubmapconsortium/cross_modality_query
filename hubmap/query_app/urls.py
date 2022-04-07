@@ -77,7 +77,7 @@ urlpatterns = [
     ),
     path(
         "celltypedetailevaluation/",
-        views.CellTypeDetailEvaluationViewSet.as_view({"post": "post"}),
+        views.CellTypeListEvaluationViewSet.as_view({"post": "post"}),
         name="cell_type_detail_evaluation",
     ),
     path(

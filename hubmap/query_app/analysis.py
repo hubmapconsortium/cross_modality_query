@@ -145,10 +145,10 @@ def get_bounds(self, request):
     adata = modalities_dict[modality]
 
     if "var_id" in query_params.keys():
-        min_value = adata.var.at[query_params["var_id"], "min"]
-        max_value = adata.var.at[query_params["var_id"], "max"]
+        min_value = float(adata.var.at[query_params["var_id"], "min"])
+        max_value = float(adata.var.at[query_params["var_id"], "max"])
     else:
-        min_value = adata.uns["min"]
-        max_value = adata.uns["max"]
+        min_value = float(adata.uns["min"])
+        max_value = float(adata.uns["max"])
 
     return {"results": {"minimum_value": min_value, "maximum_value": max_value}}
