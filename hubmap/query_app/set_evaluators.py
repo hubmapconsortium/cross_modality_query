@@ -132,7 +132,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
 
     cell_df = cell_df.loc[(uuid)]
 
-    keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
+    keep_columns = ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"]
     cell_df = cell_df[keep_columns]
 
     if len(include_values) > 0:
