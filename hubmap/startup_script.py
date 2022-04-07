@@ -8,10 +8,13 @@ from pathlib import Path
 from typing import List
 
 import anndata
+import django
 import numpy as np
 import pandas as pd
 from django.core.cache import cache
 from django.db import connection, transaction
+
+django.setup()
 
 from query_app.models import (
     Cell,
@@ -44,16 +47,20 @@ def set_up_cell_cluster_relationships(hdf_file, new_datasets):
                     cell.clusters.add(clusters)
 
     elif hdf_file.stem in ["atac", "rna"]:
-        all_clusters = pd.read_hdf(hdf_file, "cluster")["grouping_name"].unique()
-        cell_df = pd.read_hdf(hdf_file, "cell")
+        store = pd.HDFStore(hdf_file)
+        all_clusters = store.get("cluster")["grouping_name"].unique()
+        cell_df = store.get("cell")
         cell_df = cell_df[cell_df["dataset"].isin(new_datasets)]
-        for cluster in all_clusters:
+        for cluster_id in all_clusters:
+            dataset = cluster_id.split()
+            cell_df = cell_df["dataset"]
             cell_ids = [
                 cell_df["cell_id"][i]
                 for i in cell_df.index
-                if cluster in cell_df["clusters"][i].split(",")
+                if cluster_id in cell_df["clusters"][i].split(",")
             ]
             cell_pks = Cell.objects.filter(cell_id__in=cell_ids).values_list("pk", flat=True)
+            cluster = Cluster.objects.filter(grouping_name=cluster_id).first()
             cluster.cells.add(*cell_pks)
 
 
@@ -108,6 +115,7 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
         "dataset",
         "modality",
         "organ",
+        "cell_type",
     ]
 
     sanitized_records = [
@@ -128,8 +136,8 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
             record["modality"] = record["dataset"].modality
         record["organ"] = Organ.objects.filter(grouping_name__icontains=record["organ"]).first()
         record["celL_type"] = CellType.objects.filter(
-            grouping_name__icontains=record["cell_type"].first()
-        )
+            grouping_name__icontains=record["cell_type"]
+        ).first()
 
     return sanitized_records
 
@@ -150,13 +158,15 @@ def create_cells(hdf_file: Path, new_datasets):
                 cell_df = pd.read_hdf(hdf_file, key)
                 df_to_db(cell_df, "cell")
     else:
-        cell_df = pd.read_hdf(hdf_file, "cell")
+        store = pd.HDFStore(hdf_file)
+        cell_df = store.get("cell")
         cell_df = cell_df[cell_df["dataset"].isin(new_datasets)]
         df_to_db(cell_df, "cell")
 
 
 def create_genes(hdf_file: Path):
-    pval_df = pd.read_hdf(hdf_file, "organ")
+    store = pd.HDFStore(hdf_file)
+    pval_df = store.get("organ")
     genes_to_create = [
         sanitize_string(gene)[:64]
         for gene in pval_df["gene_id"].unique()
@@ -178,7 +188,8 @@ def create_organs(hdf_file: Path):
 
         organs = list(organs_set)
     else:
-        cell_df = pd.read_hdf(hdf_file, "cell")
+        store = pd.HDFStore(hdf_file)
+        cell_df = store.get("cell")
         organs = list(cell_df["organ"].unique())
 
     for organ_name in organs:
@@ -194,7 +205,8 @@ def create_cell_types(hdf_file: Path):
         return
 
     else:
-        cell_df = pd.read_hdf(hdf_file, "cell")
+        store = pd.HDFStore(hdf_file)
+        cell_df = store.get("cell")
         cell_types = cell_df["cell_type"].unique()
 
     for cell_type in cell_types:
@@ -206,7 +218,6 @@ def create_cell_types(hdf_file: Path):
 
 
 def create_clusters(hdf_file: Path, new_datasets):
-
     if hdf_file.stem in ["atac", "rna"]:
         print("True")
         cluster_method = "leiden"
@@ -284,7 +295,7 @@ def create_modality_and_datasets(hdf_file: Path, new_datasets):
 def delete_old_data(hdf_file):
     store = pd.HDFStore(hdf_file)
     modality = hdf_file.stem
-    if "cell" in store.keys():
+    if "/cell" in store.keys():
         new_datasets = set(store.get("cell")["dataset"].unique())
     old_datasets = Dataset.objects.filter(modality__modality_name__icontains=modality).exclude(
         uuid__in=new_datasets
@@ -294,7 +305,7 @@ def delete_old_data(hdf_file):
 
 
 def load_data(hdf_file: Path):
-    new_datasets = delete_old_data(hdf_file)
+    new_datasets, store = delete_old_data(hdf_file)
 
     print("Old data deleted")
     create_modality_and_datasets(hdf_file, new_datasets)
@@ -326,6 +337,10 @@ def main(hdf_files: List[Path]):
 
 
 if __name__ == "__main__":
+    import django
+
+    django.setup()
+
     p = ArgumentParser()
     p.add_argument("hdf_files", type=Path, nargs="+")
     args = p.parse_args()
