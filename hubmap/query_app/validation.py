@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
-from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein
+from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
@@ -169,7 +169,15 @@ def validate_cluster_query_params(query_params):
 
 
 def validate_dataset_query_params(query_params):
-    permitted_input_types = ["cell", "cluster", "dataset", "gene", "modality", "protein"]
+    permitted_input_types = [
+        "cell",
+        "cell_type",
+        "cluster",
+        "dataset",
+        "gene",
+        "modality",
+        "protein",
+    ]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -197,8 +205,29 @@ def validate_protein_query_params(query_params):
     check_parameter_types_and_values(query_params)
 
 
+def validate_cell_type_query_params(query_params):
+    permitted_input_types = ["cell_type", "cell", "dataset"]
+    input_type = query_params["input_type"]
+    check_input_type(input_type, permitted_input_types)
+
+    required_fields = {"input_type", "input_set"}
+    permitted_fields = required_fields | {"input_set_token"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    check_parameter_types_and_values(query_params)
+
+
 def validate_cell_query_params(query_params):
-    permitted_input_types = ["organ", "gene", "dataset", "cluster", "protein", "cell", "modality"]
+    permitted_input_types = [
+        "organ",
+        "gene",
+        "dataset",
+        "cluster",
+        "protein",
+        "cell",
+        "modality",
+        "cell_type",
+    ]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -423,6 +452,7 @@ def validate_input_terms(input_type: str, input_set: List[str]):
         "cell": (Cell, "cell_id"),
         "dataset": (Dataset, "uuid"),
         "modality": (Modality, "modality_name"),
+        "cell_type": (CellType, "grouping_name"),
     }
 
     model, kwarg_piece = input_type_model_mapping[input_type]

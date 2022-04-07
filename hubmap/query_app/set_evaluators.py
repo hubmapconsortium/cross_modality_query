@@ -34,6 +34,7 @@ from .models import (
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
+    CellTypeSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
     DatasetAndValuesSerializer,
@@ -132,7 +133,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
 
     cell_df = cell_df.loc[(uuid)]
 
-    keep_columns = ["cell_id", "modality", "dataset", "organ", "clusters"]
+    keep_columns = ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"]
     cell_df = cell_df[keep_columns]
 
     if len(include_values) > 0:
@@ -334,6 +335,8 @@ def evaluation_list(self, request):
             response = DatasetSerializer(eval_qs, many=True, context=context).data
         if set_type == "protein":
             response = ProteinSerializer(eval_qs, many=True, context=context).data
+        if set_type == "cell_type":
+            response = CellTypeSerializer(eval_qs, many=True, context=context).data
 
         return response
 
@@ -370,6 +373,8 @@ def evaluation_detail(self, request):
             response = DatasetAndValuesSerializer(eval_qs, many=True, context=context).data
         if set_type == "protein":
             response = ProteinSerializer(eval_qs, many=True, context=context).data
+        if set_type == "cell_type":
+            response = CellTypeSerializer(eval_qs, many=True, context=context).data
 
         return response
 

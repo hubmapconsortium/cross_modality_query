@@ -161,6 +161,7 @@ def get_cell_filter(query_params: Dict) -> Q:
     groupings_dict = {
         "organ": "grouping_name",
         "cluster": "grouping_name",
+        "cell_type": "grouping_name",
         "dataset": "uuid",
         "modality": "modality_name",
     }
@@ -243,6 +244,39 @@ def get_organ_filter(query_params: Dict) -> Q:
         return Q(grouping_name__in=grouping_names)
 
 
+def get_cell_type_filter(query_params: Dict) -> Q:
+    """str, List[str], str -> Q
+    Finds the filter for a query for group objects based on the input set, input type, and logical operator
+    Currently services membership queries where input type is cells
+    and categorical queries where input type is genes"""
+
+    input_type = query_params["input_type"]
+    input_set = query_params["input_set"]
+
+    if input_type == "cell_type":
+        return Q(grouping_name__in=input_set)
+
+    if input_type == "cell":
+
+        cell_qs = Cell.objects.filter(cell_id__in=input_set)
+
+        cell_type_pks = cell_qs.distinct("cell_type").values_list("cell_type", flat=True)
+
+        q = Q(pk__in=cell_type_pks)
+
+        return q
+
+    if input_type == "dataset":
+
+        cell_qs = Cell.objects.filter(dataset__uuid__in=input_set)
+
+        cell_type_pks = cell_qs.distinct("cell_type").values_list("cell_type", flat=True)
+
+        q = Q(pk__in=cell_type_pks)
+
+        return q
+
+
 def get_cluster_filter(query_params: dict):
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
@@ -312,6 +346,15 @@ def get_dataset_filter(query_params: dict):
 
     if input_type == "cell":
         cell_qs = Cell.objects.filter(cell_id__in=input_set)
+
+        dataset_pks = cell_qs.distinct("dataset").values_list("dataset", flat=True)
+
+        q = Q(pk__in=dataset_pks)
+
+        return q
+
+    if input_type == "cell_type":
+        cell_qs = Cell.objects.filter(cell_type__grouping_name__in=input_set)
 
         dataset_pks = cell_qs.distinct("dataset").values_list("dataset", flat=True)
 

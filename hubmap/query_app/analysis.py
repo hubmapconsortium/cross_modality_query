@@ -145,18 +145,10 @@ def get_bounds(self, request):
     adata = modalities_dict[modality]
 
     if "var_id" in query_params.keys():
-        adata = adata[:, [query_params["var_id"]]]
-
-    x = adata.X
-    #    if not isinstance(x, np.ndarray):
-    #        x = x.todense()
-
-    min_value = float(x.min())
-    max_value = float(x.max())
-
-    if not min_value >= 0 and not isinstance(adata.X, np.ndarray):
-        data_list = adata.X.data.tolist()
-        min_value = min(data_list)
-        max_value = max(data_list)
+        min_value = float(adata.var.at[query_params["var_id"], "min"])
+        max_value = float(adata.var.at[query_params["var_id"], "max"])
+    else:
+        min_value = float(adata.uns["min"])
+        max_value = float(adata.uns["max"])
 
     return {"results": {"minimum_value": min_value, "maximum_value": max_value}}

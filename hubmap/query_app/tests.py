@@ -349,7 +349,7 @@ class ListEvaluationTestCase(TestCase):
         all_datasets = get_all("dataset")
         evaluated_dataset = set_list_evaluation(all_datasets, "dataset", 1)[0]
         evaluated_dataset_fields = list(evaluated_dataset.keys())
-        self.assertEqual(evaluated_dataset_fields, ["uuid"])
+        self.assertEqual(evaluated_dataset_fields, ["uuid", "annotation_metadata"])
 
     def test_proteins(self):
         all_proteins = get_all("protein")
@@ -397,7 +397,7 @@ class DetailEvaluationTestCase(TestCase):
         all_datasets = get_all("dataset")
         evaluated_dataset = set_detail_evaluation(all_datasets, "dataset", 1)[0]
         evaluated_dataset_fields = list(evaluated_dataset.keys())
-        self.assertEqual(evaluated_dataset_fields, ["uuid", "values"])
+        self.assertEqual(evaluated_dataset_fields, ["uuid", "annotation_metadata", "values"])
 
     def test_proteins(self):
         all_proteins = get_all("protein")

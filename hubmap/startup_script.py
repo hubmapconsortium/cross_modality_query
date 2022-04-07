@@ -8,41 +8,59 @@ from pathlib import Path
 from typing import List
 
 import anndata
+import django
 import numpy as np
 import pandas as pd
 from django.core.cache import cache
 from django.db import connection, transaction
 
-if __name__ == "__main__":
-    import django
+django.setup()
 
-    django.setup()
+from query_app.models import (
+    Cell,
+    CellType,
+    Cluster,
+    Dataset,
+    Gene,
+    Modality,
+    Organ,
+    Protein,
+)
 
-from query_app.models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein
+# if __name__ == "__main__":
+#    import django
+
+#    django.setup()
 
 
-def set_up_cell_cluster_relationships(hdf_file):
+def set_up_cell_cluster_relationships(hdf_file, new_datasets):
     if hdf_file.stem == "codex":
         store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
-            cell_df = store.get(key)
-            for i in cell_df.index:
-                cell_id = cell_df["cell_id"][i]
-                cluster_ids = cell_df["clusters"][i]
-                cell = Cell.objects.filter(cell_id=cell_id).first()
-                clusters = Cluster.objects.filter(grouping_name__in=cluster_ids)
-                cell.clusters.add(clusters)
+            if key in new_datasets:
+                cell_df = store.get(key)
+                for i in cell_df.index:
+                    cell_id = cell_df["cell_id"][i]
+                    cluster_ids = cell_df["clusters"][i]
+                    cell = Cell.objects.filter(cell_id=cell_id).first()
+                    clusters = Cluster.objects.filter(grouping_name__in=cluster_ids)
+                    cell.clusters.add(clusters)
 
     elif hdf_file.stem in ["atac", "rna"]:
-        all_clusters = pd.read_hdf(hdf_file, "cluster")["grouping_name"].unique()
-        cell_df = pd.read_hdf(hdf_file, "cell")
-        for cluster in all_clusters:
+        store = pd.HDFStore(hdf_file)
+        all_clusters = store.get("cluster")["grouping_name"].unique()
+        cell_df = store.get("cell")
+        cell_df = cell_df[cell_df["dataset"].isin(new_datasets)]
+        for cluster_id in all_clusters:
+            dataset = cluster_id.split()
+            cell_df = cell_df["dataset"]
             cell_ids = [
                 cell_df["cell_id"][i]
                 for i in cell_df.index
-                if cluster in cell_df["clusters"][i].split(",")
+                if cluster_id in cell_df["clusters"][i].split(",")
             ]
             cell_pks = Cell.objects.filter(cell_id__in=cell_ids).values_list("pk", flat=True)
+            cluster = Cluster.objects.filter(grouping_name=cluster_id).first()
             cluster.cells.add(*cell_pks)
 
 
@@ -97,6 +115,7 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
         "dataset",
         "modality",
         "organ",
+        "cell_type",
     ]
 
     sanitized_records = [
@@ -116,6 +135,9 @@ def process_cell_records(cell_df: pd.DataFrame) -> List[dict]:
         if "modality" not in record.keys():
             record["modality"] = record["dataset"].modality
         record["organ"] = Organ.objects.filter(grouping_name__icontains=record["organ"]).first()
+        record["celL_type"] = CellType.objects.filter(
+            grouping_name__icontains=record["cell_type"]
+        ).first()
 
     return sanitized_records
 
@@ -128,19 +150,23 @@ def df_to_db(df: pd.DataFrame, model_name: str, modality=None, grouping_type: st
         Cell.objects.bulk_create(objs)
 
 
-def create_cells(hdf_file: Path):
+def create_cells(hdf_file: Path, new_datasets):
     if hdf_file.stem == "codex":
         store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
-            cell_df = pd.read_hdf(hdf_file, key)
-            df_to_db(cell_df, "cell")
+            if key in new_datasets:
+                cell_df = pd.read_hdf(hdf_file, key)
+                df_to_db(cell_df, "cell")
     else:
-        cell_df = pd.read_hdf(hdf_file, "cell")
+        store = pd.HDFStore(hdf_file)
+        cell_df = store.get("cell")
+        cell_df = cell_df[cell_df["dataset"].isin(new_datasets)]
         df_to_db(cell_df, "cell")
 
 
 def create_genes(hdf_file: Path):
-    pval_df = pd.read_hdf(hdf_file, "organ")
+    store = pd.HDFStore(hdf_file)
+    pval_df = store.get("organ")
     genes_to_create = [
         sanitize_string(gene)[:64]
         for gene in pval_df["gene_id"].unique()
@@ -162,7 +188,8 @@ def create_organs(hdf_file: Path):
 
         organs = list(organs_set)
     else:
-        cell_df = pd.read_hdf(hdf_file, "cell")
+        store = pd.HDFStore(hdf_file)
+        cell_df = store.get("cell")
         organs = list(cell_df["organ"].unique())
 
     for organ_name in organs:
@@ -173,8 +200,24 @@ def create_organs(hdf_file: Path):
     return
 
 
-def create_clusters(hdf_file: Path):
+def create_cell_types(hdf_file: Path):
+    if hdf_file.stem in ["codex", "atac"]:
+        return
 
+    else:
+        store = pd.HDFStore(hdf_file)
+        cell_df = store.get("cell")
+        cell_types = cell_df["cell_type"].unique()
+
+    for cell_type in cell_types:
+        if CellType.objects.filter(grouping_name__icontains=cell_type).first() is None:
+            cell_type = CellType(grouping_name=cell_type)
+            cell_type.save()
+
+    return
+
+
+def create_clusters(hdf_file: Path, new_datasets):
     if hdf_file.stem in ["atac", "rna"]:
         print("True")
         cluster_method = "leiden"
@@ -184,45 +227,47 @@ def create_clusters(hdf_file: Path):
             cluster_df = store.get("cluster")
             for cluster in cluster_df["grouping_name"].unique():
                 dataset = cluster.split("-")[-2]
-                dset = Dataset.objects.filter(uuid__iexact=dataset).first()
-                cluster = Cluster(
-                    grouping_name=cluster,
-                    cluster_method=cluster_method,
-                    cluster_data=cluster_data,
-                    dataset=dset,
-                )
-                cluster.save()
+                if dataset in new_datasets:
+                    dset = Dataset.objects.filter(uuid__iexact=dataset).first()
+                    cluster = Cluster(
+                        grouping_name=cluster,
+                        cluster_method=cluster_method,
+                        cluster_data=cluster_data,
+                        dataset=dset,
+                    )
+                    cluster.save()
 
     elif hdf_file.stem == "codex":
         store = pd.HDFStore(hdf_file, mode="r")
         for key in store.keys():
-            cell_df = pd.read_hdf(hdf_file, key)
-            cluster_lists = cell_df["clusters"].tolist()
-            cluster_set = set(
-                [cluster for cluster_list in cluster_lists for cluster in cluster_list]
-            )
-            cluster_set_splits = [cluster.split("-") + [cluster] for cluster in cluster_set]
-            cluster_kwargs = [
-                {
-                    "cluster_method": cluster_split[0],
-                    "cluster_data": cluster_split[1],
-                    "dataset": cluster_split[2],
-                    "grouping_name": cluster_split[-1],
-                }
-                for cluster_split in cluster_set_splits
-            ]
-            for cluster_kwarg_set in cluster_kwargs:
-                cluster_kwarg_set["dataset"] = Dataset.objects.filter(
-                    uuid=cluster_kwarg_set["dataset"]
-                ).first()
+            if key in new_datasets:
+                cell_df = pd.read_hdf(hdf_file, key)
+                cluster_lists = cell_df["clusters"].tolist()
+                cluster_set = set(
+                    [cluster for cluster_list in cluster_lists for cluster in cluster_list]
+                )
+                cluster_set_splits = [cluster.split("-") + [cluster] for cluster in cluster_set]
+                cluster_kwargs = [
+                    {
+                        "cluster_method": cluster_split[0],
+                        "cluster_data": cluster_split[1],
+                        "dataset": cluster_split[2],
+                        "grouping_name": cluster_split[-1],
+                    }
+                    for cluster_split in cluster_set_splits
+                ]
+                for cluster_kwarg_set in cluster_kwargs:
+                    cluster_kwarg_set["dataset"] = Dataset.objects.filter(
+                        uuid=cluster_kwarg_set["dataset"]
+                    ).first()
 
-            objs = [create_model("cluster", kwargs) for kwargs in cluster_kwargs]
-            Cluster.objects.bulk_create(objs)
+                objs = [create_model("cluster", kwargs) for kwargs in cluster_kwargs]
+                Cluster.objects.bulk_create(objs)
 
         return
 
 
-def create_modality_and_datasets(hdf_file: Path):
+def create_modality_and_datasets(hdf_file: Path, new_datasets):
     modality_name = hdf_file.stem
     modality = Modality.objects.filter(modality_name__iexact=modality_name).first()
     if modality is None:
@@ -234,45 +279,62 @@ def create_modality_and_datasets(hdf_file: Path):
         for key in store.keys():
             cell_df = store.get(key)
             for uuid in cell_df["dataset"].unique():
-                dataset = Dataset(uuid=uuid[:32], modality=modality)
-                dataset.save()
+                if uuid in new_datasets:
+                    dataset = Dataset(uuid=uuid[:32], modality=modality)
+                    dataset.save()
+
+    elif modality_name == "rna":
+        adata_path = hdf_file.parent / Path("rna.h5ad")
+        adata = anndata.read(adata_path)
+        annotation_metadata = adata.uns["annotation_metadata"]
+        with pd.HDFStore(hdf_file) as store:
+            cell_df = store.get("cell")
+            for uuid in cell_df["dataset"].unique():
+                if uuid in new_datasets:
+                    metadata = annotation_metadata[uuid]["annotation_metadata"]
+                    metadata["is_annotated"] = bool(metadata["is_annotated"])
+                    dataset = Dataset(
+                        uuid=uuid[:32], modality=modality, annotation_metadata=metadata
+                    )
+                    dataset.save()
 
     else:
         with pd.HDFStore(hdf_file) as store:
             cell_df = store.get("cell")
             for uuid in cell_df["dataset"].unique():
-                dataset = Dataset(uuid=uuid[:32], modality=modality)
-                dataset.save()
+                if uuid in new_datasets:
+                    dataset = Dataset(uuid=uuid[:32], modality=modality)
+                    dataset.save()
 
 
-def delete_old_data(modality: str):
-    Cell.objects.filter(modality__modality_name__icontains=modality).delete()
-    modality_datasets = Dataset.objects.filter(
-        modality__modality_name__icontains=modality
-    ).values_list("pk", flat=True)
-    Dataset.objects.filter(modality__modality_name__icontains=modality).delete()
-    Cluster.objects.filter(dataset__in=modality_datasets).delete()
-    Modality.objects.filter(modality_name__icontains=modality).delete()
-
-    if modality in {"codex"}:
-        Protein.objects.all().delete()
+def delete_old_data(hdf_file):
+    store = pd.HDFStore(hdf_file)
+    modality = hdf_file.stem
+    if "/cell" in store.keys():
+        new_datasets = set(store.get("cell")["dataset"].unique())
+    old_datasets = Dataset.objects.filter(modality__modality_name__icontains=modality).exclude(
+        uuid__in=new_datasets
+    )
+    old_datasets.delete()  # This should cascade
+    return new_datasets
 
 
 def load_data(hdf_file: Path):
-    delete_old_data(hdf_file.stem)
+    new_datasets, store = delete_old_data(hdf_file)
 
     print("Old data deleted")
-    create_modality_and_datasets(hdf_file)
+    create_modality_and_datasets(hdf_file, new_datasets)
     print("Modality and datasets created")
     create_organs(hdf_file)
     print("Organs created")
-    create_clusters(hdf_file)
+    create_cell_types(hdf_file)
+    print("Cell types created")
+    create_clusters(hdf_file, new_datasets)
     print("Clusters created")
-    create_cells(hdf_file)
+    create_cells(hdf_file, new_datasets)
     print("Cells created")
-    set_up_cell_cluster_relationships(hdf_file)
+    set_up_cell_cluster_relationships(hdf_file, new_datasets)
     print("Cell cluster relationships established")
-    print("Quants created")
     if hdf_file.stem in ["atac", "rna"]:
         create_genes(hdf_file)
         print("Genes created")
@@ -290,6 +352,10 @@ def main(hdf_files: List[Path]):
 
 
 if __name__ == "__main__":
+    import django
+
+    django.setup()
+
     p = ArgumentParser()
     p.add_argument("hdf_files", type=Path, nargs="+")
     args = p.parse_args()

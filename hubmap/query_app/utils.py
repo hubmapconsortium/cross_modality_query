@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from pymongo import MongoClient
 
 from .apps import count_dict
-from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
+from .models import Cell, CellType, Cluster, Dataset, Gene, Organ, Protein
 
 
 def set_intersection(query_set_1, query_set_2):
@@ -70,6 +70,9 @@ def unpickle_query_set(query_handle):
 
     elif set_type == "protein":
         qs = Protein.objects.all()
+
+    elif set_type == "cell_type":
+        qs = CellType.objects.all()
 
     qs.query = pickle.loads(query_pickle)
 

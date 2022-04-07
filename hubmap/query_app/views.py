@@ -13,9 +13,10 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 
 from .analysis import calculate_statistics, get_bounds
-from .models import Cell, Cluster, Dataset, Gene, Organ, Protein, StatReport
+from .models import Cell, CellType, Cluster, Dataset, Gene, Organ, Protein, StatReport
 from .queries import (
     cell_query,
+    cell_type_query,
     cluster_query,
     dataset_query,
     gene_query,
@@ -25,6 +26,7 @@ from .queries import (
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
+    CellTypeSerializer,
     ClusterAndValuesSerializer,
     ClusterSerializer,
     DatasetAndValuesSerializer,
@@ -63,6 +65,7 @@ def query(self, request):
         "gene": gene_query,
         "organ": organ_query,
         "cell": cell_query,
+        "celltype": cell_type_query,
         "dataset": dataset_query,
         "cluster": cluster_query,
         "protein": protein_query,
@@ -167,6 +170,16 @@ class CellListEvaluationViewSet(viewsets.ModelViewSet):
     serializer_class = CellSerializer
     pagination_class = PaginationClass
     model = Cell
+
+    def post(self, request, format=None):
+        return get_response(self, request, evaluation_list)
+
+
+class CellTypeListEvaluationViewSet(viewsets.ModelViewSet):
+    query_set = CellType.objects.all()
+    serializer_class = CellTypeSerializer
+    pagination_class = PaginationClass
+    model = CellType
 
     def post(self, request, format=None):
         return get_response(self, request, evaluation_list)
