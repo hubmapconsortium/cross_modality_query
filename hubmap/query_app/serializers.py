@@ -17,7 +17,17 @@ from .apps import (
     rna_pvals,
 )
 from .filters import get_cells_list, split_at_comparator
-from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein, StatReport
+from .models import (
+    Cell,
+    CellType,
+    Cluster,
+    Dataset,
+    Gene,
+    Modality,
+    Organ,
+    Protein,
+    StatReport,
+)
 
 
 def infer_values_type(values: List) -> str:
@@ -215,6 +225,12 @@ class CellSerializer(serializers.ModelSerializer):
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organ
+        fields = ["grouping_name"]
+
+
+class CellTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CellType
         fields = ["grouping_name"]
 
 

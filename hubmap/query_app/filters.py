@@ -244,6 +244,29 @@ def get_organ_filter(query_params: Dict) -> Q:
         return Q(grouping_name__in=grouping_names)
 
 
+def get_cell_type_filter(query_params: Dict) -> Q:
+    """str, List[str], str -> Q
+    Finds the filter for a query for group objects based on the input set, input type, and logical operator
+    Currently services membership queries where input type is cells
+    and categorical queries where input type is genes"""
+
+    input_type = query_params["input_type"]
+    input_set = query_params["input_set"]
+
+    if input_type == "cell_type":
+        return Q(grouping_name__in=input_set)
+
+    if input_type == "cell":
+
+        cell_qs = Cell.objects.filter(cell_id__in=input_set)
+
+        cell_type_pks = cell_qs.distinct("cell_type").values_list("cell_type", flat=True)
+
+        q = Q(pk__in=cell_type_pks)
+
+        return q
+
+
 def get_cluster_filter(query_params: dict):
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]

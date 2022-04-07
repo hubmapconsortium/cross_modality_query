@@ -197,6 +197,18 @@ def validate_protein_query_params(query_params):
     check_parameter_types_and_values(query_params)
 
 
+def validate_cell_type_query_params(query_params):
+    permitted_input_types = ["cell_type", "cell"]
+    input_type = query_params["input_type"]
+    check_input_type(input_type, permitted_input_types)
+
+    required_fields = {"input_type", "input_set"}
+    permitted_fields = required_fields | {"input_set_token"}
+    check_parameter_fields(query_params, required_fields, permitted_fields)
+
+    check_parameter_types_and_values(query_params)
+
+
 def validate_cell_query_params(query_params):
     permitted_input_types = [
         "organ",
