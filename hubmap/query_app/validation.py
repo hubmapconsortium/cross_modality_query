@@ -169,7 +169,15 @@ def validate_cluster_query_params(query_params):
 
 
 def validate_dataset_query_params(query_params):
-    permitted_input_types = ["cell", "cluster", "dataset", "gene", "modality", "protein"]
+    permitted_input_types = [
+        "cell",
+        "cell_type",
+        "cluster",
+        "dataset",
+        "gene",
+        "modality",
+        "protein",
+    ]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -198,7 +206,7 @@ def validate_protein_query_params(query_params):
 
 
 def validate_cell_type_query_params(query_params):
-    permitted_input_types = ["cell_type", "cell"]
+    permitted_input_types = ["cell_type", "cell", "dataset"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 

@@ -266,6 +266,16 @@ def get_cell_type_filter(query_params: Dict) -> Q:
 
         return q
 
+    if input_type == "dataset":
+
+        cell_qs = Cell.objects.filter(dataset__uuid__in=input_set)
+
+        cell_type_pks = cell_qs.distinct("cell_type").values_list("cell_type", flat=True)
+
+        q = Q(pk__in=cell_type_pks)
+
+        return q
+
 
 def get_cluster_filter(query_params: dict):
     input_type = query_params["input_type"]
@@ -336,6 +346,15 @@ def get_dataset_filter(query_params: dict):
 
     if input_type == "cell":
         cell_qs = Cell.objects.filter(cell_id__in=input_set)
+
+        dataset_pks = cell_qs.distinct("dataset").values_list("dataset", flat=True)
+
+        q = Q(pk__in=dataset_pks)
+
+        return q
+
+    if input_type == "cell_type":
+        cell_qs = Cell.objects.filter(cell_type__grouping_name__in=input_set)
 
         dataset_pks = cell_qs.distinct("dataset").values_list("dataset", flat=True)
 
