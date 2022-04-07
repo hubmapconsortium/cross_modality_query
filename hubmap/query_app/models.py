@@ -6,6 +6,10 @@ from django.db import models
 EXPIRATION_TIME = 14400  # 4 hours in seconds
 
 
+def annotation_default():
+    return {"is_annotated": False}
+
+
 class CellGrouping(models.Model):
     grouping_name = models.CharField(max_length=64, null=True)
 
@@ -24,10 +28,12 @@ class Modality(models.Model):
 
 
 class Dataset(CellGrouping):
+
     uuid = models.CharField(max_length=32)
     modality = models.ForeignKey(
         to=Modality, related_name="datasets", on_delete=models.CASCADE, null=True
     )
+    annotation_metadata = models.JSONField(default=annotation_default)
 
     def __repr__(self):
         return self.uuid
