@@ -6,6 +6,10 @@ from django.db import models
 EXPIRATION_TIME = 14400  # 4 hours in seconds
 
 
+def annotation_default():
+    return {"is_annotated": False}
+
+
 class CellGrouping(models.Model):
     grouping_name = models.CharField(max_length=64, null=True)
 
@@ -24,10 +28,12 @@ class Modality(models.Model):
 
 
 class Dataset(CellGrouping):
+
     uuid = models.CharField(max_length=32)
     modality = models.ForeignKey(
         to=Modality, related_name="datasets", on_delete=models.CASCADE, null=True
     )
+    annotation_metadata = models.JSONField(default=annotation_default)
 
     def __repr__(self):
         return self.uuid
@@ -58,6 +64,14 @@ class Cluster(CellGrouping):
         return "%s" % self.grouping_name
 
 
+class CellType(CellGrouping):
+    def __repr__(self):
+        return self.grouping_name
+
+    def __str__(self):
+        return "%s" % self.grouping_name
+
+
 class Cell(models.Model):
     cell_id = models.CharField(db_index=True, max_length=128, null=True)
     modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
@@ -69,6 +83,9 @@ class Cell(models.Model):
     mask_index = models.IntegerField(null=True)
     organ = models.ForeignKey(to=Organ, related_name="cells", on_delete=models.CASCADE, null=True)
     clusters = models.ManyToManyField(to=Cluster, related_name="cells")
+    cell_type = models.ForeignKey(
+        to=CellType, related_name="cells", on_delete=models.CASCADE, null=True
+    )
 
     def __repr__(self):
         return self.cell_id

@@ -17,7 +17,17 @@ from .apps import (
     rna_pvals,
 )
 from .filters import get_cells_list, split_at_comparator
-from .models import Cell, Cluster, Dataset, Gene, Modality, Organ, Protein, StatReport
+from .models import (
+    Cell,
+    CellType,
+    Cluster,
+    Dataset,
+    Gene,
+    Modality,
+    Organ,
+    Protein,
+    StatReport,
+)
 
 
 def infer_values_type(values: List) -> str:
@@ -180,9 +190,11 @@ class ModalitySerializer(serializers.ModelSerializer):
 
 
 class DatasetSerializer(serializers.ModelSerializer):
+    annotation_metadata = serializers.JSONField()
+
     class Meta:
         model = Dataset
-        fields = ["uuid"]
+        fields = ["uuid", "annotation_metadata"]
 
 
 class ClusterSerializer(serializers.ModelSerializer):
@@ -197,6 +209,7 @@ class CellSerializer(serializers.ModelSerializer):
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
+    cell_type = serializers.CharField(read_only=True, source="cell_type.grouping_name")
     clusters = serializers.StringRelatedField(many=True)
 
     class Meta:
@@ -206,6 +219,7 @@ class CellSerializer(serializers.ModelSerializer):
             "modality",
             "dataset",
             "organ",
+            "cell_type",
             "clusters",
         ]
 
@@ -213,6 +227,12 @@ class CellSerializer(serializers.ModelSerializer):
 class OrganSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organ
+        fields = ["grouping_name"]
+
+
+class CellTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CellType
         fields = ["grouping_name"]
 
 
@@ -233,6 +253,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
     modality = serializers.CharField(read_only=True, source="modality.modality_name")
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
+    cell_type = serializers.CharField(read_only=True, source="cell_type.grouping_name")
     clusters = serializers.StringRelatedField(many=True)
     values = serializers.SerializerMethodField(method_name="get_values")
 
@@ -243,6 +264,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             "modality",
             "dataset",
             "organ",
+            "cell_type",
             "clusters",
             "values",
         ]
@@ -321,11 +343,12 @@ class ClusterAndValuesSerializer(serializers.ModelSerializer):
 
 
 class DatasetAndValuesSerializer(serializers.ModelSerializer):
+    annotation_metadata = serializers.JSONField()
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
         model = Dataset
-        fields = ["uuid", "values"]
+        fields = ["uuid", "annotation_metadata", "values"]
 
     def get_values(self, obj):
         request = self.context["request"]

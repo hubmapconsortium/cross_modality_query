@@ -11,6 +11,7 @@ from django.apps import AppConfig
 from django.conf import settings
 from django.db.utils import ProgrammingError
 from pymongo import MongoClient
+from tables.exceptions import HDF5ExtError
 from zarr.errors import PathNotFoundError
 
 PATH_TO_H5AD_FILES = Path("/opt")
@@ -126,7 +127,7 @@ def attempt_to_open_file(file_path, key=None):
 
             df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
 
-        except (FileNotFoundError, KeyError, ValueError):
+        except (FileNotFoundError, KeyError, ValueError, HDF5ExtError):
             print(f"File path: {file_path} not found")
             columns_dict = {
                 "percentages": ["var_id", "cutoff", "dataset", "percentage"],
@@ -140,7 +141,7 @@ def attempt_to_open_file(file_path, key=None):
         assert file_path.suffix == ".hdf5"
         try:
             df = get_pval_df(file_path)
-        except (FileNotFoundError, KeyError):
+        except (FileNotFoundError, KeyError, HDF5ExtError):
             print(f"File path: {file_path} not found")
             df = pd.DataFrame(columns=["grouping_name", "gene_id", "value"])
         return df
@@ -197,4 +198,7 @@ class QueryAppConfig(AppConfig):
         try:
             codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="r")
         except:
-            codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="a")
+            try:
+                codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="a")
+            except:
+                codex_store = pd.HDFStore("/opt/codex_fake.hdf5", mode="a")

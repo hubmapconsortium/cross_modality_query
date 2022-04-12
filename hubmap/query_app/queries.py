@@ -6,17 +6,19 @@ from django.core.cache import cache
 from .apps import uuid_dict
 from .filters import (
     get_cell_filter,
+    get_cell_type_filter,
     get_cluster_filter,
     get_dataset_filter,
     get_gene_filter,
     get_organ_filter,
     get_protein_filter,
 )
-from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
+from .models import Cell, CellType, Cluster, Dataset, Gene, Organ, Protein
 from .utils import get_response_from_query_handle, make_pickle_and_hash
 from .validation import (
     process_query_parameters,
     validate_cell_query_params,
+    validate_cell_type_query_params,
     validate_cluster_query_params,
     validate_dataset_query_params,
     validate_gene_query_params,
@@ -99,13 +101,23 @@ def get_datasets_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_dataset_filter(query_params)
 
-    if query_params["input_type"] in ["cell", "cluster", "dataset", "gene", "modality", "protein"]:
+    if query_params["input_type"] in {"cell", "cluster", "dataset", "gene", "modality", "protein"}:
         query_set = (
             Dataset.objects.filter(filter)
             .filter(modality__modality_name__isnull=False)
             .distinct("uuid")
         )
         query_handle = make_pickle_and_hash(query_set, "dataset")
+        return query_handle
+
+
+def get_cell_types_list(query_params: Dict, input_set=None):
+    query_params = process_query_parameters(query_params, input_set)
+    filter = get_cell_type_filter(query_params)
+
+    if query_params["input_type"] in {"cell", "cell_type", "dataset"}:
+        query_set = CellType.objects.filter(filter)
+        query_handle = make_pickle_and_hash(query_set, "cell_type")
         return query_handle
 
 
@@ -208,3 +220,19 @@ def protein_query(self, request):
         pickle_hash = get_proteins_list(query_params, input_set=request.POST.getlist("input_set"))
 
     return get_response_from_query_handle(pickle_hash, "protein")
+
+
+def cell_type_query(self, request):
+    if request.data == {}:
+        all_cell_types = CellType.objects.all().distinct("grouping_name")
+        pickle_hash = make_pickle_and_hash(all_cell_types, "cell_type")
+
+    else:
+        query_params = request.data.dict()
+        query_params["input_set"] = request.POST.getlist("input_set")
+        validate_cell_type_query_params(query_params)
+        pickle_hash = get_cell_types_list(
+            query_params, input_set=request.POST.getlist("input_set")
+        )
+
+    return get_response_from_query_handle(pickle_hash, "cell_type")
