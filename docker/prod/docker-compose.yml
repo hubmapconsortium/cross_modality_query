@@ -22,7 +22,6 @@ services:
       - 5000
     volumes:
       - /opt/secret:/opt/secret
-      - /opt/data:/opt/data
   redis:
     image: redis:latest
     restart: "${DOCKER_RESTART_POLICY:-unless-stopped}"

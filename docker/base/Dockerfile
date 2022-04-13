@@ -20,7 +20,7 @@ WORKDIR /opt
 RUN pip3 install --no-binary annoylib -r /opt/requirements.txt \
  && rm -rf /root/.cache/pip
 
-RUN mkdir /opt/data/zarr/example.zarr
+RUN mkdir -p /opt/data/zarr/example.zarr
 
 RUN curl https://s3.amazonaws.com/cells-api-index-assets/rna.hdf5 --output /opt/rna.hdf5
 RUN curl https://s3.amazonaws.com/cells-api-index-assets/rna.h5ad --output /opt/rna.h5ad
@@ -37,5 +37,3 @@ WORKDIR /opt/data/zarr/example.zarr
 RUN curl https://s3.amazonaws.com/cells-api-index-assets/codex.tar.gz | tar -xzf -
 RUN curl https://s3.amazonaws.com/cells-api-index-assets/rna.tar.gz | tar -xzf -
 RUN curl https://s3.amazonaws.com/cells-api-index-assets/atac.tar.gz | tar -xzf -
-
-RUN tar -xvzf
