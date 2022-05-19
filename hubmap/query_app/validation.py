@@ -4,9 +4,18 @@ from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
-from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
+from .apps import atac_adata, rna_adata
+from .models import (
+    Cell,
+    CellType,
+    Cluster,
+    Dataset,
+    Gene,
+    Modality,
+    Organ,
+    Protein
+)
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
-from .apps import rna_adata, atac_adata
 
 
 def check_input_type(input_type, permitted_input_types):
