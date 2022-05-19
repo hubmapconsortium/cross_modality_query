@@ -15,7 +15,7 @@ from query_app.apps import (
     hash_dict,
     rna_adata,
     rna_cell_df,
-    zarr_root
+    zarr_root,
 )
 
 from .filters import get_cells_list, split_at_comparator
@@ -29,7 +29,7 @@ from .models import (
     Organ,
     Protein,
     PVal,
-    RnaQuant
+    RnaQuant,
 )
 from .serializers import (
     CellAndValuesSerializer,
@@ -44,21 +44,21 @@ from .serializers import (
     OrganAndValuesSerializer,
     OrganSerializer,
     ProteinSerializer,
-    get_quant_value
+    get_quant_value,
 )
 from .utils import (
     get_response_from_query_handle,
     get_response_with_count_from_query_handle,
     infer_values_type,
     split_at_comparator,
-    unpickle_query_set
+    unpickle_query_set,
 )
 from .validation import (
     process_evaluation_args,
     validate_detail_evaluation_args,
     validate_gene_modality,
     validate_list_evaluation_args,
-    validate_values_types
+    validate_values_types,
 )
 
 

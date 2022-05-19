@@ -5,16 +5,7 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
 from .apps import atac_adata, rna_adata
-from .models import (
-    Cell,
-    CellType,
-    Cluster,
-    Dataset,
-    Gene,
-    Modality,
-    Organ,
-    Protein
-)
+from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
