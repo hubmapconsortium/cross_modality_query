@@ -210,7 +210,7 @@ class CellSerializer(serializers.ModelSerializer):
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
     cell_type = serializers.CharField(read_only=True, source="cell_type.grouping_name")
-    clusters = serializers.SerializerMethodField(method_name="get_clusters")
+    clusters = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = Cell
@@ -222,14 +222,6 @@ class CellSerializer(serializers.ModelSerializer):
             "cell_type",
             "clusters",
         ]
-
-    def get_clusters(self, obj):
-        clusters_list = []
-        for cluster in obj.clusters.all():
-            clusters_list.append(cluster.grouping_name)
-        if obj.cell_type is not None:
-            clusters_list.append(obj.cell_type)
-        return clusters_list
 
 
 class OrganSerializer(serializers.ModelSerializer):
@@ -262,7 +254,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
     dataset = serializers.CharField(read_only=True, source="dataset.uuid")
     organ = serializers.CharField(read_only=True, source="organ.grouping_name")
     cell_type = serializers.CharField(read_only=True, source="cell_type.grouping_name")
-    clusters = serializers.SerializerMethodField(method_name="get_clusters")
+    clusters = serializers.StringRelatedField(many=True)
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
@@ -285,14 +277,6 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
             for var_id in var_ids
         }
         return values_dict
-
-    def get_clusters(self, obj):
-        clusters_list = []
-        for cluster in obj.clusters.all():
-            clusters_list.append(cluster.grouping_name)
-        if obj.cell_type is not None:
-            clusters_list.append(obj.cell_type)
-        return clusters_list
 
 
 class GeneAndValuesSerializer(serializers.ModelSerializer):
