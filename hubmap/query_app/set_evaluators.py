@@ -133,7 +133,8 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     elif modality == "codex":
         cell_df = codex_cell_df
 
-    validate_gene_modality(include_values[0], modality)
+    if len(include_values) > 0:
+        validate_gene_modality(include_values[0], modality)
 
     cell_df = cell_df.loc[(uuid)]
 
