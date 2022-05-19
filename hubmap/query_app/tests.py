@@ -73,6 +73,11 @@ def set_list_evaluation(set_key: str, set_type: str, limit: int, offset=0):
     return response_json
 
 
+def get_response_code(request_url, request_dict):
+    response = c.post(request_url, request_dict)
+    return response.status_code
+
+
 # This function/API call returns a more detailed version of the set, containing data specified in include_values
 # It may be slow.
 
@@ -404,3 +409,55 @@ class DetailEvaluationTestCase(TestCase):
         evaluated_protein = set_detail_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
         self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
+
+
+class ErrorTestCase(TestCase):
+    def test_invalid_input_types(self):
+        request_url = base_url + "protein/"
+        request_dict = {"input_type": "organ", "input_set": []}
+        response_code = get_response_code(request_url, request_dict)
+        self.assertEqual(response_code, 400)
+
+    def test_invalid_genomic_modalities(self):
+        request_url = base_url + "dataset/"
+        request_dict = {
+            "input_type": "gene",
+            "input_set": ["VIM > 1"],
+            "genomic_modality": "fake",
+            "min_cell_percentage": 10.0,
+        }
+        response_code = get_response_code(request_url, request_dict)
+        self.assertEqual(response_code, 400)
+
+    def test_invalid_gene_modality_pairing(self):
+        request_url = base_url + "dataset/"
+        request_dict = {
+            "input_type": "gene",
+            "input_set": ["BEST1 > 1"],
+            "genomic_modality": "rna",
+            "min_cell_percentage": 10.0,
+        }
+        response_code = get_response_code(request_url, request_dict)
+        self.assertEqual(response_code, 400)
+
+    def test_invalid_parameters(self):
+        request_url = base_url + "dataset/"
+        request_dict = {
+            "input_type": "gene",
+            "input_set": ["BEST1 > 1"],
+            "genomic_modality": "rna",
+            "min_cell_percentage": 10.0,
+            "extra_param": "fake",
+        }
+        response_code = get_response_code(request_url, request_dict)
+        self.assertEqual(response_code, 400)
+
+    def test_missing_parameters(self):
+        request_url = base_url + "dataset/"
+        request_dict = {
+            "input_type": "gene",
+            "input_set": ["BEST1 > 1"],
+            "min_cell_percentage": 10.0,
+        }
+        response_code = get_response_code(request_url, request_dict)
+        self.assertEqual(response_code, 400)
