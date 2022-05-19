@@ -130,7 +130,10 @@ def attempt_to_open_file(file_path, key=None):
 
                     old_clusters_list = df["clusters"].to_list()
                     cell_types_list = df["cell_type"].to_list()
-                    new_clusters_list = [old_clusters_list[i] + [cell_types_list[i]] for i in range(len(old_clusters_list))]
+                    new_clusters_list = [
+                        old_clusters_list[i] + [cell_types_list[i]]
+                        for i in range(len(old_clusters_list))
+                    ]
                     df["clusters"] = pd.Series(new_clusters_list, index=df.index)
 
             df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()

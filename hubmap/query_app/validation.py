@@ -8,6 +8,7 @@ from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Pro
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 from .apps import rna_adata, atac_adata
 
+
 def check_input_type(input_type, permitted_input_types):
     permitted_input_types.sort()
     if input_type not in permitted_input_types:
