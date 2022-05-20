@@ -5,7 +5,7 @@ from typing import Callable
 
 import django.core.serializers
 from django.conf import settings
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect
 from django.views import View
 from rest_framework import viewsets
@@ -53,6 +53,12 @@ class PaginationClass(PageNumberPagination):
 def get_generic_response(self, callable, request):
     try:
         return JsonResponse(callable(self, request), safe=False)
+    except ValueError as e:
+        tb = traceback.format_exc()
+        json_error_response = {"error": {"stack_trace": tb}, "message": str(e)}
+        response = JsonResponse(json_error_response)
+        response.status_code = 400
+        return response
     except Exception as e:
         tb = traceback.format_exc()
         json_error_response = {"error": {"stack_trace": tb}, "message": str(e)}
@@ -94,6 +100,12 @@ def get_response(self, request, callable: Callable):
         paginated_queryset = self.paginate_queryset(response)
         paginated_response = self.get_paginated_response(paginated_queryset)
         return paginated_response
+    except ValueError as e:
+        tb = traceback.format_exc()
+        json_error_response = {"error": {"stack_trace": tb}, "message": str(e)}
+        response = JsonResponse(json_error_response)
+        response.status_code = 400
+        return response
     except Exception as e:
         tb = traceback.format_exc()
         json_error_response = json.dumps({"error": {"stack_trace": tb}, "message": str(e)})
@@ -124,7 +136,10 @@ class CellDetailEvaluationViewSet(viewsets.ModelViewSet):
     model = Cell
 
     def post(self, request, format=None):
-        return get_response(self, request, evaluation_detail)
+        response = get_response(self, request, evaluation_detail)
+        print("Got response")
+        print(response)
+        return response
 
 
 class OrganDetailEvaluationViewSet(viewsets.ModelViewSet):

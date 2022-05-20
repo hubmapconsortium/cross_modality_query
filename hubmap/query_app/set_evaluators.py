@@ -56,6 +56,7 @@ from .utils import (
 from .validation import (
     process_evaluation_args,
     validate_detail_evaluation_args,
+    validate_gene_modality,
     validate_list_evaluation_args,
     validate_values_types,
 )
@@ -122,6 +123,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
         .first()
         .modality.modality_name
     )
+
     if modality == "rna":
         cell_df = rna_cell_df
 
@@ -130,6 +132,9 @@ def get_dataset_cells(uuid, include_values, offset, limit):
 
     elif modality == "codex":
         cell_df = codex_cell_df
+
+    if len(include_values) > 0:
+        validate_gene_modality(include_values[0], modality)
 
     cell_df = cell_df.loc[(uuid)]
 
