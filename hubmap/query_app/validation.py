@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
+from .apps import atac_adata, rna_adata
 from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
@@ -463,3 +464,15 @@ def validate_input_terms(input_type: str, input_set: List[str]):
     if len(identifiers_not_found) > 0:
         identifiers_string = ", ".join(identifiers_not_found)
         raise ValueError(f"No {input_type} found with identifiers: {identifiers_string}")
+
+
+def validate_gene_modality(gene_symbol, modality):
+    if modality == "rna":
+        gene_symbols = list(rna_adata.var.index)
+        other_modality = "atac"
+    elif modality == "atac":
+        gene_symbols = list(atac_adata.var.index)
+        other_modality = "rna"
+    if modality in ["rna", "atac"]:
+        if gene_symbol not in gene_symbols:
+            raise ValueError(f"{gene_symbol} not present in {modality} only in {other_modality}")
