@@ -119,21 +119,12 @@ def attempt_to_open_file(file_path, key=None):
             columns_dict = {"percentages": ["var_id", "cutoff", "dataset"], "cell": ["dataset"]}
 
             if key == "cell":
-                if "cell_type" not in df.columns:
-                    df["cell_type"] = "unknown"
 
                 if "clusters" in df.columns:
                     df = df[~df["clusters"].isna()]
 
                     if isinstance(df["clusters"].iloc[0], str):
                         df["clusters"] = df["clusters"].str.split(",")
-
-                if "cell_type" not in df.columns:
-                    df["cell_type"] = "unknown"
-                    old_clusters_list = df["clusters"].to_list()
-                    cell_types_list = df["cell_type"].to_list()
-                    new_clusters_list = [old_clusters_list[i] + [cell_types_list[i]] for i in range(len(old_clusters_list))]
-                    df["clusters"] = pd.Series(new_clusters_list, index=df.index)
 
             df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
 
