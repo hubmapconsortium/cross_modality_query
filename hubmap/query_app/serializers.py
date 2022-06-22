@@ -224,7 +224,7 @@ class CellSerializer(serializers.ModelSerializer):
         ]
 
     def get_clusters(self, obj):
-        clusters_list = list(obj.clusters.all().values_list('grouping_name', flat=True))
+        clusters_list = list(obj.clusters.all().values_list("grouping_name", flat=True))
         if obj.cell_type is not None:
             clusters_list.append(obj.cell_type.grouping_name)
         return clusters_list
@@ -285,7 +285,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
         return values_dict
 
     def get_clusters(self, obj):
-        clusters_list = list(obj.clusters.all().values_list('grouping_name', flat=True))
+        clusters_list = list(obj.clusters.all().values_list("grouping_name", flat=True))
         if obj.cell_type is not None:
             clusters_list.append(obj.cell_type.grouping_name)
         return clusters_list
