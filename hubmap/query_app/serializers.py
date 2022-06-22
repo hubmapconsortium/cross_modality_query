@@ -228,7 +228,7 @@ class CellSerializer(serializers.ModelSerializer):
         for cluster in obj.clusters.all():
             clusters_list.append(cluster.grouping_name)
         if obj.cell_type is not None:
-            clusters_list.append(obj.cell_type)
+            clusters_list.append(obj.cell_type.grouping_name)
         return clusters_list
 
 
@@ -291,7 +291,7 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
         for cluster in obj.clusters.all():
             clusters_list.append(cluster.grouping_name)
         if obj.cell_type is not None:
-            clusters_list.append(obj.cell_type)
+            clusters_list.append(obj.cell_type.grouping_name)
         return clusters_list
 
 
