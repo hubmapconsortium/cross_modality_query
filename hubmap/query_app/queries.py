@@ -101,7 +101,15 @@ def get_datasets_list(query_params: Dict, input_set=None):
     query_params = process_query_parameters(query_params, input_set)
     filter = get_dataset_filter(query_params)
 
-    if query_params["input_type"] in {"cell", "cluster", "dataset", "gene", "modality", "protein"}:
+    if query_params["input_type"] in {
+        "cell",
+        "cell_type",
+        "cluster",
+        "dataset",
+        "gene",
+        "modality",
+        "protein",
+    }:
         query_set = (
             Dataset.objects.filter(filter)
             .filter(modality__modality_name__isnull=False)
