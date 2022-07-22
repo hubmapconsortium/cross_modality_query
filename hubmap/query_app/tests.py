@@ -138,7 +138,7 @@ class CellTestCase(TestCase):
         dataset_cells_count = set_count(dataset_cells, "cell")
         self.assertEqual(dataset_cells_count, 10)
 
-    def test_cells_from_modalitiess(self):
+    def test_cells_from_modalities(self):
         input_set = ["rna"]
         modality_cells = hubmap_query(
             input_type="modality", output_type="cell", input_set=input_set

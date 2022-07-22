@@ -26,7 +26,6 @@ from .models import (
     Modality,
     Organ,
     Protein,
-    StatReport,
 )
 
 
@@ -370,17 +369,3 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
         else:
             values_type = infer_values_type(conditions)
             return get_percentage(obj.uuid, values_type, conditions[0])
-
-
-class StatReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StatReport
-        fields = [
-            "query_handle",
-            "var_id",
-            "statistic_type",
-            "rna_value",
-            "atac_value",
-            "codex_value",
-            "num_cells_excluded",
-        ]

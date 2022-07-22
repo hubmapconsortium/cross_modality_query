@@ -20,16 +20,12 @@ from query_app.apps import (
 
 from .filters import get_cells_list, split_at_comparator
 from .models import (
-    AtacQuant,
     Cell,
     Cluster,
-    CodexQuant,
     Dataset,
     Gene,
     Organ,
     Protein,
-    PVal,
-    RnaQuant,
 )
 from .serializers import (
     CellAndValuesSerializer,
