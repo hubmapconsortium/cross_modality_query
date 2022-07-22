@@ -215,12 +215,17 @@ def get_organ_filter(query_params: Dict) -> Q:
     if input_type == "organ":
         return Q(grouping_name__in=input_set)
 
-    entities_dict = {'cell':{'cell_id__in':input_set}, 'cell_type':{'cell_type__grouping_name__in':input_set}, 'dataset':{'dataset__uuid__in':input_set}, 'cluster':{'clusters__grouping_name__in':input_set}}
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "cell_type": {"cell_type__grouping_name__in": input_set},
+        "dataset": {"dataset__uuid__in": input_set},
+        "cluster": {"clusters__grouping_name__in": input_set},
+    }
 
     if input_type in entities_dict:
         kwargs = entities_dict[input_type]
         cell_qs = Cell.objects.filter(**kwargs)
-        organ_pks = cell_qs.distinct('organ').values_list('organ', flat=True)
+        organ_pks = cell_qs.distinct("organ").values_list("organ", flat=True)
         q = Q(pk__in=organ_pks)
         return q
 
@@ -255,7 +260,11 @@ def get_cell_type_filter(query_params: Dict) -> Q:
     if input_type == "cell_type":
         return Q(grouping_name__in=input_set)
 
-    entities_dict = {'cell':{'cell_id__in':input_set}, 'dataset':{'dataset__uuid__in':input_set}, 'organ':{'organ__grouping_name__in':input_set}}
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "dataset": {"dataset__uuid__in": input_set},
+        "organ": {"organ__grouping_name__in": input_set},
+    }
 
     if input_type in entities_dict:
         kwargs = entities_dict[input_type]
@@ -271,7 +280,11 @@ def get_cluster_filter(query_params: dict):
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
 
-    entities_dict = {'cell':{'cell_id__in':input_set}, 'dataset':{'dataset__uuid__in':input_set}, 'organ':{'organ__grouping_name__in':input_set}}
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "dataset": {"dataset__uuid__in": input_set},
+        "organ": {"organ__grouping_name__in": input_set},
+    }
 
     if input_type == "cluster":
         return Q(grouping_name__in=input_set)
@@ -297,9 +310,9 @@ def get_cluster_filter(query_params: dict):
     elif input_type in entities_dict:
         kwargs = entities_dict[input_type]
         cell_qs = Cell.objects.filter(**kwargs)
-        cell_pks = cell_qs.values_list('pk', flat=True)
-        cluster_pks = Cluster.objects.filter(cells__pk__in=cell_pks).values_list('pk', flat=True)
-#        cluster_pks = {cluster.id for cell in cell_qs for cluster in cell.clusters.all()}
+        cell_pks = cell_qs.values_list("pk", flat=True)
+        cluster_pks = Cluster.objects.filter(cells__pk__in=cell_pks).values_list("pk", flat=True)
+        #        cluster_pks = {cluster.id for cell in cell_qs for cluster in cell.clusters.all()}
         q = Q(pk__in=cluster_pks)
         return q
 
@@ -326,7 +339,12 @@ def get_dataset_filter(query_params: dict):
     elif input_type == "modality":
         return Q(modality__modality_name__in=input_set)
 
-    entities_dict = {'cell':{'cell_id__in':input_set}, 'cell_type':{'cell_type__grouping_name__in':input_set}, 'organ':{'organ__grouping_name__in':input_set}, 'cluster':{'cluster__grouping_name__in':input_set}}
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "cell_type": {"cell_type__grouping_name__in": input_set},
+        "organ": {"organ__grouping_name__in": input_set},
+        "cluster": {"cluster__grouping_name__in": input_set},
+    }
     if input_type in entities_dict:
         kwargs = entities_dict[input_type]
         cell_qs = Cell.objects.filter(**kwargs)

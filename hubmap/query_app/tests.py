@@ -221,6 +221,7 @@ class OrganTestCase(TestCase):
         organs_count = set_count(organs, "organ")
         self.assertEqual(organs_count, 1)
 
+
 class DatasetTestCase(TestCase):
     fixtures = [
         "minimal_dataset_test.json",
@@ -270,6 +271,7 @@ class DatasetTestCase(TestCase):
         )
         organ_datasets_count = set_count(organ_datasets, "cell")
         self.assertEqual(organ_datasets_count, 1)
+
 
 class ClusterTestCase(TestCase):
     fixtures = [
