@@ -109,10 +109,8 @@ def set_detail_evaluation(
 
 class CellTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -178,10 +176,8 @@ class CellTestCase(TestCase):
 
 class GeneTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -204,10 +200,8 @@ class GeneTestCase(TestCase):
 
 class OrganTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -251,10 +245,8 @@ class OrganTestCase(TestCase):
 
 class DatasetTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -311,10 +303,8 @@ class DatasetTestCase(TestCase):
 
 class ClusterTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -352,10 +342,8 @@ class ClusterTestCase(TestCase):
 
 class ProteinTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -378,10 +366,8 @@ class ProteinTestCase(TestCase):
 
 class OperationsTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -402,10 +388,8 @@ class OperationsTestCase(TestCase):
 
 class ListEvaluationTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -463,10 +447,8 @@ class ListEvaluationTestCase(TestCase):
 
 class DetailEvaluationTestCase(TestCase):
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
@@ -521,10 +503,9 @@ class DetailEvaluationTestCase(TestCase):
 class ErrorTestCase(TestCase):
 
     fixtures = [
-        "admin.json",
         "cell.json",
-        "cell_cluster.json",
-        "cell_type.json",
+        "celltype.json"json",
+       ,
         "cluster.json",
         "dataset.json",
         "gene.json",
