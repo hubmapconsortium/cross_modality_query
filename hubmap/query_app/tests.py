@@ -504,8 +504,7 @@ class ErrorTestCase(TestCase):
 
     fixtures = [
         "cell.json",
-        "celltype.json"json",
-       ,
+        "celltype.json",
         "cluster.json",
         "dataset.json",
         "gene.json",
