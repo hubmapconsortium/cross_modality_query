@@ -19,14 +19,7 @@ from query_app.apps import (
 )
 
 from .filters import get_cells_list, split_at_comparator
-from .models import (
-    Cell,
-    Cluster,
-    Dataset,
-    Gene,
-    Organ,
-    Protein,
-)
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,

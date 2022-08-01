@@ -17,16 +17,7 @@ from .apps import (
     rna_pvals,
 )
 from .filters import get_cells_list, split_at_comparator
-from .models import (
-    Cell,
-    CellType,
-    Cluster,
-    Dataset,
-    Gene,
-    Modality,
-    Organ,
-    Protein,
-)
+from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 
 
 def infer_values_type(values: List) -> str:
