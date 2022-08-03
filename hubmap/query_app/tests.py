@@ -352,7 +352,8 @@ class CellTypeTestCase(TestCase):
         "celltype.json",
         "cluster.json",
         "dataset.json",
-        "modality.json" "organ.json",
+        "modality.json",
+        "organ.json",
     ]
 
     def test_all_cell_types(self):
@@ -360,7 +361,7 @@ class CellTypeTestCase(TestCase):
         all_clusters_count = set_count(all_clusters, "cluster")
         self.assertEqual(all_clusters_count, 40)
 
-    def test_cells_from_cell_types(self):
+    def test_cell_types_from_cell_types(self):
         input_set = ["Mesangial Cell"]
         cell_type_cell_types = hubmap_query(
             input_type="cell_type", output_type="cell_type", input_set=input_set
