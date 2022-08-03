@@ -10,6 +10,7 @@ from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
 def check_input_type(input_type, permitted_input_types):
+    input_type = "cell_type" if input_type == "celltype" else input_type
     permitted_input_types.sort()
     if input_type not in permitted_input_types:
         raise ValueError(f"{input_type} not in {permitted_input_types}")
