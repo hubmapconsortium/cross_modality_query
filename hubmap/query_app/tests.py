@@ -387,7 +387,7 @@ class CellTypeTestCase(TestCase):
             input_type="organ", output_type="celltype", input_set=input_set
         )
         organ_cell_types_count = set_count(organ_cell_types, "cell_type")
-        self.assertEqual(organ_cell_types_count, 5)
+        self.assertEqual(organ_cell_types_count, 22)
 
 
 class ProteinTestCase(TestCase):
