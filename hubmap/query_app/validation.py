@@ -255,6 +255,10 @@ def split_and_strip(string: str) -> List[str]:
 def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
     query_params["input_type"] = query_params["input_type"].lower()
 
+    query_params["input_type"] = (
+        "cell_type" if query_params["input_type"] == "celltype" else query_params["input_type"]
+    )
+
     if input_set is not None:
         query_params["input_set"] = input_set
 
