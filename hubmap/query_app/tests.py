@@ -220,7 +220,10 @@ class OrganTestCase(TestCase):
         self.assertEqual(organs_count, 1)
 
     def test_organs_from_clusters(self):
-        input_set = ["leiden-UMAP-d4493657cde29702c5ed73932da5317c-1"]
+        input_set = [
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-7",
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-5",
+        ]
         organs = hubmap_query(input_type="cluster", output_type="organ", input_set=input_set)
         organs_count = set_count(organs, "organ")
         self.assertEqual(organs_count, 1)
@@ -258,8 +261,8 @@ class DatasetTestCase(TestCase):
 
     def test_datasets_from_clusters(self):
         input_set = [
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-8",
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-7",
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-5",
         ]
         datasets_from_clusters = hubmap_query("cluster", "dataset", input_set)
         datasets_from_clusters_count = set_count(datasets_from_clusters, "dataset")
