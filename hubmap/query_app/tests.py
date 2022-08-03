@@ -167,7 +167,9 @@ class CellTestCase(TestCase):
 
     def test_cells_from_cell_types(self):
         input_set = ["Mesangial Cell"]
-        cell_type_cells = hubmap_query(input_type="cell_type", output_type="cell", input_set=input_set)
+        cell_type_cells = hubmap_query(
+            input_type="cell_type", output_type="cell", input_set=input_set
+        )
         cell_type_cells_count = set_count(cell_type_cells, "cell")
         self.assertEqual(cell_type_cells_count, 10)
 
@@ -236,7 +238,9 @@ class OrganTestCase(TestCase):
 
     def test_organs_from_cell_types(self):
         input_set = ["Mesangial Cell"]
-        cell_type_organs = hubmap_query(input_type="cell_type", output_type="organ", input_set=input_set)
+        cell_type_organs = hubmap_query(
+            input_type="cell_type", output_type="organ", input_set=input_set
+        )
         cell_type_organs_count = set_count(cell_type_organs, "organ")
         self.assertEqual(cell_type_organs_count, 1)
 
@@ -298,7 +302,9 @@ class DatasetTestCase(TestCase):
 
     def test_datasets_from_cell_types(self):
         input_set = ["Mesangial Cell"]
-        cell_type_datasets = hubmap_query(input_type="cell_type", output_type="dataset", input_set=input_set)
+        cell_type_datasets = hubmap_query(
+            input_type="cell_type", output_type="dataset", input_set=input_set
+        )
         cell_type_datasets_count = set_count(cell_type_datasets, "dataset")
         self.assertEqual(cell_type_datasets_count, 10)
 
@@ -356,7 +362,9 @@ class CellTypeTestCase(TestCase):
 
     def test_cells_from_cell_types(self):
         input_set = ["Mesangial Cell"]
-        cell_type_cell_types = hubmap_query(input_type="cell_type", output_type="cell_type", input_set=input_set)
+        cell_type_cell_types = hubmap_query(
+            input_type="cell_type", output_type="cell_type", input_set=input_set
+        )
         cell_type_cell_types_count = set_count(cell_type_cell_types, "cell_type")
         self.assertEqual(cell_type_cell_types_count, 1)
 
@@ -379,6 +387,7 @@ class CellTypeTestCase(TestCase):
         )
         organ_cell_types_count = set_count(organ_cell_types, "cell")
         self.assertEqual(organ_cell_types_count, 5)
+
 
 class ProteinTestCase(TestCase):
     fixtures = [
@@ -544,6 +553,7 @@ class DetailEvaluationTestCase(TestCase):
         evaluated_cell_type = set_detail_evaluation(all_cell_types, "cell_type", 1)[0]
         evaluated_cell_type_fields = list(evaluated_cell_type.keys())
         self.assertEqual(evaluated_cell_type_fields, ["grouping_name"])
+
 
 class ErrorTestCase(TestCase):
     def test_invalid_input_types(self):
