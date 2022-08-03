@@ -10,6 +10,10 @@ def annotation_default():
     return {"is_annotated": False}
 
 
+def summary_default():
+    return {}
+
+
 class CellGrouping(models.Model):
     grouping_name = models.CharField(max_length=64, null=True)
 
@@ -104,6 +108,7 @@ class Cell(models.Model):
 class Gene(models.Model):
     gene_symbol = models.CharField(db_index=True, max_length=64)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+    summary = models.JSONField(default=summary_default)
 
     def __repr__(self):
         return self.gene_symbol
@@ -115,57 +120,7 @@ class Gene(models.Model):
 class Protein(models.Model):
     protein_id = models.CharField(db_index=True, max_length=32)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+    summary = models.JSONField(default=summary_default)
 
     def __repr__(self):
         return self.protein_id
-
-
-class Quant(models.Model):
-    q_cell_id = models.CharField(max_length=128, null=True, db_index=True)
-    q_var_id = models.CharField(max_length=64, null=True, db_index=True)
-    value = models.FloatField(db_index=True)
-
-    class Meta:
-        abstract = True
-
-
-class RnaQuant(Quant):
-    def __repr__(self):
-        return str(self.value)
-
-
-class AtacQuant(Quant):
-    def __repr__(self):
-        return str(self.value)
-
-
-class CodexQuant(Quant):
-    statistic = models.CharField(
-        max_length=16, null=True, db_index=True
-    )  # One of mean, total, covariance
-
-
-#    region = models.CharField(
-#        max_length=16, null=True
-#    )  # One of nucleus, membrane, cytoplasm, cell
-
-
-class PVal(models.Model):
-    p_cluster = models.ForeignKey(to=Cluster, on_delete=models.CASCADE, null=True)
-    p_organ = models.ForeignKey(to=Organ, on_delete=models.CASCADE, null=True)
-    p_gene = models.ForeignKey(to=Gene, on_delete=models.CASCADE, null=True)
-    modality = models.ForeignKey(to=Modality, on_delete=models.CASCADE, null=True)
-    value = models.FloatField(null=True, db_index=True)
-
-    def __repr__(self):
-        return self.value
-
-
-class StatReport(models.Model):
-    query_handle = models.TextField()
-    var_id = models.TextField()
-    statistic_type = models.TextField()
-    rna_value = models.FloatField(null=True)
-    atac_value = models.FloatField(null=True)
-    codex_value = models.FloatField(null=True)
-    num_cells_excluded = models.IntegerField(null=True)

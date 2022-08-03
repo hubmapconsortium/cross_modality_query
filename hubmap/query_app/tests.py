@@ -109,13 +109,20 @@ def set_detail_evaluation(
 
 class CellTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "gene.json",
+        "modality.json",
+        "organ.json",
+        "protein.json",
     ]
 
     def test_all_cells(self):
         all_cells = get_all("cell")
         all_cells_count = set_count(all_cells, "cell")
-        self.assertEqual(all_cells_count, 30)
+        self.assertEqual(all_cells_count, 1230)
 
     def test_cells_from_cells(self):
         input_set = [
@@ -138,19 +145,19 @@ class CellTestCase(TestCase):
         dataset_cells_count = set_count(dataset_cells, "cell")
         self.assertEqual(dataset_cells_count, 10)
 
-    def test_cells_from_modalitiess(self):
+    def test_cells_from_modalities(self):
         input_set = ["rna"]
         modality_cells = hubmap_query(
             input_type="modality", output_type="cell", input_set=input_set
         )
         modality_cells_count = set_count(modality_cells, "cell")
-        self.assertEqual(modality_cells_count, 10)
+        self.assertEqual(modality_cells_count, 1100)
 
     def test_cells_from_organs(self):
         input_set = ["Heart"]
         organ_cells = hubmap_query(input_type="organ", output_type="cell", input_set=input_set)
         organ_cells_count = set_count(organ_cells, "cell")
-        self.assertEqual(organ_cells_count, 10)
+        self.assertEqual(organ_cells_count, 50)
 
     def test_cells_from_datasets(self):
         input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
@@ -158,24 +165,24 @@ class CellTestCase(TestCase):
         dataset_cells_count = set_count(dataset_cells, "cell")
         self.assertEqual(dataset_cells_count, 10)
 
-    def test_cells_from_modalitiess(self):
-        input_set = ["rna"]
-        modality_cells = hubmap_query(
-            input_type="modality", output_type="cell", input_set=input_set
+    def test_cells_from_cell_types(self):
+        input_set = ["Mesangial Cell"]
+        cell_type_cells = hubmap_query(
+            input_type="cell_type", output_type="cell", input_set=input_set
         )
-        modality_cells_count = set_count(modality_cells, "cell")
-        self.assertEqual(modality_cells_count, 10)
+        cell_type_cells_count = set_count(cell_type_cells, "cell")
+        self.assertEqual(cell_type_cells_count, 2)
 
 
 class GeneTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "gene.json",
     ]
 
     def test_all_genes(self):
         all_genes = get_all("gene")
         all_genes_count = set_count(all_genes, "gene")
-        self.assertEqual(all_genes_count, 20)
+        self.assertEqual(all_genes_count, 11)
 
     def test_genes_from_genes(self):
         input_set = ["ABHD17A"]
@@ -186,13 +193,18 @@ class GeneTestCase(TestCase):
 
 class OrganTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "modality.json",
+        "organ.json",
     ]
 
     def test_all_organs(self):
         all_organs = get_all("organ")
         all_organs_count = set_count(all_organs, "organ")
-        self.assertEqual(all_organs_count, 3)
+        self.assertEqual(all_organs_count, 10)
 
     def test_organs_from_cells(self):
         input_set = [
@@ -209,16 +221,44 @@ class OrganTestCase(TestCase):
         organs_count = set_count(organs, "organ")
         self.assertEqual(organs_count, 1)
 
+    def test_organs_from_datasets(self):
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
+        organs = hubmap_query(input_type="dataset", output_type="organ", input_set=input_set)
+        organs_count = set_count(organs, "organ")
+        self.assertEqual(organs_count, 1)
+
+    def test_organs_from_clusters(self):
+        input_set = [
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-7",
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-5",
+        ]
+        organs = hubmap_query(input_type="cluster", output_type="organ", input_set=input_set)
+        organs_count = set_count(organs, "organ")
+        self.assertEqual(organs_count, 1)
+
+    def test_organs_from_cell_types(self):
+        input_set = ["Mesangial Cell"]
+        cell_type_organs = hubmap_query(
+            input_type="cell_type", output_type="organ", input_set=input_set
+        )
+        cell_type_organs_count = set_count(cell_type_organs, "organ")
+        self.assertEqual(cell_type_organs_count, 1)
+
 
 class DatasetTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "modality.json",
+        "organ.json",
     ]
 
     def test_all_datasets(self):
         all_datasets = get_all("dataset")
         all_datasets_count = set_count(all_datasets, "dataset")
-        self.assertEqual(all_datasets_count, 3)
+        self.assertEqual(all_datasets_count, 170)
 
     def test_datasets_from_cells(self):
         input_set = [
@@ -237,57 +277,128 @@ class DatasetTestCase(TestCase):
 
     def test_datasets_from_clusters(self):
         input_set = [
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-10",
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-7",
+            "leiden-UMAP-0576b972e074074b4c51a61c3d17a6e3-5",
         ]
         datasets_from_clusters = hubmap_query("cluster", "dataset", input_set)
         datasets_from_clusters_count = set_count(datasets_from_clusters, "dataset")
         self.assertEqual(datasets_from_clusters_count, 1)
 
-    def test_datasets_from_modalitiess(self):
+    def test_datasets_from_modalities(self):
         input_set = ["codex"]
         modality_datasets = hubmap_query(
             input_type="modality", output_type="dataset", input_set=input_set
         )
         modality_datasets_count = set_count(modality_datasets, "cell")
-        self.assertEqual(modality_datasets_count, 1)
+        self.assertEqual(modality_datasets_count, 47)
+
+    def test_datasets_from_organs(self):
+        input_set = ["Heart"]
+        organ_datasets = hubmap_query(
+            input_type="organ", output_type="dataset", input_set=input_set
+        )
+        organ_datasets_count = set_count(organ_datasets, "cell")
+        self.assertEqual(organ_datasets_count, 5)
+
+    def test_datasets_from_cell_types(self):
+        input_set = ["Mesangial Cell"]
+        cell_type_datasets = hubmap_query(
+            input_type="cell_type", output_type="dataset", input_set=input_set
+        )
+        cell_type_datasets_count = set_count(cell_type_datasets, "dataset")
+        self.assertEqual(cell_type_datasets_count, 2)
 
 
 class ClusterTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "modality.json",
+        "organ.json",
     ]
 
     def test_all_clusters(self):
         all_clusters = get_all("cluster")
         all_clusters_count = set_count(all_clusters, "cluster")
-        self.assertEqual(all_clusters_count, 69)
+        self.assertEqual(all_clusters_count, 1795)
+
+    def test_clusters_from_cells(self):
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3-AATGGCTTCTCGACGG"]
+        clusters_from_cells = hubmap_query("cell", "cluster", input_set)
+        clusters_from_cells = set_count(clusters_from_cells, "cluster")
+        self.assertEqual(clusters_from_cells, 2)
 
     def test_clusters_from_datasets(self):
         input_set = ["d4493657cde29702c5ed73932da5317c"]
         clusters_from_datasets = hubmap_query("dataset", "cluster", input_set)
         clusters_from_datasets_count = set_count(clusters_from_datasets, "cluster")
-        self.assertEqual(clusters_from_datasets_count, 23)
+        self.assertEqual(clusters_from_datasets_count, 9)
 
     def test_clusters_from_clusters(self):
         input_set = [
             "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-10",
+            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-8",
         ]
         clusters_from_clusters = hubmap_query("cluster", "cluster", input_set)
         clusters_from_clusters_count = set_count(clusters_from_clusters, "cluster")
         self.assertEqual(clusters_from_clusters_count, 2)
 
 
+class CellTypeTestCase(TestCase):
+    fixtures = [
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "modality.json",
+        "organ.json",
+    ]
+
+    def test_all_cell_types(self):
+        all_cell_types = get_all("celltype")
+        all_cell_types_count = set_count(all_cell_types, "cell_type")
+        self.assertEqual(all_cell_types_count, 40)
+
+    def test_cell_types_from_cell_types(self):
+        input_set = ["Mesangial Cell"]
+        cell_type_cell_types = hubmap_query(
+            input_type="celltype", output_type="celltype", input_set=input_set
+        )
+        cell_type_cell_types_count = set_count(cell_type_cell_types, "cell_type")
+        self.assertEqual(cell_type_cell_types_count, 1)
+
+    def test_cell_types_from_cells(self):
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3-AATGGCTTCTCGACGG"]
+        cell_types_from_cells = hubmap_query("cell", "celltype", input_set)
+        cell_types_from_cells = set_count(cell_types_from_cells, "cell_type")
+        self.assertEqual(cell_types_from_cells, 1)
+
+    def test_cell_types_from_datasets(self):
+        input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
+        cell_types_from_datasets = hubmap_query("dataset", "celltype", input_set)
+        cell_types_from_datasets_count = set_count(cell_types_from_datasets, "cell_type")
+        self.assertEqual(cell_types_from_datasets_count, 1)
+
+    def test_cell_types_from_organs(self):
+        input_set = ["Kidney"]
+        organ_cell_types = hubmap_query(
+            input_type="organ", output_type="celltype", input_set=input_set
+        )
+        organ_cell_types_count = set_count(organ_cell_types, "cell_type")
+        self.assertEqual(organ_cell_types_count, 22)
+
+
 class ProteinTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "protein.json",
     ]
 
     def test_all_proteins(self):
         all_proteins = get_all("protein")
         all_proteins_count = set_count(all_proteins, "protein")
-        self.assertEqual(all_proteins_count, 10)
+        self.assertEqual(all_proteins_count, 65)
 
     def test_proteins_from_proteins(self):
         input_set = ["CD107a", "CD11c"]
@@ -298,7 +409,14 @@ class ProteinTestCase(TestCase):
 
 class OperationsTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "gene.json",
+        "modality.json",
+        "organ.json",
+        "protein.json",
     ]
 
     def test_union(self):
@@ -308,12 +426,19 @@ class OperationsTestCase(TestCase):
         cells_from_organ = hubmap_query("organ", "cell", input_set)
         intersection_cells = set_union(cells_from_dataset, cells_from_organ, "cell")
         intersection_cells_count = set_count(intersection_cells, "cell")
-        self.assertEqual(intersection_cells_count, 20)
+        self.assertEqual(intersection_cells_count, 180)
 
 
 class ListEvaluationTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "gene.json",
+        "modality.json",
+        "organ.json",
+        "protein.json",
     ]
 
     def test_cells(self):
@@ -321,14 +446,15 @@ class ListEvaluationTestCase(TestCase):
         evaluated_cell = set_list_evaluation(all_cells, "cell", 1)[0]
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
-            evaluated_cell_fields, ["cell_id", "modality", "dataset", "organ", "clusters"]
+            evaluated_cell_fields,
+            ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"],
         )
 
     def test_genes(self):
         all_genes = get_all("gene")
         evaluated_gene = set_list_evaluation(all_genes, "gene", 1)[0]
         evaluated_gene_fields = list(evaluated_gene.keys())
-        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms"])
+        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "summary"])
 
     def test_organs(self):
         all_organs = get_all("organ")
@@ -360,12 +486,25 @@ class ListEvaluationTestCase(TestCase):
         all_proteins = get_all("protein")
         evaluated_protein = set_list_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
-        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
+        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms", "summary"])
+
+    def test_cell_type(self):
+        all_cell_types = get_all("celltype")
+        evaluated_cell_type = set_list_evaluation(all_cell_types, "celltype", 1)[0]
+        evaluated_cell_type_fields = list(evaluated_cell_type.keys())
+        self.assertEqual(evaluated_cell_type_fields, ["grouping_name"])
 
 
 class DetailEvaluationTestCase(TestCase):
     fixtures = [
-        "minimal_dataset_test.json",
+        "cell.json",
+        "celltype.json",
+        "cluster.json",
+        "dataset.json",
+        "gene.json",
+        "modality.json",
+        "organ.json",
+        "protein.json",
     ]
 
     def test_cells(self):
@@ -374,14 +513,14 @@ class DetailEvaluationTestCase(TestCase):
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
             evaluated_cell_fields,
-            ["cell_id", "modality", "dataset", "organ", "clusters", "values"],
+            ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters", "values"],
         )
 
     def test_genes(self):
         all_genes = get_all("gene")
         evaluated_gene = set_detail_evaluation(all_genes, "gene", 1)[0]
         evaluated_gene_fields = list(evaluated_gene.keys())
-        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "values"])
+        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "summary", "values"])
 
     def test_organs(self):
         all_organs = get_all("organ")
@@ -408,7 +547,13 @@ class DetailEvaluationTestCase(TestCase):
         all_proteins = get_all("protein")
         evaluated_protein = set_detail_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
-        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
+        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms", "summary"])
+
+    def test_cell_type(self):
+        all_cell_types = get_all("celltype")
+        evaluated_cell_type = set_detail_evaluation(all_cell_types, "celltype", 1)[0]
+        evaluated_cell_type_fields = list(evaluated_cell_type.keys())
+        self.assertEqual(evaluated_cell_type_fields, ["grouping_name"])
 
 
 class ErrorTestCase(TestCase):

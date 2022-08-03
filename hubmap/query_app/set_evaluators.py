@@ -19,18 +19,7 @@ from query_app.apps import (
 )
 
 from .filters import get_cells_list, split_at_comparator
-from .models import (
-    AtacQuant,
-    Cell,
-    Cluster,
-    CodexQuant,
-    Dataset,
-    Gene,
-    Organ,
-    Protein,
-    PVal,
-    RnaQuant,
-)
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,
@@ -314,6 +303,8 @@ def evaluation_list(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         set_type = query_params["set_type"]
+        set_type = "cell_type" if set_type == "celltype" else set_type
+
         validate_list_evaluation_args(query_params)
         key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
 
@@ -350,6 +341,7 @@ def evaluation_detail(self, request):
     if request.method == "POST":
         query_params = request.data.dict()
         set_type = query_params["set_type"]
+        set_type = "cell_type" if set_type == "celltype" else set_type
         query_params["values_included"] = request.POST.getlist("values_included")
         validate_detail_evaluation_args(query_params)
         key, include_values, sort_by, limit, offset = process_evaluation_args(query_params)
