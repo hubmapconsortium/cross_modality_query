@@ -122,7 +122,7 @@ class CellTestCase(TestCase):
     def test_all_cells(self):
         all_cells = get_all("cell")
         all_cells_count = set_count(all_cells, "cell")
-        self.assertEqual(all_cells_count, 30)
+        self.assertEqual(all_cells_count, 1230)
 
     def test_cells_from_cells(self):
         input_set = [
@@ -151,27 +151,19 @@ class CellTestCase(TestCase):
             input_type="modality", output_type="cell", input_set=input_set
         )
         modality_cells_count = set_count(modality_cells, "cell")
-        self.assertEqual(modality_cells_count, 10)
+        self.assertEqual(modality_cells_count, 1100)
 
     def test_cells_from_organs(self):
         input_set = ["Heart"]
         organ_cells = hubmap_query(input_type="organ", output_type="cell", input_set=input_set)
         organ_cells_count = set_count(organ_cells, "cell")
-        self.assertEqual(organ_cells_count, 10)
+        self.assertEqual(organ_cells_count, 50)
 
     def test_cells_from_datasets(self):
         input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
         dataset_cells = hubmap_query(input_type="dataset", output_type="cell", input_set=input_set)
         dataset_cells_count = set_count(dataset_cells, "cell")
         self.assertEqual(dataset_cells_count, 10)
-
-    def test_cells_from_modalitiess(self):
-        input_set = ["rna"]
-        modality_cells = hubmap_query(
-            input_type="modality", output_type="cell", input_set=input_set
-        )
-        modality_cells_count = set_count(modality_cells, "cell")
-        self.assertEqual(modality_cells_count, 10)
 
 
 class GeneTestCase(TestCase):
@@ -182,7 +174,7 @@ class GeneTestCase(TestCase):
     def test_all_genes(self):
         all_genes = get_all("gene")
         all_genes_count = set_count(all_genes, "gene")
-        self.assertEqual(all_genes_count, 20)
+        self.assertEqual(all_genes_count, 11)
 
     def test_genes_from_genes(self):
         input_set = ["ABHD17A"]
@@ -335,7 +327,7 @@ class ProteinTestCase(TestCase):
     def test_all_proteins(self):
         all_proteins = get_all("protein")
         all_proteins_count = set_count(all_proteins, "protein")
-        self.assertEqual(all_proteins_count, 10)
+        self.assertEqual(all_proteins_count, 65)
 
     def test_proteins_from_proteins(self):
         input_set = ["CD107a", "CD11c"]
@@ -363,7 +355,7 @@ class OperationsTestCase(TestCase):
         cells_from_organ = hubmap_query("organ", "cell", input_set)
         intersection_cells = set_union(cells_from_dataset, cells_from_organ, "cell")
         intersection_cells_count = set_count(intersection_cells, "cell")
-        self.assertEqual(intersection_cells_count, 20)
+        self.assertEqual(intersection_cells_count, 180)
 
 
 class ListEvaluationTestCase(TestCase):
@@ -383,14 +375,14 @@ class ListEvaluationTestCase(TestCase):
         evaluated_cell = set_list_evaluation(all_cells, "cell", 1)[0]
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
-            evaluated_cell_fields, ["cell_id", "modality", "dataset", "organ", "clusters"]
+            evaluated_cell_fields, ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"]
         )
 
     def test_genes(self):
         all_genes = get_all("gene")
         evaluated_gene = set_list_evaluation(all_genes, "gene", 1)[0]
         evaluated_gene_fields = list(evaluated_gene.keys())
-        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms"])
+        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "summary"])
 
     def test_organs(self):
         all_organs = get_all("organ")
@@ -422,7 +414,7 @@ class ListEvaluationTestCase(TestCase):
         all_proteins = get_all("protein")
         evaluated_protein = set_list_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
-        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
+        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms", "summary"])
 
 
 class DetailEvaluationTestCase(TestCase):
@@ -443,14 +435,14 @@ class DetailEvaluationTestCase(TestCase):
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
             evaluated_cell_fields,
-            ["cell_id", "modality", "dataset", "organ", "clusters", "values"],
+            ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters", "values"],
         )
 
     def test_genes(self):
         all_genes = get_all("gene")
         evaluated_gene = set_detail_evaluation(all_genes, "gene", 1)[0]
         evaluated_gene_fields = list(evaluated_gene.keys())
-        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "values"])
+        self.assertEqual(evaluated_gene_fields, ["gene_symbol", "go_terms", "summary", "values"])
 
     def test_organs(self):
         all_organs = get_all("organ")
@@ -477,7 +469,7 @@ class DetailEvaluationTestCase(TestCase):
         all_proteins = get_all("protein")
         evaluated_protein = set_detail_evaluation(all_proteins, "protein", 1)[0]
         evaluated_protein_fields = list(evaluated_protein.keys())
-        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms"])
+        self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms", "summary"])
 
 
 class ErrorTestCase(TestCase):
