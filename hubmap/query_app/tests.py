@@ -481,7 +481,6 @@ class DetailEvaluationTestCase(TestCase):
 
 
 class ErrorTestCase(TestCase):
-
     def test_invalid_input_types(self):
         request_url = base_url + "protein/"
         request_dict = {"input_type": "organ", "input_set": []}

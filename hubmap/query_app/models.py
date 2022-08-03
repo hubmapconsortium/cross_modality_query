@@ -9,6 +9,7 @@ EXPIRATION_TIME = 14400  # 4 hours in seconds
 def annotation_default():
     return {"is_annotated": False}
 
+
 def summary_default():
     return {}
 
