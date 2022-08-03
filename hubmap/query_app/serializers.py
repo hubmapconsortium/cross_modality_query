@@ -233,9 +233,11 @@ class CellTypeSerializer(serializers.ModelSerializer):
 
 
 class GeneSerializer(serializers.ModelSerializer):
+    summary = serializers.JSONField()
+
     class Meta:
         model = Gene
-        fields = ["gene_symbol", "go_terms"]
+        fields = ["gene_symbol", "go_terms", "summary"]
 
 
 class ProteinSerializer(serializers.ModelSerializer):
@@ -284,11 +286,12 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
 class GeneAndValuesSerializer(serializers.ModelSerializer):
     #    values = serializers.JSONField()
     #    gene = GeneSerializer(read_only=True)
+    summary = serializers.JSONField()
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
         model = Gene
-        fields = ["gene_symbol", "go_terms", "values"]
+        fields = ["gene_symbol", "go_terms", "summary", "values"]
 
     def get_values(self, obj):
         request = self.context["request"]

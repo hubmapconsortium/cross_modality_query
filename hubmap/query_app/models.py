@@ -9,6 +9,9 @@ EXPIRATION_TIME = 14400  # 4 hours in seconds
 def annotation_default():
     return {"is_annotated": False}
 
+def summary_default():
+    return {}
+
 
 class CellGrouping(models.Model):
     grouping_name = models.CharField(max_length=64, null=True)
@@ -104,6 +107,7 @@ class Cell(models.Model):
 class Gene(models.Model):
     gene_symbol = models.CharField(db_index=True, max_length=64)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+    summary = models.JSONField(default=summary_default)
 
     def __repr__(self):
         return self.gene_symbol
@@ -115,6 +119,7 @@ class Gene(models.Model):
 class Protein(models.Model):
     protein_id = models.CharField(db_index=True, max_length=32)
     go_terms = ArrayField(models.CharField(max_length=50), db_index=True, null=True, blank=True)
+    summary = models.JSONField(default=summary_default)
 
     def __repr__(self):
         return self.protein_id
