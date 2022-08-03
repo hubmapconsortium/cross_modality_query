@@ -446,6 +446,8 @@ def validate_input_terms(input_type: str, input_set: List[str]):
         for item in input_set
     ]
 
+    input_type = "cell_type" if input_type == "celltype" else input_type
+
     input_type_model_mapping = {
         "gene": (Gene, "gene_symbol"),
         "protein": (Protein, "protein_id"),
