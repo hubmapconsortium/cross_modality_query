@@ -259,7 +259,7 @@ class DatasetTestCase(TestCase):
     def test_datasets_from_clusters(self):
         input_set = [
             "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-10",
+            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-8",
         ]
         datasets_from_clusters = hubmap_query("cluster", "dataset", input_set)
         datasets_from_clusters_count = set_count(datasets_from_clusters, "dataset")
@@ -312,7 +312,7 @@ class ClusterTestCase(TestCase):
     def test_clusters_from_clusters(self):
         input_set = [
             "leiden-UMAP-d4493657cde29702c5ed73932da5317c-1",
-            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-10",
+            "leiden-UMAP-d4493657cde29702c5ed73932da5317c-8",
         ]
         clusters_from_clusters = hubmap_query("cluster", "cluster", input_set)
         clusters_from_clusters_count = set_count(clusters_from_clusters, "cluster")
@@ -375,7 +375,8 @@ class ListEvaluationTestCase(TestCase):
         evaluated_cell = set_list_evaluation(all_cells, "cell", 1)[0]
         evaluated_cell_fields = list(evaluated_cell.keys())
         self.assertEqual(
-            evaluated_cell_fields, ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"]
+            evaluated_cell_fields,
+            ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"],
         )
 
     def test_genes(self):

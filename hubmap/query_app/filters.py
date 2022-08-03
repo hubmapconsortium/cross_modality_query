@@ -282,7 +282,6 @@ def get_cluster_filter(query_params: dict):
 
     entities_dict = {
         "cell": {"cell_id__in": input_set},
-        "dataset": {"dataset__uuid__in": input_set},
         "organ": {"organ__grouping_name__in": input_set},
     }
 
@@ -306,6 +305,9 @@ def get_cluster_filter(query_params: dict):
         grouping_names = list(df["grouping_name"].unique())
 
         return Q(grouping_name__in=grouping_names)
+
+    elif input_type == "dataset":
+        return Q(dataset__uuid__in=input_set)
 
     elif input_type in entities_dict:
         kwargs = entities_dict[input_type]
