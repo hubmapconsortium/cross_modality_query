@@ -7,49 +7,49 @@ import query_app.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('query_app', '0007_dataset_annotation_metadata'),
+        ("query_app", "0007_dataset_annotation_metadata"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='AtacQuant',
+            name="AtacQuant",
         ),
         migrations.DeleteModel(
-            name='CodexQuant',
+            name="CodexQuant",
         ),
         migrations.RemoveField(
-            model_name='pval',
-            name='modality',
+            model_name="pval",
+            name="modality",
         ),
         migrations.RemoveField(
-            model_name='pval',
-            name='p_cluster',
+            model_name="pval",
+            name="p_cluster",
         ),
         migrations.RemoveField(
-            model_name='pval',
-            name='p_gene',
+            model_name="pval",
+            name="p_gene",
         ),
         migrations.RemoveField(
-            model_name='pval',
-            name='p_organ',
+            model_name="pval",
+            name="p_organ",
         ),
         migrations.DeleteModel(
-            name='RnaQuant',
+            name="RnaQuant",
         ),
         migrations.DeleteModel(
-            name='StatReport',
+            name="StatReport",
         ),
         migrations.AddField(
-            model_name='gene',
-            name='summary',
+            model_name="gene",
+            name="summary",
             field=models.JSONField(default=query_app.models.summary_default),
         ),
         migrations.AddField(
-            model_name='protein',
-            name='summary',
+            model_name="protein",
+            name="summary",
             field=models.JSONField(default=query_app.models.summary_default),
         ),
         migrations.DeleteModel(
-            name='PVal',
+            name="PVal",
         ),
     ]
