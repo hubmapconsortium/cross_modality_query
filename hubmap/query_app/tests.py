@@ -204,7 +204,7 @@ class OrganTestCase(TestCase):
     def test_all_organs(self):
         all_organs = get_all("organ")
         all_organs_count = set_count(all_organs, "organ")
-        self.assertEqual(all_organs_count, 3)
+        self.assertEqual(all_organs_count, 10)
 
     def test_organs_from_cells(self):
         input_set = [
@@ -247,7 +247,7 @@ class DatasetTestCase(TestCase):
     def test_all_datasets(self):
         all_datasets = get_all("dataset")
         all_datasets_count = set_count(all_datasets, "dataset")
-        self.assertEqual(all_datasets_count, 3)
+        self.assertEqual(all_datasets_count, 170)
 
     def test_datasets_from_cells(self):
         input_set = [
@@ -279,7 +279,7 @@ class DatasetTestCase(TestCase):
             input_type="modality", output_type="dataset", input_set=input_set
         )
         modality_datasets_count = set_count(modality_datasets, "cell")
-        self.assertEqual(modality_datasets_count, 1)
+        self.assertEqual(modality_datasets_count, 47)
 
     def test_datasets_from_organs(self):
         input_set = ["Heart"]
@@ -287,7 +287,7 @@ class DatasetTestCase(TestCase):
             input_type="organ", output_type="dataset", input_set=input_set
         )
         organ_datasets_count = set_count(organ_datasets, "cell")
-        self.assertEqual(organ_datasets_count, 1)
+        self.assertEqual(organ_datasets_count, 5)
 
 
 class ClusterTestCase(TestCase):
@@ -303,19 +303,19 @@ class ClusterTestCase(TestCase):
     def test_all_clusters(self):
         all_clusters = get_all("cluster")
         all_clusters_count = set_count(all_clusters, "cluster")
-        self.assertEqual(all_clusters_count, 69)
+        self.assertEqual(all_clusters_count, 1795)
 
     def test_clusters_from_cells(self):
         input_set = ["0576b972e074074b4c51a61c3d17a6e3-AATGGCTTCTCGACGG"]
-        clusters_from_datasets = hubmap_query("cell", "cluster", input_set)
-        clusters_from_cells = set_count(all_clusters, "cluster")
+        clusters_from_cells = hubmap_query("cell", "cluster", input_set)
+        clusters_from_cells = set_count(clusters_from_cells, "cluster")
         self.assertEqual(clusters_from_cells, 2)
 
     def test_clusters_from_datasets(self):
         input_set = ["d4493657cde29702c5ed73932da5317c"]
         clusters_from_datasets = hubmap_query("dataset", "cluster", input_set)
         clusters_from_datasets_count = set_count(clusters_from_datasets, "cluster")
-        self.assertEqual(clusters_from_datasets_count, 23)
+        self.assertEqual(clusters_from_datasets_count, 4)
 
     def test_clusters_from_clusters(self):
         input_set = [
