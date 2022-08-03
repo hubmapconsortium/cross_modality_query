@@ -155,7 +155,7 @@ def split_at_comparator(item: str) -> List:
 def get_response_from_query_handle(query_handle: str, set_type: str):
     query_dict = {}
     query_dict["query_handle"] = query_handle
-    set_type = "cell_type" if set_type == "cell_type" else set_type
+    set_type = "cell_type" if set_type == "celltype" else set_type
     query_dict["set_type"] = set_type
     response_dict = {}
     response_dict["count"] = 1
@@ -169,7 +169,7 @@ def get_response_with_count_from_query_handle(query_handle: str):
     query_dict = {}
     query_dict["query_handle"] = query_handle
     query_set, set_type = unpickle_query_set(query_handle)
-    set_type = "cell_type" if set_type == "cell_type" else set_type
+    set_type = "cell_type" if set_type == "celltype" else set_type
     query_dict["set_type"] = set_type
     count = count_dict[query_handle] if query_handle in count_dict else query_set.count()
     query_dict["count"] = count
