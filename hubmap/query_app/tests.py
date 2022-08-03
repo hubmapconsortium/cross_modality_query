@@ -171,7 +171,7 @@ class CellTestCase(TestCase):
             input_type="cell_type", output_type="cell", input_set=input_set
         )
         cell_type_cells_count = set_count(cell_type_cells, "cell")
-        self.assertEqual(cell_type_cells_count, 10)
+        self.assertEqual(cell_type_cells_count, 2)
 
 
 class GeneTestCase(TestCase):
@@ -306,7 +306,7 @@ class DatasetTestCase(TestCase):
             input_type="cell_type", output_type="dataset", input_set=input_set
         )
         cell_type_datasets_count = set_count(cell_type_datasets, "dataset")
-        self.assertEqual(cell_type_datasets_count, 10)
+        self.assertEqual(cell_type_datasets_count, 2)
 
 
 class ClusterTestCase(TestCase):
@@ -352,7 +352,7 @@ class CellTypeTestCase(TestCase):
         "celltype.json",
         "cluster.json",
         "dataset.json",
-        "organ.json",
+        "modality.json" "organ.json",
     ]
 
     def test_all_cell_types(self):
