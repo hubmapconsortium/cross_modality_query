@@ -490,7 +490,7 @@ class ListEvaluationTestCase(TestCase):
 
     def test_cell_type(self):
         all_cell_types = get_all("celltype")
-        evaluated_cell_type = set_list_evaluation(all_cell_types, "cell_type", 1)[0]
+        evaluated_cell_type = set_list_evaluation(all_cell_types, "celltype", 1)[0]
         evaluated_cell_type_fields = list(evaluated_cell_type.keys())
         self.assertEqual(evaluated_cell_type_fields, ["grouping_name"])
 
