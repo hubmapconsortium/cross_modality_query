@@ -176,14 +176,7 @@ class CellTestCase(TestCase):
 
 class GeneTestCase(TestCase):
     fixtures = [
-        "cell.json",
-        "celltype.json",
-        "cluster.json",
-        "dataset.json",
         "gene.json",
-        "modality.json",
-        "organ.json",
-        "protein.json",
     ]
 
     def test_all_genes(self):
@@ -204,10 +197,8 @@ class OrganTestCase(TestCase):
         "celltype.json",
         "cluster.json",
         "dataset.json",
-        "gene.json",
         "modality.json",
         "organ.json",
-        "protein.json",
     ]
 
     def test_all_organs(self):
@@ -249,10 +240,8 @@ class DatasetTestCase(TestCase):
         "celltype.json",
         "cluster.json",
         "dataset.json",
-        "gene.json",
         "modality.json",
         "organ.json",
-        "protein.json",
     ]
 
     def test_all_datasets(self):
@@ -307,10 +296,8 @@ class ClusterTestCase(TestCase):
         "celltype.json",
         "cluster.json",
         "dataset.json",
-        "gene.json",
         "modality.json",
         "organ.json",
-        "protein.json",
     ]
 
     def test_all_clusters(self):
@@ -342,13 +329,6 @@ class ClusterTestCase(TestCase):
 
 class ProteinTestCase(TestCase):
     fixtures = [
-        "cell.json",
-        "celltype.json",
-        "cluster.json",
-        "dataset.json",
-        "gene.json",
-        "modality.json",
-        "organ.json",
         "protein.json",
     ]
 
@@ -501,17 +481,6 @@ class DetailEvaluationTestCase(TestCase):
 
 
 class ErrorTestCase(TestCase):
-
-    fixtures = [
-        "cell.json",
-        "celltype.json",
-        "cluster.json",
-        "dataset.json",
-        "gene.json",
-        "modality.json",
-        "organ.json",
-        "protein.json",
-    ]
 
     def test_invalid_input_types(self):
         request_url = base_url + "protein/"
