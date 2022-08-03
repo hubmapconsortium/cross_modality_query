@@ -345,7 +345,7 @@ def get_dataset_filter(query_params: dict):
         "cell": {"cell_id__in": input_set},
         "cell_type": {"cell_type__grouping_name__in": input_set},
         "organ": {"organ__grouping_name__in": input_set},
-        "cluster": {"cluster__grouping_name__in": input_set},
+        "cluster": {"clusters__grouping_name__in": input_set},
     }
     if input_type in entities_dict:
         kwargs = entities_dict[input_type]

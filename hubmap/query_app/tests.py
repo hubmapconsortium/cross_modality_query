@@ -307,7 +307,7 @@ class ClusterTestCase(TestCase):
         input_set = ["d4493657cde29702c5ed73932da5317c"]
         clusters_from_datasets = hubmap_query("dataset", "cluster", input_set)
         clusters_from_datasets_count = set_count(clusters_from_datasets, "cluster")
-        self.assertEqual(clusters_from_datasets_count, 4)
+        self.assertEqual(clusters_from_datasets_count, 9)
 
     def test_clusters_from_clusters(self):
         input_set = [

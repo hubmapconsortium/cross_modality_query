@@ -241,9 +241,11 @@ class GeneSerializer(serializers.ModelSerializer):
 
 
 class ProteinSerializer(serializers.ModelSerializer):
+    summary = serializers.JSONField()
+
     class Meta:
         model = Protein
-        fields = ["protein_id", "go_terms"]
+        fields = ["protein_id", "go_terms", "summary"]
 
 
 class CellAndValuesSerializer(serializers.ModelSerializer):
