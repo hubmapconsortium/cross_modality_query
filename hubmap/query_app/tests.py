@@ -364,7 +364,7 @@ class CellTypeTestCase(TestCase):
     def test_cell_types_from_cell_types(self):
         input_set = ["Mesangial Cell"]
         cell_type_cell_types = hubmap_query(
-            input_type="cell_type", output_type="cell_type", input_set=input_set
+            input_type="celltype", output_type="celltype", input_set=input_set
         )
         cell_type_cell_types_count = set_count(cell_type_cell_types, "cell_type")
         self.assertEqual(cell_type_cell_types_count, 1)
@@ -379,14 +379,14 @@ class CellTypeTestCase(TestCase):
         input_set = ["0576b972e074074b4c51a61c3d17a6e3"]
         cell_types_from_datasets = hubmap_query("dataset", "celltype", input_set)
         cell_types_from_datasets_count = set_count(cell_types_from_datasets, "cell_type")
-        self.assertEqual(cell_types_from_datasets_count, 9)
+        self.assertEqual(cell_types_from_datasets_count, 1)
 
     def test_cell_types_from_organs(self):
         input_set = ["Kidney"]
         organ_cell_types = hubmap_query(
             input_type="organ", output_type="celltype", input_set=input_set
         )
-        organ_cell_types_count = set_count(organ_cell_types, "celltype")
+        organ_cell_types_count = set_count(organ_cell_types, "cell_type")
         self.assertEqual(organ_cell_types_count, 5)
 
 
@@ -489,7 +489,7 @@ class ListEvaluationTestCase(TestCase):
         self.assertEqual(evaluated_protein_fields, ["protein_id", "go_terms", "summary"])
 
     def test_cell_type(self):
-        all_cell_types = get_all("cell_type")
+        all_cell_types = get_all("celltype")
         evaluated_cell_type = set_list_evaluation(all_cell_types, "cell_type", 1)[0]
         evaluated_cell_type_fields = list(evaluated_cell_type.keys())
         self.assertEqual(evaluated_cell_type_fields, ["grouping_name"])
@@ -551,7 +551,7 @@ class DetailEvaluationTestCase(TestCase):
 
     def test_cell_type(self):
         all_cell_types = get_all("celltype")
-        evaluated_cell_type = set_detail_evaluation(all_cell_types, "cell_type", 1)[0]
+        evaluated_cell_type = set_detail_evaluation(all_cell_types, "celltype", 1)[0]
         evaluated_cell_type_fields = list(evaluated_cell_type.keys())
         self.assertEqual(evaluated_cell_type_fields, ["grouping_name"])
 
