@@ -215,14 +215,18 @@ def get_organ_filter(query_params: Dict) -> Q:
     if input_type == "organ":
         return Q(grouping_name__in=input_set)
 
-    if input_type == "cell":
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "cell_type": {"cell_type__grouping_name__in": input_set},
+        "dataset": {"dataset__uuid__in": input_set},
+        "cluster": {"clusters__grouping_name__in": input_set},
+    }
 
-        cell_qs = Cell.objects.filter(cell_id__in=input_set)
-
+    if input_type in entities_dict:
+        kwargs = entities_dict[input_type]
+        cell_qs = Cell.objects.filter(**kwargs)
         organ_pks = cell_qs.distinct("organ").values_list("organ", flat=True)
-
         q = Q(pk__in=organ_pks)
-
         return q
 
     elif input_type == "gene":
@@ -256,20 +260,15 @@ def get_cell_type_filter(query_params: Dict) -> Q:
     if input_type == "cell_type":
         return Q(grouping_name__in=input_set)
 
-    if input_type == "cell":
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "dataset": {"dataset__uuid__in": input_set},
+        "organ": {"organ__grouping_name__in": input_set},
+    }
 
-        cell_qs = Cell.objects.filter(cell_id__in=input_set)
-
-        cell_type_pks = cell_qs.distinct("cell_type").values_list("cell_type", flat=True)
-
-        q = Q(pk__in=cell_type_pks)
-
-        return q
-
-    if input_type == "dataset":
-
-        cell_qs = Cell.objects.filter(dataset__uuid__in=input_set)
-
+    if input_type in entities_dict:
+        kwargs = entities_dict[input_type]
+        cell_qs = Cell.objects.filter(**kwargs)
         cell_type_pks = cell_qs.distinct("cell_type").values_list("cell_type", flat=True)
 
         q = Q(pk__in=cell_type_pks)
@@ -280,6 +279,11 @@ def get_cell_type_filter(query_params: Dict) -> Q:
 def get_cluster_filter(query_params: dict):
     input_type = query_params["input_type"]
     input_set = query_params["input_set"]
+
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "organ": {"organ__grouping_name__in": input_set},
+    }
 
     if input_type == "cluster":
         return Q(grouping_name__in=input_set)
@@ -302,24 +306,17 @@ def get_cluster_filter(query_params: dict):
 
         return Q(grouping_name__in=grouping_names)
 
-    elif input_type == "cell":
-
-        cell_qs = Cell.objects.filter(cell_id__in=input_set)
-
-        cluster_pks = {cluster.id for cell in cell_qs for cluster in cell.clusters.all()}
-
-        q = Q(pk__in=cluster_pks)
-
-        return q
-
     elif input_type == "dataset":
+        return Q(dataset__uuid__in=input_set)
 
-        cluster_ids = []
-
-        for dataset in Dataset.objects.filter(uuid__in=input_set):
-            cluster_ids.extend([cluster.grouping_name for cluster in dataset.clusters.all()])
-
-        return Q(grouping_name__in=cluster_ids)
+    elif input_type in entities_dict:
+        kwargs = entities_dict[input_type]
+        cell_qs = Cell.objects.filter(**kwargs)
+        cell_pks = cell_qs.values_list("pk", flat=True)
+        cluster_pks = Cluster.objects.filter(cells__pk__in=cell_pks).values_list("pk", flat=True)
+        #        cluster_pks = {cluster.id for cell in cell_qs for cluster in cell.clusters.all()}
+        q = Q(pk__in=cluster_pks)
+        return q
 
 
 def get_percentage_and_cache(params_tuple):
@@ -344,31 +341,17 @@ def get_dataset_filter(query_params: dict):
     elif input_type == "modality":
         return Q(modality__modality_name__in=input_set)
 
-    if input_type == "cell":
-        cell_qs = Cell.objects.filter(cell_id__in=input_set)
-
+    entities_dict = {
+        "cell": {"cell_id__in": input_set},
+        "cell_type": {"cell_type__grouping_name__in": input_set},
+        "organ": {"organ__grouping_name__in": input_set},
+        "cluster": {"clusters__grouping_name__in": input_set},
+    }
+    if input_type in entities_dict:
+        kwargs = entities_dict[input_type]
+        cell_qs = Cell.objects.filter(**kwargs)
         dataset_pks = cell_qs.distinct("dataset").values_list("dataset", flat=True)
-
         q = Q(pk__in=dataset_pks)
-
-        return q
-
-    if input_type == "cell_type":
-        cell_qs = Cell.objects.filter(cell_type__grouping_name__in=input_set)
-
-        dataset_pks = cell_qs.distinct("dataset").values_list("dataset", flat=True)
-
-        q = Q(pk__in=dataset_pks)
-
-        return q
-
-    if input_type == "cluster":
-        cluster_qs = Cluster.objects.filter(grouping_name__in=input_set)
-
-        dataset_pks = cluster_qs.distinct("dataset").values_list("dataset", flat=True)
-
-        q = Q(pk__in=dataset_pks)
-
         return q
 
     if input_type in ["gene", "protein"]:

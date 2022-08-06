@@ -17,17 +17,7 @@ from .apps import (
     rna_pvals,
 )
 from .filters import get_cells_list, split_at_comparator
-from .models import (
-    Cell,
-    CellType,
-    Cluster,
-    Dataset,
-    Gene,
-    Modality,
-    Organ,
-    Protein,
-    StatReport,
-)
+from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 
 
 def infer_values_type(values: List) -> str:
@@ -243,15 +233,19 @@ class CellTypeSerializer(serializers.ModelSerializer):
 
 
 class GeneSerializer(serializers.ModelSerializer):
+    summary = serializers.JSONField()
+
     class Meta:
         model = Gene
-        fields = ["gene_symbol", "go_terms"]
+        fields = ["gene_symbol", "go_terms", "summary"]
 
 
 class ProteinSerializer(serializers.ModelSerializer):
+    summary = serializers.JSONField()
+
     class Meta:
         model = Protein
-        fields = ["protein_id", "go_terms"]
+        fields = ["protein_id", "go_terms", "summary"]
 
 
 class CellAndValuesSerializer(serializers.ModelSerializer):
@@ -294,11 +288,12 @@ class CellAndValuesSerializer(serializers.ModelSerializer):
 class GeneAndValuesSerializer(serializers.ModelSerializer):
     #    values = serializers.JSONField()
     #    gene = GeneSerializer(read_only=True)
+    summary = serializers.JSONField()
     values = serializers.SerializerMethodField(method_name="get_values")
 
     class Meta:
         model = Gene
-        fields = ["gene_symbol", "go_terms", "values"]
+        fields = ["gene_symbol", "go_terms", "summary", "values"]
 
     def get_values(self, obj):
         request = self.context["request"]
@@ -370,17 +365,3 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
         else:
             values_type = infer_values_type(conditions)
             return get_percentage(obj.uuid, values_type, conditions[0])
-
-
-class StatReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StatReport
-        fields = [
-            "query_handle",
-            "var_id",
-            "statistic_type",
-            "rna_value",
-            "atac_value",
-            "codex_value",
-            "num_cells_excluded",
-        ]

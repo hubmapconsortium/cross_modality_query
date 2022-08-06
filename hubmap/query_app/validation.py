@@ -10,6 +10,7 @@ from .utils import infer_values_type, split_at_comparator, unpickle_query_set
 
 
 def check_input_type(input_type, permitted_input_types):
+    input_type = "cell_type" if input_type == "celltype" else input_type
     permitted_input_types.sort()
     if input_type not in permitted_input_types:
         raise ValueError(f"{input_type} not in {permitted_input_types}")
@@ -132,7 +133,7 @@ def validate_gene_query_params(query_params):
 
 
 def validate_organ_query_params(query_params):
-    permitted_input_types = ["cell", "gene", "organ"]
+    permitted_input_types = ["cell", "cell_type", "cluster", "dataset", "gene", "organ"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -151,7 +152,7 @@ def validate_organ_query_params(query_params):
 
 
 def validate_cluster_query_params(query_params):
-    permitted_input_types = ["cell", "gene", "dataset", "cluster"]
+    permitted_input_types = ["cell", "gene", "dataset", "cluster", "organ"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -176,6 +177,7 @@ def validate_dataset_query_params(query_params):
         "cluster",
         "dataset",
         "gene",
+        "organ",
         "modality",
         "protein",
     ]
@@ -207,7 +209,7 @@ def validate_protein_query_params(query_params):
 
 
 def validate_cell_type_query_params(query_params):
-    permitted_input_types = ["cell_type", "cell", "dataset"]
+    permitted_input_types = ["cell_type", "cell", "dataset", "organ"]
     input_type = query_params["input_type"]
     check_input_type(input_type, permitted_input_types)
 
@@ -253,6 +255,10 @@ def split_and_strip(string: str) -> List[str]:
 
 def process_query_parameters(query_params: Dict, input_set: List) -> Dict:
     query_params["input_type"] = query_params["input_type"].lower()
+
+    query_params["input_type"] = (
+        "cell_type" if query_params["input_type"] == "celltype" else query_params["input_type"]
+    )
 
     if input_set is not None:
         query_params["input_set"] = input_set
@@ -444,6 +450,8 @@ def validate_input_terms(input_type: str, input_set: List[str]):
         else item.strip()
         for item in input_set
     ]
+
+    input_type = "cell_type" if input_type == "celltype" else input_type
 
     input_type_model_mapping = {
         "gene": (Gene, "gene_symbol"),
