@@ -2,12 +2,11 @@ from statistics import mean, stdev
 
 import numpy as np
 
-from .apps import atac_adata, codex_adata, rna_adata
+from .apps import atac_cell_df, codex_cell_df, rna_cell_df, zarr_root
 from .utils import unpickle_query_set
 from .validation import validate_bounds_args, validate_statistic_args
 
-adatas = [codex_adata, rna_adata, atac_adata]
-
+cell_dfs_dict = {"atac": atac_cell_df, "codex": codex_cell_df, "rna": rna_cell_df}
 
 def check_list(vals_list):
     good_vals = []
@@ -24,50 +23,22 @@ def check_list(vals_list):
     return good_vals
 
 
-def get_adata_subset(adata, var_id, cell_ids):
-    adata = adata[cell_ids, :]
-    if len(adata.obs.index) == 0 or var_id not in adata.var.index:
-        return None
-    else:
-        return adata[:, [var_id]]
+def get_data(modality, var_id, cell_ids):
+    bool_mask = cell_df.cell_id.isin(cell_ids)
+    a = zarr_root[f"/{modality}/{var_id}/"][bool_mask]
+    return a
 
+def get_statistic_value(a, stat_type):
+    if stat_type == "mean":
+        value = a.mean()
+    elif stat_type == "min":
+        value = a.min()
+    elif stat_type == "max":
+        value = adata.X.max()
+    elif stat_type == "stddev":
+        value = adata.X.std()
 
-def get_statistic_value(adata, stat_type):
-    if not adata:
-        return None
-    else:
-        if stat_type == "mean":
-            value = adata.X.mean()
-            if not value >= 0 and not isinstance(adata.X, np.ndarray):
-                data_list = adata.X.todense().flatten().tolist()
-                if isinstance(data_list[0], list):
-                    data_list = data_list[0]
-                data_list = check_list(data_list)
-                #                value = adata.X.todense().mean()
-                value = mean(data_list)
-        elif stat_type == "min":
-            value = adata.X.min()
-            if not value >= 0 and not isinstance(adata.X, np.ndarray):
-                data_list = adata.X.data.tolist()
-                value = min(data_list)
-        elif stat_type == "max":
-            value = adata.X.max()
-            if not value >= 0 and not isinstance(adata.X, np.ndarray):
-                data_list = adata.X.data.tolist()
-                value = max(data_list)
-        elif stat_type == "stddev":
-            if not isinstance(adata.X, np.ndarray):
-                value = adata.X.todense().std()
-            else:
-                value = adata.X.std()
-            if not value >= 0 and not isinstance(adata.X, np.ndarray):
-                data_list = adata.X.todense().flatten().tolist()
-                if isinstance(data_list[0], list):
-                    data_list = data_list[0]
-                data_list = check_list(data_list)
-                value = stdev(data_list)
-
-        return float(value)
+    return float(value)
 
 
 def get_stat_values(query_set, var_id, stat_type):
@@ -84,15 +55,13 @@ def get_stat_values(query_set, var_id, stat_type):
 
     print("Cells for each modality found")
 
-    codex_adata = get_adata_subset(adatas[0], var_id, codex_cells)
-    rna_adata = get_adata_subset(adatas[1], var_id, rna_cells)
-    atac_adata = get_adata_subset(adatas[2], var_id, atac_cells)
+    codex_array = get_data("codex", var_id, codex_cells)
+    rna_array = get_data("rna", var_id, rna_cells)
+    atac_array = get_data("atac", var_id, atac_cells)
 
-    print("Quants for each modality found")
-
-    codex_value = get_statistic_value(codex_adata, stat_type)
-    rna_value = get_statistic_value(rna_adata, stat_type)
-    atac_value = get_statistic_value(atac_adata, stat_type)
+    codex_value = get_statistic_value(codex_array, stat_type)
+    rna_value = get_statistic_value(rna_array, stat_type)
+    atac_value = get_statistic_value(atac_array, stat_type)
 
     return codex_value, rna_value, atac_value
 
@@ -141,14 +110,12 @@ def get_bounds(self, request):
     validate_bounds_args(query_params)
     modality = query_params["modality"]
 
-    modalities_dict = {"rna": rna_adata, "atac": atac_adata, "codex": codex_adata}
-    adata = modalities_dict[modality]
-
     if "var_id" in query_params.keys():
-        min_value = float(adata.var.at[query_params["var_id"], "min"])
-        max_value = float(adata.var.at[query_params["var_id"], "max"])
+        a = zarr_root[f"/{modality}/{query_params['var_id']}/"]
+        min_value = a.min()
+        max_value = a.max()
     else:
-        min_value = float(adata.uns["min"])
-        max_value = float(adata.uns["max"])
+        min_value = 0.0
+        max_value = 0.0
 
     return {"results": {"minimum_value": min_value, "maximum_value": max_value}}

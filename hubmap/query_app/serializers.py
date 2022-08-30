@@ -7,14 +7,15 @@ from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
 from .apps import (
-    atac_adata,
+    atac_cell_df,
     atac_percentages,
     atac_pvals,
-    codex_adata,
+    codex_cell_df,
     codex_percentages,
-    rna_adata,
+    rna_cell_df,
     rna_percentages,
     rna_pvals,
+    zarr_root,
 )
 from .filters import get_cells_list, split_at_comparator
 from .models import (
@@ -26,7 +27,6 @@ from .models import (
     Modality,
     Organ,
     Protein,
-    StatReport,
 )
 
 
@@ -63,26 +63,11 @@ def infer_values_type(values: List) -> str:
 
 
 def get_quant_value(cell_id, gene_symbol, modality):
-    if modality == "codex":
-        adata = codex_adata
-        var_adata = adata[:, [gene_symbol]]
-        cell_and_var_adata = var_adata[[cell_id], :]
-        val = cell_and_var_adata.X.flatten()[0]
-
-    elif modality == "rna":
-        adata = rna_adata
-    elif modality == "atac":
-        adata = atac_adata
-
-    if modality in ["rna", "atac"]:
-        var_adata = adata[:, [gene_symbol]]
-        cell_and_var_adata = var_adata[[cell_id], :]
-        cell_and_var_x = cell_and_var_adata.X.todense()
-        if type(cell_and_var_x) == np.matrix:
-            cell_and_var_x = cell_and_var_x.A.flatten()[0]
-        while type(cell_and_var_x) in [np.ndarray, list]:
-            cell_and_var_x = cell_and_var_x[0]
-        val = cell_and_var_x
+    cell_dfs_dict = {"atac": atac_cell_df, "codex": codex_cell_df, "rna": rna_cell_df}
+    cell_df = cell_dfs_dict[modality]
+    array_index = cell_df.at[cell_id, "int_index"]
+    #array = zarr_root[f"/{modality}/{gene_symbol}"][:]
+    val = zarr_root[f"/{modality}/{gene_symbol}"][array_index]
 
     return val
 
@@ -370,17 +355,3 @@ class DatasetAndValuesSerializer(serializers.ModelSerializer):
         else:
             values_type = infer_values_type(conditions)
             return get_percentage(obj.uuid, values_type, conditions[0])
-
-
-class StatReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StatReport
-        fields = [
-            "query_handle",
-            "var_id",
-            "statistic_type",
-            "rna_value",
-            "atac_value",
-            "codex_value",
-            "num_cells_excluded",
-        ]

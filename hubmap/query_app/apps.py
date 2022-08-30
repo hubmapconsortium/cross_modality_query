@@ -25,6 +25,13 @@ PATH_TO_RNA_PERCENTAGES = PATH_TO_H5AD_FILES / "rna_precompute.hdf5"
 PATH_TO_ATAC_PERCENTAGES = PATH_TO_H5AD_FILES / "atac_precompute.hdf5"
 PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
+def get_atac_pvals():
+    organ_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_organ.h5ad")
+    organ_adata.obs['grouping_type'] = 'organ'
+    cluster_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_cluster.h5ad")
+    cluster_adata.obs['grouping_type'] = 'cluster'
+    adata = anndata.concat([organ_adata, cluster_adata])
+    return adata
 
 def make_pickle_and_hash(qs, set_type):
     client = MongoClient(settings.MONGO_HOST_AND_PORT)
@@ -112,6 +119,8 @@ def attempt_to_open_file(file_path, key=None):
                 store = pd.HDFStore(file_path)
                 dfs = [store.get(key) for key in store.keys()]
                 df = pd.concat(dfs)
+                df = df.set_index('cell_id', inplace=False, drop=False)
+                df['int_index'] = [i for i in range(len(df.index))]
 
             else:
                 df = pd.read_hdf(file_path, key)
@@ -152,9 +161,6 @@ class QueryAppConfig(AppConfig):
     name = "query_app"
 
     def ready(self):
-        global codex_adata
-        global rna_adata
-        global atac_adata
         global rna_pvals
         global atac_pvals
         global rna_percentages
@@ -171,10 +177,6 @@ class QueryAppConfig(AppConfig):
 
         set_up_mongo()
 
-        codex_adata = attempt_to_open_file(PATH_TO_CODEX_H5AD)
-        rna_adata = attempt_to_open_file(PATH_TO_RNA_H5AD)
-        atac_adata = attempt_to_open_file(PATH_TO_ATAC_H5AD)
-
         hash_dict, uuid_dict, count_dict = compute_dataset_hashes()
 
         print("Quant adatas read in")
@@ -183,7 +185,7 @@ class QueryAppConfig(AppConfig):
             rna_pvals = pd.DataFrame()
         else:
             rna_pvals = attempt_to_open_file(PATH_TO_RNA_PVALS, "pval")
-            atac_pvals = attempt_to_open_file(PATH_TO_ATAC_PVALS, "pval")
+            atac_pvals = get_atac_pvals()
         print("Pvals read in")
         rna_percentages = attempt_to_open_file(PATH_TO_RNA_PERCENTAGES, "percentages")
         atac_percentages = attempt_to_open_file(PATH_TO_ATAC_PERCENTAGES, "percentages")

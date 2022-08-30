@@ -13,7 +13,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 
 from .analysis import calculate_statistics, get_bounds
-from .models import Cell, CellType, Cluster, Dataset, Gene, Organ, Protein, StatReport
+from .models import Cell, CellType, Cluster, Dataset, Gene, Organ, Protein
 from .queries import (
     cell_query,
     cell_type_query,
@@ -36,7 +36,6 @@ from .serializers import (
     OrganAndValuesSerializer,
     OrganSerializer,
     ProteinSerializer,
-    StatReportSerializer,
 )
 from .set_evaluators import evaluation_detail, evaluation_list, query_set_count
 from .set_operators import query_set_difference, query_set_intersection, query_set_union
