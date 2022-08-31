@@ -7,14 +7,15 @@ from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
 from .apps import (
-    atac_adata,
+    atac_cell_df,
     atac_percentages,
     atac_pvals,
-    codex_adata,
+    codex_cell_df,
     codex_percentages,
-    rna_adata,
+    rna_cell_df,
     rna_percentages,
     rna_pvals,
+    zarr_root,
 )
 from .filters import get_cells_list, split_at_comparator
 from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
@@ -53,26 +54,11 @@ def infer_values_type(values: List) -> str:
 
 
 def get_quant_value(cell_id, gene_symbol, modality):
-    if modality == "codex":
-        adata = codex_adata
-        var_adata = adata[:, [gene_symbol]]
-        cell_and_var_adata = var_adata[[cell_id], :]
-        val = cell_and_var_adata.X.flatten()[0]
-
-    elif modality == "rna":
-        adata = rna_adata
-    elif modality == "atac":
-        adata = atac_adata
-
-    if modality in ["rna", "atac"]:
-        var_adata = adata[:, [gene_symbol]]
-        cell_and_var_adata = var_adata[[cell_id], :]
-        cell_and_var_x = cell_and_var_adata.X.todense()
-        if type(cell_and_var_x) == np.matrix:
-            cell_and_var_x = cell_and_var_x.A.flatten()[0]
-        while type(cell_and_var_x) in [np.ndarray, list]:
-            cell_and_var_x = cell_and_var_x[0]
-        val = cell_and_var_x
+    cell_dfs_dict = {"atac": atac_cell_df, "codex": codex_cell_df, "rna": rna_cell_df}
+    cell_df = cell_dfs_dict[modality]
+    array_index = cell_df.loc[(cell_id,), "int_index"].iloc[0]
+    # array = zarr_root[f"/{modality}/{gene_symbol}"][:]
+    val = zarr_root[f"/{modality}/{gene_symbol}"][array_index]
 
     return val
 
@@ -147,7 +133,7 @@ def get_percentage(uuid, values_type, include_values):
     return percentage
 
 
-def get_modality_pval(pval_df, identifier, set_type, var_id):
+def get_rna_pval(pval_df, identifier, set_type, var_id):
     if set_type in ["organ", "cluster"]:
         df = pval_df[pval_df["grouping_name"] == identifier]
         df = df[df["gene_id"] == var_id]
@@ -160,10 +146,24 @@ def get_modality_pval(pval_df, identifier, set_type, var_id):
     return value
 
 
+def get_atac_pval(pval_adata, identifier, set_type, var_id):
+    if set_type in ["organ", "cluster"]:
+        value = (
+            pval_adata[[identifier], [var_id]].X if identifier in pval_adata.obs.index else None
+        )
+
+    elif set_type in ["gene"]:
+        value = (
+            pval_adata[[var_id], [identifier]].X if identifier in pval_adata.var.index else None
+        )
+
+    return value
+
+
 def get_p_values(identifier: str, set_type: str, var_id: str, var_type, statistic="mean"):
 
-    rna_value = get_modality_pval(rna_pvals, identifier, set_type, var_id)
-    atac_value = get_modality_pval(atac_pvals, identifier, set_type, var_id)
+    rna_value = get_rna_pval(rna_pvals, identifier, set_type, var_id)
+    atac_value = get_atac_pval(atac_pvals, identifier, set_type, var_id)
 
     if rna_value is not None and atac_value is not None:
         return min(rna_value, atac_value)
