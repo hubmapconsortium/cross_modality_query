@@ -2,11 +2,20 @@ from statistics import mean, stdev
 
 import numpy as np
 
-from .apps import atac_cell_df, codex_cell_df, rna_cell_df, zarr_root
+from .apps import (
+    atac_cell_df,
+    atac_gene_df,
+    codex_cell_df,
+    codex_gene_df,
+    rna_cell_df,
+    rna_gene_df,
+    zarr_root,
+)
 from .utils import unpickle_query_set
 from .validation import validate_bounds_args, validate_statistic_args
 
 cell_dfs_dict = {"atac": atac_cell_df, "codex": codex_cell_df, "rna": rna_cell_df}
+
 
 def check_list(vals_list):
     good_vals = []
@@ -27,6 +36,7 @@ def get_data(modality, var_id, cell_ids):
     bool_mask = cell_df.cell_id.isin(cell_ids)
     a = zarr_root[f"/{modality}/{var_id}/"][bool_mask]
     return a
+
 
 def get_statistic_value(a, stat_type):
     if stat_type == "mean":
@@ -110,12 +120,14 @@ def get_bounds(self, request):
     validate_bounds_args(query_params)
     modality = query_params["modality"]
 
-    if "var_id" in query_params.keys():
-        a = zarr_root[f"/{modality}/{query_params['var_id']}/"]
-        min_value = a.min()
-        max_value = a.max()
-    else:
-        min_value = 0.0
-        max_value = 0.0
+    gene_dfs_dict = {"atac": atac_gene_df, "codex": codex_gene_df, "rna": rna_gene_df}
+    gene_df = gene_dfs_dict[modality]
 
-    return {"results": {"minimum_value": min_value, "maximum_value": max_value}}
+    if "var_id" in query_params.keys():
+        min_value = gene_df.at[query_params["var_id"], "min"]
+        max_value = gene_df.at[query_params["var_id"], "max"]
+    else:
+        min_value = gene_df["min"].min()
+        max_value = gene_df["max"].max()
+
+    return {"results": {"minimum_value": float(min_value), "maximum_value": float(max_value)}}

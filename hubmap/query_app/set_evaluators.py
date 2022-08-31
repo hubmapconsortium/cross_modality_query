@@ -6,24 +6,15 @@ import pandas as pd
 from django.db.models import Case, IntegerField, Q, Sum, When
 
 from query_app.apps import (
-    PATH_TO_RNA_PERCENTAGES,
     atac_cell_df,
     codex_cell_df,
-    codex_store,
     hash_dict,
     rna_cell_df,
     zarr_root,
 )
 
 from .filters import get_cells_list, split_at_comparator
-from .models import (
-    Cell,
-    Cluster,
-    Dataset,
-    Gene,
-    Organ,
-    Protein,
-)
+from .models import Cell, Cluster, Dataset, Gene, Organ, Protein
 from .serializers import (
     CellAndValuesSerializer,
     CellSerializer,

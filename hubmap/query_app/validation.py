@@ -4,9 +4,9 @@ from django.conf import settings
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models.functions import Upper
 
+from .apps import zarr_root
 from .models import Cell, CellType, Cluster, Dataset, Gene, Modality, Organ, Protein
 from .utils import infer_values_type, split_at_comparator, unpickle_query_set
-from .apps import zarr_root
 
 
 def check_input_type(input_type, permitted_input_types):
@@ -468,7 +468,7 @@ def validate_input_terms(input_type: str, input_set: List[str]):
 
 def validate_gene_modality(gene_symbol, modality):
     modality_group = zarr_root[modality]
-    other_modality_dict = {"rna":"atac", "atac":"rna"}
+    other_modality_dict = {"rna": "atac", "atac": "rna"}
     gene_symbols = list(modality_group.array_keys())
     other_modality = other_modality_dict[modality]
     if modality in ["rna", "atac"]:
