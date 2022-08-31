@@ -27,11 +27,14 @@ PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
 
 def get_atac_pvals():
-    organ_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_organ.h5ad")
-    organ_adata.obs["grouping_type"] = "organ"
-    cluster_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_cluster.h5ad")
-    cluster_adata.obs["grouping_type"] = "cluster"
-    adata = anndata.concat([organ_adata, cluster_adata])
+    try:
+        organ_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_organ.h5ad")
+        organ_adata.obs["grouping_type"] = "organ"
+        cluster_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_cluster.h5ad")
+        cluster_adata.obs["grouping_type"] = "cluster"
+        adata = anndata.concat([organ_adata, cluster_adata])
+    except FileNotFoundError:
+        adata = anndata.AnnData()
     return adata
 
 
