@@ -151,6 +151,7 @@ def attempt_to_open_file(file_path, key=None):
             columns_dict = {
                 "percentages": ["var_id", "cutoff", "dataset", "percentage"],
                 "cell": ["cell_id", "dataset", "organ", "modality", "clusters"],
+                "gene": ["max", "min", "summary"]
             }
             if key in columns_dict:
                 df = pd.DataFrame(columns=columns_dict[key])
