@@ -3,6 +3,8 @@ from time import perf_counter
 from typing import List
 
 import numpy as np
+import pandas as pd
+import anndata
 from django.db.models import Case, IntegerField, Sum, When
 from rest_framework import serializers
 
@@ -133,7 +135,7 @@ def get_percentage(uuid, values_type, include_values):
     return percentage
 
 
-def get_rna_pval(pval_df, identifier, set_type, var_id):
+def get_rna_pval(pval_df:pd.DataFrame, identifier:str, set_type:str, var_id:str):
     if set_type in ["organ", "cluster"]:
         df = pval_df[pval_df["grouping_name"] == identifier]
         df = df[df["gene_id"] == var_id]
@@ -146,7 +148,7 @@ def get_rna_pval(pval_df, identifier, set_type, var_id):
     return value
 
 
-def get_atac_pval(pval_adata, identifier, set_type, var_id):
+def get_atac_pval(pval_adata:anndata.AnnData, identifier:str, set_type:str, var_id:str):
     if set_type in ["organ", "cluster"]:
         value = (
             pval_adata[[identifier], [var_id]].X if identifier in pval_adata.obs.index else None

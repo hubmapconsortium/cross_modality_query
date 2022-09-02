@@ -1,6 +1,7 @@
 from statistics import mean, stdev
 
 import numpy as np
+from typing import List
 
 from .apps import (
     atac_cell_df,
@@ -32,7 +33,7 @@ def check_list(vals_list):
     return good_vals
 
 
-def get_data(modality, var_id, cell_ids):
+def get_data(modality:str, var_id:str, cell_ids:List[str]):
     bool_mask = cell_df.cell_id.isin(cell_ids)
     a = zarr_root[f"/{modality}/{var_id}/"][bool_mask]
     return a
