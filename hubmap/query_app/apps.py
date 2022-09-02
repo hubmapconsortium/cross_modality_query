@@ -26,6 +26,18 @@ PATH_TO_ATAC_PERCENTAGES = PATH_TO_H5AD_FILES / "atac_precompute.hdf5"
 PATH_TO_CODEX_PERCENTAGES = PATH_TO_H5AD_FILES / "codex_precompute.hdf5"
 
 
+def get_atac_pvals():
+    try:
+        organ_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_organ.h5ad")
+        organ_adata.obs["grouping_type"] = "organ"
+        cluster_adata = anndata.read(PATH_TO_H5AD_FILES / "atac_cluster.h5ad")
+        cluster_adata.obs["grouping_type"] = "cluster"
+        adata = anndata.concat([organ_adata, cluster_adata])
+    except FileNotFoundError:
+        adata = anndata.AnnData()
+    return adata
+
+
 def make_pickle_and_hash(qs, set_type):
     client = MongoClient(settings.MONGO_HOST_AND_PORT)
     collection = client[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION_NAME]
@@ -105,18 +117,23 @@ def attempt_to_open_file(file_path, key=None):
             adata = anndata.AnnData()
         return adata
 
-    elif key in {"cell", "percentages"}:
+    elif key in {"cell", "gene", "percentages"}:
         assert file_path.suffix == ".hdf5"
         try:
             if file_path.stem == "codex" and key == "cell":
                 store = pd.HDFStore(file_path)
                 dfs = [store.get(key) for key in store.keys()]
                 df = pd.concat(dfs)
+                df = df.set_index("cell_id", inplace=False, drop=False)
+                df["int_index"] = [i for i in range(len(df.index))]
 
             else:
                 df = pd.read_hdf(file_path, key)
 
-            columns_dict = {"percentages": ["var_id", "cutoff", "dataset"], "cell": ["dataset"]}
+            columns_dict = {
+                "percentages": ["var_id", "cutoff", "dataset"],
+                "cell": ["cell_id", "dataset"],
+            }
 
             if key == "cell":
 
@@ -126,15 +143,18 @@ def attempt_to_open_file(file_path, key=None):
                     if isinstance(df["clusters"].iloc[0], str):
                         df["clusters"] = df["clusters"].str.split(",")
 
-            df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
+            if key in columns_dict:
+                df = df.set_index(columns_dict[key], drop=False, inplace=False).sort_index()
 
         except (FileNotFoundError, KeyError, ValueError, HDF5ExtError):
             print(f"File path: {file_path} not found")
             columns_dict = {
                 "percentages": ["var_id", "cutoff", "dataset", "percentage"],
                 "cell": ["cell_id", "dataset", "organ", "modality", "clusters"],
+                "gene": ["max", "min", "summary"],
             }
-            df = pd.DataFrame(columns=columns_dict[key])
+            if key in columns_dict:
+                df = pd.DataFrame(columns=columns_dict[key])
 
         return df
 
@@ -152,9 +172,6 @@ class QueryAppConfig(AppConfig):
     name = "query_app"
 
     def ready(self):
-        global codex_adata
-        global rna_adata
-        global atac_adata
         global rna_pvals
         global atac_pvals
         global rna_percentages
@@ -163,17 +180,15 @@ class QueryAppConfig(AppConfig):
         global codex_cell_df
         global rna_cell_df
         global atac_cell_df
+        global codex_gene_df
+        global rna_gene_df
+        global atac_gene_df
         global hash_dict
         global uuid_dict
         global count_dict
         global zarr_root
-        global codex_store
 
         set_up_mongo()
-
-        codex_adata = attempt_to_open_file(PATH_TO_CODEX_H5AD)
-        rna_adata = attempt_to_open_file(PATH_TO_RNA_H5AD)
-        atac_adata = attempt_to_open_file(PATH_TO_ATAC_H5AD)
 
         hash_dict, uuid_dict, count_dict = compute_dataset_hashes()
 
@@ -183,23 +198,20 @@ class QueryAppConfig(AppConfig):
             rna_pvals = pd.DataFrame()
         else:
             rna_pvals = attempt_to_open_file(PATH_TO_RNA_PVALS, "pval")
-            atac_pvals = attempt_to_open_file(PATH_TO_ATAC_PVALS, "pval")
+            atac_pvals = get_atac_pvals()
         print("Pvals read in")
         rna_percentages = attempt_to_open_file(PATH_TO_RNA_PERCENTAGES, "percentages")
         atac_percentages = attempt_to_open_file(PATH_TO_ATAC_PERCENTAGES, "percentages")
         codex_percentages = attempt_to_open_file(PATH_TO_CODEX_PERCENTAGES, "percentages")
         print("Percentages read in")
+        rna_gene_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "gene")
+        atac_gene_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "gene")
+        codex_gene_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "gene")
         rna_cell_df = attempt_to_open_file(PATH_TO_RNA_PVALS, "cell")
         atac_cell_df = attempt_to_open_file(PATH_TO_ATAC_PVALS, "cell")
         codex_cell_df = attempt_to_open_file(PATH_TO_CODEX_PVALS, "cell")
+        print(rna_gene_df)
         try:
             zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="r")
         except PathNotFoundError:
             zarr_root = zarr.open("/opt/data/zarr/example.zarr", mode="a")
-        try:
-            codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="r")
-        except:
-            try:
-                codex_store = pd.HDFStore(PATH_TO_CODEX_PVALS, mode="a")
-            except:
-                codex_store = pd.HDFStore("/opt/codex_fake.hdf5", mode="a")

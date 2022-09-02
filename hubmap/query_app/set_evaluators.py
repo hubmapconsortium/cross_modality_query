@@ -6,14 +6,9 @@ import pandas as pd
 from django.db.models import Case, IntegerField, Q, Sum, When
 
 from query_app.apps import (
-    PATH_TO_RNA_PERCENTAGES,
-    atac_adata,
     atac_cell_df,
-    codex_adata,
     codex_cell_df,
-    codex_store,
     hash_dict,
-    rna_adata,
     rna_cell_df,
     zarr_root,
 )
@@ -67,31 +62,6 @@ def copy_pagination_format(results_json: str) -> str:
     return response_json
 
 
-def annotate_with_values(cell_df, include_values, modality):
-    if modality == "atac":
-        adata = atac_adata
-    elif modality == "codex":
-        adata = codex_adata
-    elif modality == "rna":
-        adata = rna_adata
-
-    cell_df = cell_df.set_index("cell_id", inplace=False, drop=False)
-
-    cell_ids = set(cell_df["cell_id"])
-    quant_df = adata.to_df()
-    quant_df["cell_id"] = quant_df.index
-    quant_df = quant_df[quant_df["cell_id"].isin(cell_ids)]
-    quant_df = quant_df[include_values]
-
-    values_dict = quant_df.to_dict(orient="index")
-    values_list = [values_dict[i] for i in cell_df.index]
-    values_series = pd.Series(values_list, index=cell_df.index)
-
-    cell_df["values"] = values_series
-
-    return cell_df
-
-
 def annotate_list_with_values(dict_list, include_values, modality):
     for cell_dict in dict_list:
         cell_id = cell_dict["cell_id"]
@@ -122,10 +92,11 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     elif modality == "codex":
         cell_df = codex_cell_df
 
-    if len(include_values) > 0:
+    if len(include_values) > 0 and modality in {"atac", "rna"}:
         validate_gene_modality(include_values[0], modality)
 
-    cell_df = cell_df.loc[(uuid)]
+    #    cell_df = cell_df.loc[(uuid)]
+    cell_df = cell_df[cell_df.dataset == uuid]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"]
     cell_df = cell_df[keep_columns]
@@ -146,16 +117,13 @@ def get_dataset_cells(uuid, include_values, offset, limit):
             else:
                 cell_df = cell_df[offset:limit]
 
-                if len(include_values) > 0 and modality == "codex":
-                    cell_df = annotate_with_values(cell_df, include_values, modality)
-
                 if isinstance(cell_df["clusters"].iloc[0], str):
                     clusters_list = [clusters.split(",") for clusters in cell_df["clusters"]]
                     cell_df["clusters"] = pd.Series(clusters_list, index=cell_df.index)
 
                 cell_dict_list = cell_df.to_dict(orient="records")
 
-                if len(include_values) > 0 and modality in ["atac", "rna"]:
+                if len(include_values) > 0:
                     cell_dict_list = annotate_list_with_values(
                         cell_dict_list, include_values, modality
                     )

@@ -1,23 +1,30 @@
 from functools import reduce
-from operator import and_, or_
+from operator import and_, eq, ge, gt, le, lt, ne, or_
 from typing import Dict, List
 
 from django.core.cache import cache
 from django.db.models import Case, Count, IntegerField, Q, Sum, When
 
 from .apps import (
-    atac_adata,
+    atac_cell_df,
+    atac_gene_df,
     atac_percentages,
     atac_pvals,
-    codex_adata,
+    codex_cell_df,
+    codex_gene_df,
     codex_percentages,
-    rna_adata,
+    rna_cell_df,
+    rna_gene_df,
     rna_percentages,
     rna_pvals,
+    zarr_root,
 )
 from .models import Cell, Cluster, Dataset, Modality, Organ
 from .utils import unpickle_query_set
 from .validation import process_query_parameters, split_at_comparator
+
+operators_dict = {">": gt, ">=": ge, "<": lt, "<=": le, "==": eq, "!=": ne}
+modalities_to_pvals = {"rna": rna_pvals, "atac": atac_pvals}
 
 
 def get_precomputed_datasets(modality, min_cell_percentage, input_set):
@@ -82,29 +89,30 @@ def process_single_condition(
     Finds the keyword args for a quantitative query based on the results of
     calling split_at_comparator() on a string representation of that condition"""
 
+    cell_dfs_dict = {"atac": atac_cell_df, "codex": codex_cell_df, "rna": rna_cell_df}
+
     value = float(split_condition[2].strip())
 
     var_id = split_condition[0].strip()
 
     if input_type == "protein":
         modality = "codex"
-        adata = codex_adata
     elif genomic_modality == "rna":
         modality = "rna"
-        adata = rna_adata
     elif genomic_modality == "atac":
         modality = "atac"
-        adata = atac_adata
 
-    if var_id not in adata.var.index:
+    cell_df = cell_dfs_dict[modality]
+
+    try:
+        operator = operators_dict[split_condition[1].strip()]
+        num_array = zarr_root[f"/{modality}/{var_id}"][:]
+        bool_array = operator(num_array, value)
+        cell_ids = cell_df[bool_array].cell_id.to_list()
+        return Q(cell_id__in=cell_ids)
+
+    except KeyError as e:
         raise ValueError(f"{var_id} not present in {modality} index")
-
-    adata = adata[:, [var_id]]
-    bool_series = adata.X > value
-    adata = adata[bool_series, :]
-    cell_ids = list(adata.obs.index)
-
-    return Q(cell_id__in=cell_ids)
 
 
 def get_gene_filter(query_params: Dict) -> Q:
@@ -127,9 +135,9 @@ def get_gene_filter(query_params: Dict) -> Q:
     elif input_type == "modality":
         genes_list = []
         if "rna" in input_set:
-            genes_list.extend(rna_adata.var.index)
+            genes_list.extend(list(rna_gene_df.index))
         if "atac" in input_set:
-            genes_list.extend(atac_adata.var.index)
+            genes_list.extend(list(atac_gene_df.index))
         return Q(gene_symbol__in=genes_list)
 
     genomic_modality = query_params["genomic_modality"]
@@ -138,13 +146,17 @@ def get_gene_filter(query_params: Dict) -> Q:
 
         if genomic_modality == "rna":
             df = rna_pvals
+            df = df[df["grouping_name"].isin(input_set)]
+            df = df[df["value"] <= p_value]
+            gene_symbols = list(df["gene_id"].unique())
+
         elif genomic_modality == "atac":
-            df = atac_pvals
-
-        df = df[df["grouping_name"].isin(input_set)]
-        df = df[df["value"] <= p_value]
-
-        gene_symbols = list(df["gene_id"].unique())
+            atac_pvals = modalities_to_pvals["atac"]
+            atac_pvals = atac_pvals[atac_pvals.obs.grouping_type == input_type]
+            bool_masks = [atac_pvals[[var], :].X <= p_value for var in input_set]
+            bool_mask = reduce(or_, bool_masks)
+            atac_pvals = atac_pvals[:, bool_mask]
+            gene_symbols = list(atac_pvals.var.index)
 
         return Q(gene_symbol__in=gene_symbols)
 
@@ -237,13 +249,16 @@ def get_organ_filter(query_params: Dict) -> Q:
 
         if genomic_modality == "rna":
             df = rna_pvals
+            df = df[df["gene_id"].isin(input_set)]
+            df = df[df["value"] <= p_value]
+            grouping_names = list(df["grouping_name"].unique())
         elif genomic_modality == "atac":
-            df = atac_pvals
-
-        df = df[df["gene_id"].isin(input_set)]
-        df = df[df["value"] <= p_value]
-
-        grouping_names = list(df["grouping_name"].unique())
+            atac_pvals = modalities_to_pvals["atac"]
+            organ_pvals = atac_pvals[atac_pvals.obs.grouping_type == "organ"]
+            bool_masks = [organ_pvals[:, [var]].X <= p_value for var in input_set]
+            bool_mask = reduce(or_, bool_masks)
+            organ_pvals = organ_pvals[bool_mask, :]
+            grouping_names = list(organ_pvals.obs.index)
 
         return Q(grouping_name__in=grouping_names)
 
@@ -296,13 +311,17 @@ def get_cluster_filter(query_params: dict):
 
         if genomic_modality == "rna":
             df = rna_pvals
+            df = df[df["gene_id"].isin(input_set)]
+            df = df[df["value"] <= p_value]
+            grouping_names = list(df["grouping_name"].unique())
+
         elif genomic_modality == "atac":
-            df = atac_pvals
-
-        df = df[df["gene_id"].isin(input_set)]
-        df = df[df["value"] <= p_value]
-
-        grouping_names = list(df["grouping_name"].unique())
+            atac_pvals = modalities_to_pvals["atac"]
+            cluster_pvals = atac_pvals[atac_pvals.obs.grouping_type == "cluster"]
+            bool_masks = [cluster_pvals[:, [var]].X <= p_value for var in input_set]
+            bool_mask = reduce(or_, bool_masks)
+            cluster_pvals = cluster_pvals[bool_mask, :]
+            grouping_names = list(cluster_pvals.obs.index)
 
         return Q(grouping_name__in=grouping_names)
 
@@ -317,18 +336,6 @@ def get_cluster_filter(query_params: dict):
         #        cluster_pks = {cluster.id for cell in cell_qs for cluster in cell.clusters.all()}
         q = Q(pk__in=cluster_pks)
         return q
-
-
-def get_percentage_and_cache(params_tuple):
-    uuid = params_tuple[0]
-    var_cells = params_tuple[1]
-    include_values = params_tuple[2]
-    query_handle = cache.get(f"{uuid}_cells_set")
-    dataset_cells = unpickle_query_set(query_handle, "dataset")
-    dataset_count = cache.get(f"{uuid}_cells_count")
-    dataset_and_var_cells = dataset_cells.intersection(var_cells)
-    percentage = dataset_and_var_cells.count() / dataset_count
-    cache.set(f"{uuid}-{include_values}", percentage)
 
 
 def get_dataset_filter(query_params: dict):
