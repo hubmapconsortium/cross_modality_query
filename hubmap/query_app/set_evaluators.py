@@ -92,10 +92,11 @@ def get_dataset_cells(uuid, include_values, offset, limit):
     elif modality == "codex":
         cell_df = codex_cell_df
 
-    if len(include_values) > 0:
+    if len(include_values) > 0 and modality in {'atac', 'rna'}:
         validate_gene_modality(include_values[0], modality)
 
-    cell_df = cell_df.loc[(uuid)]
+#    cell_df = cell_df.loc[(uuid)]
+    cell_df = cell_df[cell_df.dataset == uuid]
 
     keep_columns = ["cell_id", "modality", "dataset", "organ", "cell_type", "clusters"]
     cell_df = cell_df[keep_columns]
