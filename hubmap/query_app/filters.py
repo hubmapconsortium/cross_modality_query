@@ -111,7 +111,7 @@ def process_single_condition(
         cell_ids = cell_df[bool_array].cell_id.to_list()
         return Q(cell_id__in=cell_ids)
 
-    except Exception as e:
+    except KeyError as e:
         raise ValueError(f"{var_id} not present in {modality} index")
 
 
