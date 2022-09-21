@@ -3,6 +3,7 @@ from time import perf_counter
 from typing import List
 
 import pandas as pd
+import numpy as np
 from django.db.models import Case, IntegerField, Q, Sum, When
 
 from query_app.apps import (
@@ -106,6 +107,7 @@ def get_dataset_cells(uuid, include_values, offset, limit):
         try:
             if len(include_values) == 1:
                 values_array = zarr_root[f"{modality}/{uuid}/{include_values[0]}"]
+                values_array = np.nan_to_num(values_array)
                 values_dict_list = [{include_values[0]: float(val)} for val in values_array]
                 values_series = pd.Series(values_dict_list, index=cell_df.index)
                 cell_df["values"] = values_series
@@ -135,16 +137,13 @@ def get_dataset_cells(uuid, include_values, offset, limit):
             print(str(e))
             cell_df = cell_df[offset:limit]
 
-            if len(include_values) > 0 and modality == "codex":
-                cell_df = annotate_with_values(cell_df, include_values, modality)
-
             if isinstance(cell_df["clusters"].iloc[0], str):
                 clusters_list = [clusters.split(",") for clusters in cell_df["clusters"]]
                 cell_df["clusters"] = pd.Series(clusters_list, index=cell_df.index)
 
             cell_dict_list = cell_df.to_dict(orient="records")
 
-            if len(include_values) > 0 and modality in ["atac", "rna"]:
+            if len(include_values) > 0:
                 cell_dict_list = annotate_list_with_values(
                     cell_dict_list, include_values, modality
                 )

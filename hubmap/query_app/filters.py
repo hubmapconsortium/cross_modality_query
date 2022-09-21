@@ -49,7 +49,7 @@ def get_precomputed_datasets(modality, min_cell_percentage, input_set):
     if var_id in df["var_id"].values and cutoff in df["cutoff"].values:
         try:
             df = df.loc[(var_id, cutoff, slice(None))]
-            df = df[df["percentage"] >= float(min_cell_percentage)]
+            df = df[df["percentage"] > float(min_cell_percentage)]
             return Q(uuid__in=list(df["dataset"].unique()))
         except:
             print((var_id, cutoff, slice(None)))
