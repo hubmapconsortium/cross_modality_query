@@ -2,8 +2,8 @@ import json
 from time import perf_counter
 from typing import List
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from django.db.models import Case, IntegerField, Q, Sum, When
 
 from query_app.apps import (
